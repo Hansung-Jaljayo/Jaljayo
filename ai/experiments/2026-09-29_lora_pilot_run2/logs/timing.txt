@@ -1,0 +1,3 @@
+v4 train 25s
+v4 crashed early (METAL ImpactingInteractivity), rerun from base same config
+v4 train 95s

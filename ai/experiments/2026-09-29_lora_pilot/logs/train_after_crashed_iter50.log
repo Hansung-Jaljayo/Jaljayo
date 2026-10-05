@@ -1,0 +1,18 @@
+/Users/lumos/Jaljayo/ai/experiments/2026-09-29_lora_pilot/.venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Loading configuration file lora_config.yaml
+Loading pretrained model
+Loading datasets
+Training
+Trainable parameters: 0.456% (5.636M/1235.814M)
+Starting training..., iters: 200
+Calculating loss...:   0%|          | 0/8 [00:00<?, ?it/s]Calculating loss...:  12%|█▎        | 1/8 [00:00<00:02,  3.34it/s]Calculating loss...:  25%|██▌       | 2/8 [00:00<00:01,  4.39it/s]Calculating loss...:  38%|███▊      | 3/8 [00:00<00:01,  4.89it/s]Calculating loss...:  50%|█████     | 4/8 [00:00<00:00,  4.46it/s]Calculating loss...:  62%|██████▎   | 5/8 [00:01<00:00,  4.84it/s]Calculating loss...:  75%|███████▌  | 6/8 [00:01<00:00,  5.10it/s]Calculating loss...:  88%|████████▊ | 7/8 [00:01<00:00,  4.65it/s]Calculating loss...: 100%|██████████| 8/8 [00:01<00:00,  3.92it/s]Calculating loss...: 100%|██████████| 8/8 [00:01<00:00,  4.31it/s]
+Iter 1: Val loss 5.040, Val took 1.870s
+Iter 10: Train loss 1.790, Learning Rate 5.000e-05, It/sec 1.989, Tokens/sec 561.417, Trained Tokens 2823, Peak mem 4.683 GB
+Iter 20: Train loss 0.904, Learning Rate 5.000e-05, It/sec 2.265, Tokens/sec 577.171, Trained Tokens 5371, Peak mem 4.683 GB
+Iter 30: Train loss 0.616, Learning Rate 5.000e-05, It/sec 2.349, Tokens/sec 579.037, Trained Tokens 7836, Peak mem 4.683 GB
+Iter 40: Train loss 0.501, Learning Rate 5.000e-05, It/sec 2.268, Tokens/sec 609.597, Trained Tokens 10524, Peak mem 4.683 GB
+Iter 50: Train loss 0.307, Learning Rate 5.000e-05, It/sec 2.119, Tokens/sec 574.628, Trained Tokens 13236, Peak mem 4.683 GB
+libc++abi: terminating due to uncaught exception of type std::runtime_error: [METAL] Command buffer execution failed: Impacting Interactivity (0000000e:kIOGPUCommandBufferCallbackErrorImpactingInteractivity)
+/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/multiprocessing/resource_tracker.py:216: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

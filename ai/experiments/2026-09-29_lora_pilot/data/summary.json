@@ -1,0 +1,33 @@
+{
+ "prompt": "<|im_start|>Below is the query from the users, please choose the correct function and generate the parameters to call the function. Query: {q} Response:",
+ "conditions": {
+  "before": {
+   "source": "v1.json",
+   "train": 148,
+   "val": 32,
+   "train_by_func": {
+    "목적 자세 부르기": 37,
+    "되돌리기": 14,
+    "숫자 대답": 27,
+    "질문 알람 미루기": 16,
+    "알람 설정": 29,
+    "자세 조절": 25
+   }
+  },
+  "after": {
+   "source": "v3.json",
+   "train": 147,
+   "val": 32,
+   "train_by_func": {
+    "되돌리기": 12,
+    "목적 자세 부르기": 39,
+    "숫자 대답": 12,
+    "알람 설정": 27,
+    "일반 대화": 11,
+    "자세 조절": 28,
+    "지원하지 않는 요청": 11,
+    "질문 알람 미루기": 7
+   }
+  }
+ }
+}

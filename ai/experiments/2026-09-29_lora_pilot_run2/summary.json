@@ -1,0 +1,42 @@
+{
+ "label": "Apple M2 Pro에서 수행한 제한된 학습량의 LoRA 파일럿 비교 (추가 1회)",
+ "v4_data": "v3 train 147 + 직접 쓴 31문장(미루기 10, 숫자 대답 15, 오후 알람 6) = 178, val은 v3 val 32 그대로",
+ "config": "기존 lora_config.yaml과 모델 경로만 다름, 200스텝, 같은 기본 모델에서 새로 학습",
+ "final_eval": "final_eval_frozen.json 30문장, 18:36:41 고정, v1·v3·v4 학습·검증과 dev 25문장과 겹침 0",
+ "dev_eval": "기존 25문장은 개발 확인용으로만 사용",
+ "results": {
+  "final_before": {
+   "correct": 13,
+   "total": 30,
+   "accuracy": 0.433,
+   "format_errors": 3,
+   "truncated": 0
+  },
+  "final_after": {
+   "correct": 13,
+   "total": 30,
+   "accuracy": 0.433,
+   "format_errors": 3,
+   "truncated": 0
+  },
+  "final_v4": {
+   "correct": 15,
+   "total": 30,
+   "accuracy": 0.5,
+   "format_errors": 4,
+   "truncated": 0
+  },
+  "dev_v4": {
+   "correct": 12,
+   "total": 25,
+   "accuracy": 0.48,
+   "format_errors": 3,
+   "truncated": 0
+  }
+ },
+ "notes": [
+  "v4 학습 1회차가 초반에 METAL ImpactingInteractivity로 끊겨 같은 설정으로 기본 모델부터 재학습",
+  "추가 학습 문장과 최종 평가 문장을 같은 사람이 같은 시점에 써서 표현이 비슷할 수 있음(v4에 유리할 수 있음)",
+  "평가 30문장, 조건마다 1회 학습이라 우연에 따른 차이가 클 수 있음"
+ ]
+}
