@@ -1,0 +1,1 @@
+iters: 200 (fixed at 18:22 after trial; lr 2e-4 diverged in trial 1, lr 5e-5 in trial 2)

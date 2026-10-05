@@ -1,0 +1,4 @@
+before train 112s
+after train 31s
+after crashed at iter 50 (METAL ImpactingInteractivity), rerun from base with same config
+after train 99s

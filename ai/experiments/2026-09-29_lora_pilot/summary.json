@@ -1,0 +1,120 @@
+{
+ "label": "Apple M2 Pro에서 수행한 제한된 학습량의 LoRA 파일럿 비교",
+ "not": "마음AI 전체 학습 아님, 보드 성능 아님, 마음AI 특수 토큰 등록 방식과의 호환 주장 아님",
+ "machine": "Apple M2 Pro, 16GB",
+ "software": "Python 3.9.6, mlx 0.29.3, mlx-lm 0.29.1",
+ "model": "mlx-community/Llama-3.2-1B-Instruct-bf16",
+ "model_revision": "863c846a9ac6fad4e49e1743d52984dff262e953",
+ "config": "lora_config.yaml (lr 5e-5, batch 4, rank 8, scale 20, 16 layers, seed 0) + iters 200",
+ "decoding": "greedy, max_tokens 80, 첫 <maum_end>까지 읽음, 끝 토큰 없으면 실패",
+ "eval": "eval_frozen.json 25문장, 18:20:21 고정, sha256 in eval_frozen.sha256",
+ "data": {
+  "before": {
+   "source": "v1.json",
+   "train": 148,
+   "val": 32,
+   "train_by_func": {
+    "목적 자세 부르기": 37,
+    "되돌리기": 14,
+    "숫자 대답": 27,
+    "질문 알람 미루기": 16,
+    "알람 설정": 29,
+    "자세 조절": 25
+   }
+  },
+  "after": {
+   "source": "v3.json",
+   "train": 147,
+   "val": 32,
+   "train_by_func": {
+    "되돌리기": 12,
+    "목적 자세 부르기": 39,
+    "숫자 대답": 12,
+    "알람 설정": 27,
+    "일반 대화": 11,
+    "자세 조절": 28,
+    "지원하지 않는 요청": 11,
+    "질문 알람 미루기": 7
+   }
+  }
+ },
+ "results": {
+  "before": {
+   "correct": 16,
+   "total": 25,
+   "accuracy": 0.64,
+   "format_errors": 2,
+   "truncated": 0,
+   "eval_seconds": 19.0
+  },
+  "after": {
+   "correct": 13,
+   "total": 25,
+   "accuracy": 0.52,
+   "format_errors": 3,
+   "truncated": 0,
+   "eval_seconds": 18.5
+  }
+ },
+ "per_function": {
+  "목적 자세 부르기": {
+   "n": 4,
+   "before": 4,
+   "after": 3
+  },
+  "자세 조절": {
+   "n": 5,
+   "before": 4,
+   "after": 4
+  },
+  "되돌리기": {
+   "n": 2,
+   "before": 2,
+   "after": 2
+  },
+  "알람 설정": {
+   "n": 4,
+   "before": 1,
+   "after": 1
+  },
+  "질문 알람 미루기": {
+   "n": 3,
+   "before": 3,
+   "after": 0
+  },
+  "숫자 대답": {
+   "n": 3,
+   "before": 2,
+   "after": 0
+  },
+  "일반 대화": {
+   "n": 2,
+   "before": 0,
+   "after": 2
+  },
+  "지원하지 않는 요청": {
+   "n": 2,
+   "before": 0,
+   "after": 1
+  }
+ },
+ "timeline": {
+  "restart": "18:19:00",
+  "install_done": "18:19:25",
+  "eval_frozen": "18:20:21",
+  "model_downloaded": "18:20:59",
+  "trials_done": "18:22:12",
+  "train_before_s": 112,
+  "train_after_s": 99,
+  "train_after_crash": "iter 50 METAL ImpactingInteractivity, 같은 설정으로 기본 모델부터 재학습",
+  "eval_done": "18:27:19",
+  "pdf_updated": "18:29"
+ },
+ "trial_notes": "시험 1: lr 2e-4 20스텝에서 손실 상승(4.5→8.4). 시험 2: lr 5e-5 40스텝 손실 하강. 두 시험 모두 평가 문장을 쓰지 않음",
+ "limits": [
+  "평가 25문장으로 적음",
+  "조건마다 1회 학습",
+  "같은 스텝이라도 문장당 노출 횟수와 기능 구성이 다름",
+  "학습 데이터에 오후 알람 예시가 없음(두 조건 동일)"
+ ]
+}

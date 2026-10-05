@@ -1,0 +1,127 @@
+[
+ {
+  "func": "목적 자세 부르기",
+  "gold": "<maum_0>(command=call, purpose=tv)<maum_end>",
+  "q": "드라마 보기 편하게 해줘"
+ },
+ {
+  "func": "목적 자세 부르기",
+  "gold": "<maum_0>(command=call, purpose=sleep)<maum_end>",
+  "q": "이제 자려고 누울게"
+ },
+ {
+  "func": "목적 자세 부르기",
+  "gold": "<maum_0>(command=call, purpose=read)<maum_end>",
+  "q": "독서 자세 부탁해"
+ },
+ {
+  "func": "목적 자세 부르기",
+  "gold": "<maum_0>(command=call, purpose=rest)<maum_end>",
+  "q": "좀 쉬게 편한 자세로 바꿔줘"
+ },
+ {
+  "func": "자세 조절",
+  "gold": "<maum_0>(command=adjust, part=head, direction=up, amount=15, amount_type=delta)<maum_end>",
+  "q": "등 쪽 십오 도만 더 세워줘"
+ },
+ {
+  "func": "자세 조절",
+  "gold": "<maum_0>(command=adjust, part=leg, direction=up, amount=10, amount_type=delta)<maum_end>",
+  "q": "다리 쪽 십 도 높여줘"
+ },
+ {
+  "func": "자세 조절",
+  "gold": "<maum_0>(command=adjust, part=head, direction=down, amount=none, amount_type=none)<maum_end>",
+  "q": "머리 쪽 살짝 눕혀줘"
+ },
+ {
+  "func": "자세 조절",
+  "gold": "<maum_0>(command=adjust, part=leg, direction=down, amount=30, amount_type=target)<maum_end>",
+  "q": "다리 삼십 도로 맞춰서 내려줘"
+ },
+ {
+  "func": "자세 조절",
+  "gold": "<maum_0>(command=adjust, part=head, direction=up, amount=40, amount_type=target)<maum_end>",
+  "q": "상체 사십 도로 올려줘"
+ },
+ {
+  "func": "되돌리기",
+  "gold": "<maum_0>(command=undo)<maum_end>",
+  "q": "바꾸기 전 자세로 되돌려 줘"
+ },
+ {
+  "func": "되돌리기",
+  "gold": "<maum_0>(command=undo)<maum_end>",
+  "q": "조금 전 자세로 되돌려"
+ },
+ {
+  "func": "알람 설정",
+  "gold": "<maum_1>(command=set, date=tomorrow, ampm=am, time=06:30, type=none, repeat=none, days=none)<maum_end>",
+  "q": "내일 아침 여섯 시 반에 알람 울려줘"
+ },
+ {
+  "func": "알람 설정",
+  "gold": "<maum_1>(command=set, date=none, ampm=pm, time=02:00, type=none, repeat=none, days=none)<maum_end>",
+  "q": "오후 두 시에 깨워 줄래"
+ },
+ {
+  "func": "알람 설정",
+  "gold": "<maum_1>(command=set, date=tomorrow, ampm=none, time=08:00, type=question, repeat=none, days=none)<maum_end>",
+  "q": "내일 여덟 시에 질문 알람으로 깨워줘"
+ },
+ {
+  "func": "알람 설정",
+  "gold": "<maum_1>(command=set, date=none, ampm=am, time=10:30, type=leave_bed, repeat=none, days=none)<maum_end>",
+  "q": "오전 열 시 반에 침대에서 나와야 꺼지는 알람 맞춰줘"
+ },
+ {
+  "func": "질문 알람 미루기",
+  "gold": "<maum_1>(command=snooze, minutes=20)<maum_end>",
+  "q": "이십 분만 더 잘래"
+ },
+ {
+  "func": "질문 알람 미루기",
+  "gold": "<maum_1>(command=snooze, minutes=10)<maum_end>",
+  "q": "십 분 있다가 다시 깨워"
+ },
+ {
+  "func": "질문 알람 미루기",
+  "gold": "<maum_1>(command=snooze, minutes=none)<maum_end>",
+  "q": "조금만 더 누워 있을게"
+ },
+ {
+  "func": "숫자 대답",
+  "gold": "<maum_2>(type=number, value=37)<maum_end>",
+  "q": "삼십칠"
+ },
+ {
+  "func": "숫자 대답",
+  "gold": "<maum_2>(type=number, value=62)<maum_end>",
+  "q": "육십이요"
+ },
+ {
+  "func": "숫자 대답",
+  "gold": "<maum_2>(type=number, value=90)<maum_end>",
+  "q": "음 구십"
+ },
+ {
+  "func": "일반 대화",
+  "gold": "<General_Conversation>()<maum_end>",
+  "q": "오늘 좀 피곤했어"
+ },
+ {
+  "func": "일반 대화",
+  "gold": "<General_Conversation>()<maum_end>",
+  "q": "재미있는 얘기 해줘"
+ },
+ {
+  "func": "지원하지 않는 요청",
+  "gold": "<maum_3>(reason=out_of_scope)<maum_end>",
+  "q": "커튼 좀 쳐줘"
+ },
+ {
+  "func": "지원하지 않는 요청",
+  "gold": "<maum_3>(reason=out_of_scope)<maum_end>",
+  "q": "에어컨 틀어줘"
+ }
+]

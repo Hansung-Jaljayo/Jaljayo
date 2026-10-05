@@ -1,0 +1,475 @@
+# 대표 문장과 정답 (검토용)
+
+이 파일은 build_rep.py가 만듭니다. 고칠 때는 ai/data/seed/representative_rows.json을 고치고 build_rep.py를 다시 실행해 주세요.
+
+
+## 목적 자세 부르기
+
+| 문장 | 정답 |
+|---|---|
+| 책 좀 읽을래 | `<maum_0>(command=call, purpose=read)<maum_end>` |
+| 티비 볼 거야 | `<maum_0>(command=call, purpose=tv)<maum_end>` |
+| 이제 잘게 | `<maum_0>(command=call, purpose=sleep)<maum_end>` |
+| 좀 쉬고 싶어 | `<maum_0>(command=call, purpose=rest)<maum_end>` |
+| 책 읽기 좋게 해줘 | `<maum_0>(command=call, purpose=read)<maum_end>` |
+| 영화 보게 맞춰 줘 | `<maum_0>(command=call, purpose=tv)<maum_end>` |
+| 잘 준비할게요 | `<maum_0>(command=call, purpose=sleep)<maum_end>` |
+| 편하게 쉬는 자세로 해 주세요 | `<maum_0>(command=call, purpose=rest)<maum_end>` |
+| 독서 자세로 바꿔 주세요 | `<maum_0>(command=call, purpose=read)<maum_end>` |
+| 드라마 볼 거예요 | `<maum_0>(command=call, purpose=tv)<maum_end>` |
+
+## 자세 조절
+
+| 문장 | 정답 |
+|---|---|
+| 머리 오 도 내려 | `<maum_0>(command=adjust, part=head, direction=down, amount=5, amount_type=delta)<maum_end>` |
+| 다리 좀 올려줘 | `<maum_0>(command=adjust, part=leg, direction=up, amount=none, amount_type=none)<maum_end>` |
+| 머리 삼십 도로 올려 | `<maum_0>(command=adjust, part=head, direction=up, amount=30, amount_type=target)<maum_end>` |
+| 다리 십 도 더 올려 줘 | `<maum_0>(command=adjust, part=leg, direction=up, amount=10, amount_type=delta)<maum_end>` |
+| 좀 내려줘 | `<maum_0>(command=adjust, part=none, direction=down, amount=none, amount_type=none)<maum_end>` |
+| 조금 더 | `<maum_0>(command=adjust, part=none, direction=same, amount=none, amount_type=none)<maum_end>` |
+| 머리 쪽 살짝 낮춰 주세요 | `<maum_0>(command=adjust, part=head, direction=down, amount=none, amount_type=none)<maum_end>` |
+| 다리 영 도로 내려 줘 | `<maum_0>(command=adjust, part=leg, direction=down, amount=0, amount_type=target)<maum_end>` |
+| 머리 팔십 도로 올려 | `<maum_0>(command=adjust, part=head, direction=up, amount=80, amount_type=target)<maum_end>` |
+| 다리 이십 도 내려 주세요 | `<maum_0>(command=adjust, part=leg, direction=down, amount=20, amount_type=delta)<maum_end>` |
+| 머리 오 도 | `<maum_0>(command=adjust, part=head, direction=none, amount=5, amount_type=delta)<maum_end>` |
+| 머리 오 도 아니 십 도 내려 | `<maum_0>(command=adjust, part=head, direction=down, amount=10, amount_type=delta)<maum_end>` |
+
+## 되돌리기
+
+| 문장 | 정답 |
+|---|---|
+| 아까 자세로 돌려줘 | `<maum_0>(command=undo)<maum_end>` |
+| 원래대로 해줘 | `<maum_0>(command=undo)<maum_end>` |
+| 되돌려 줘 | `<maum_0>(command=undo)<maum_end>` |
+| 전 자세로 돌아가 줘 | `<maum_0>(command=undo)<maum_end>` |
+| 바꾸기 전으로 해 주세요 | `<maum_0>(command=undo)<maum_end>` |
+| 아까가 더 나았어 돌려줘 | `<maum_0>(command=undo)<maum_end>` |
+| 이전 자세로 돌려 주세요 | `<maum_0>(command=undo)<maum_end>` |
+| 방금 거 되돌려 | `<maum_0>(command=undo)<maum_end>` |
+| 조금 전 자세로 해줘 | `<maum_0>(command=undo)<maum_end>` |
+| 다시 아까처럼 해 주세요 | `<maum_0>(command=undo)<maum_end>` |
+
+## 기본 정하기
+
+| 문장 | 정답 |
+|---|---|
+| 이 자세가 이제 기본이야 | `<maum_0>(command=set_default, purpose=none)<maum_end>` |
+| 이 자세 기록해 | `<maum_0>(command=set_default, purpose=none)<maum_end>` |
+| 앞으로 이렇게 해줘 | `<maum_0>(command=set_default, purpose=none)<maum_end>` |
+| 티비 볼 땐 이 각도로 해 | `<maum_0>(command=set_default, purpose=tv)<maum_end>` |
+| 책 읽을 때는 이 자세로 기억해 줘 | `<maum_0>(command=set_default, purpose=read)<maum_end>` |
+| 이걸 기본으로 해 주세요 | `<maum_0>(command=set_default, purpose=none)<maum_end>` |
+| 잘 때는 항상 이렇게 해줘 | `<maum_0>(command=set_default, purpose=sleep)<maum_end>` |
+| 쉴 때 자세 이걸로 저장해 | `<maum_0>(command=set_default, purpose=rest)<maum_end>` |
+| 이 각도 기억해 둬 | `<maum_0>(command=set_default, purpose=none)<maum_end>` |
+| 지금 자세 기본으로 정해 주세요 | `<maum_0>(command=set_default, purpose=none)<maum_end>` |
+
+## 앱에서만 되는 요청
+
+| 문장 | 정답 |
+|---|---|
+| 독서 자세 기억한 거 해제해 | `<maum_3>(reason=app_only)<maum_end>` |
+| 기본 자세 해제해 | `<maum_3>(reason=app_only)<maum_end>` |
+| 티비 볼 때 자세 저장한 거 지워 줘 | `<maum_3>(reason=app_only)<maum_end>` |
+| 잘 때 기본 자세 없애 줘 | `<maum_3>(reason=app_only)<maum_end>` |
+| 쉬는 자세 기본 설정 지워 | `<maum_3>(reason=app_only)<maum_end>` |
+| 저장한 기본 자세 지워 주세요 | `<maum_3>(reason=app_only)<maum_end>` |
+| 독서 기본 자세 취소해 | `<maum_3>(reason=app_only)<maum_end>` |
+| 티비 기본 각도 해제해 주세요 | `<maum_3>(reason=app_only)<maum_end>` |
+| 잠 자세 기억한 거 지워 | `<maum_3>(reason=app_only)<maum_end>` |
+| 휴식 기본 자세 없애 주세요 | `<maum_3>(reason=app_only)<maum_end>` |
+
+## 자세 예약
+
+| 문장 | 정답 |
+|---|---|
+| 밤 열한 시 반에 잠 자세로 해줘 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=pm, time=11:30, time_type=absolute)<maum_end>` |
+| 삼십 분 뒤에 잠 자세로 바꿔줘 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=none, time=00:30, time_type=relative)<maum_end>` |
+| 한 시간 뒤에 잘 수 있게 해줘 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=none, time=01:00, time_type=relative)<maum_end>` |
+| 열한 시에 잠 자세로 바꿔 주세요 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=none, time=11:00, time_type=absolute)<maum_end>` |
+| 내일 아침 일곱 시에 쉬는 자세로 해줘 | `<maum_0>(command=reserve, purpose=rest, date=tomorrow, ampm=am, time=07:00, time_type=absolute)<maum_end>` |
+| 이십 분 있다가 잠 자세로 해 주세요 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=none, time=00:20, time_type=relative)<maum_end>` |
+| 자정에 잠 자세로 바꿔줘 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=am, time=12:00, time_type=absolute)<maum_end>` |
+| 열 시 반에 독서 자세로 해 줘 | `<maum_0>(command=reserve, purpose=read, date=none, ampm=none, time=10:30, time_type=absolute)<maum_end>` |
+| 사십 분 뒤에 자세 바꿔 줘 | `<maum_0>(command=reserve, purpose=none, date=none, ampm=none, time=00:40, time_type=relative)<maum_end>` |
+| 이십삼 시에 잠 자세로 예약해 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=none, time=23:00, time_type=absolute)<maum_end>` |
+| 잠 자세 예약해 줘 | `<maum_0>(command=reserve, purpose=sleep, date=none, ampm=none, time=none, time_type=none)<maum_end>` |
+
+## 예약 늦추기
+
+| 문장 | 정답 |
+|---|---|
+| 예약 삼십 분 늦춰줘 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=00:30, time_type=later)<maum_end>` |
+| 자세 예약 십 분만 미뤄 줘 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=00:10, time_type=later)<maum_end>` |
+| 예약 한 시간 늦춰 주세요 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=01:00, time_type=later)<maum_end>` |
+| 예약 열두 시로 늦춰줘 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=12:00, time_type=absolute)<maum_end>` |
+| 잠 자세 예약 이십 분 뒤로 미뤄 | `<maum_0>(command=change_reserve, purpose=sleep, date=none, ampm=none, time=00:20, time_type=later)<maum_end>` |
+| 예약 오후 세 시로 늦춰 줘 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=pm, time=03:00, time_type=absolute)<maum_end>` |
+| 자세 예약 십오 분 늦춰 주세요 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=00:15, time_type=later)<maum_end>` |
+| 예약 좀 미뤄줘 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=none, time_type=later)<maum_end>` |
+| 예약 열한 시 반으로 미뤄 주세요 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=11:30, time_type=absolute)<maum_end>` |
+| 예약 오 분만 늦춰 | `<maum_0>(command=change_reserve, purpose=none, date=none, ampm=none, time=00:05, time_type=later)<maum_end>` |
+
+## 예약 취소
+
+| 문장 | 정답 |
+|---|---|
+| 자세 예약 취소해 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 예약한 거 없애 줘 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 잠 자세 예약 취소해 주세요 | `<maum_0>(command=cancel_reserve, purpose=sleep, confirm=no)<maum_end>` |
+| 자세 바꾸는 예약 지워 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 예약 취소할게 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 자세 예약 안 할래 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 자세 예약 지워 주세요 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 예약했던 거 취소해 줘 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 아까 한 자세 예약 없애 줘 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+| 예약 취소해 주세요 | `<maum_0>(command=cancel_reserve, purpose=none, confirm=no)<maum_end>` |
+
+## 알람 설정
+
+| 문장 | 정답 |
+|---|---|
+| 내일 오전 일곱 시 깨워줘 | `<maum_1>(command=set, date=tomorrow, ampm=am, time=07:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 일곱 시에 깨워 줘 | `<maum_1>(command=set, date=none, ampm=none, time=07:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 내일 아침 여섯 시 반에 알람 맞춰 줘 | `<maum_1>(command=set, date=tomorrow, ampm=am, time=06:30, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 평일 아침 일곱 시마다 깨워 주세요 | `<maum_1>(command=set, date=none, ampm=am, time=07:00, time_type=absolute, type=none, repeat=weekly, days=weekdays, confirm=no)<maum_end>` |
+| 주말마다 오전 아홉 시에 알람 맞춰줘 | `<maum_1>(command=set, date=none, ampm=am, time=09:00, time_type=absolute, type=none, repeat=weekly, days=weekend, confirm=no)<maum_end>` |
+| 내일 일곱 시에 침대에서 나와야 꺼지는 알람 맞춰줘 | `<maum_1>(command=set, date=tomorrow, ampm=none, time=07:00, time_type=absolute, type=leave_bed, repeat=none, days=none, confirm=no)<maum_end>` |
+| 월요일 오전 여덟 시에 깨워 줘 | `<maum_1>(command=set, date=mon, ampm=am, time=08:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 알람 맞춰줘 | `<maum_1>(command=set, date=none, ampm=none, time=none, time_type=none, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 매일 아침 여섯 시에 문제 내는 알람 맞춰 주세요 | `<maum_1>(command=set, date=none, ampm=am, time=06:00, time_type=absolute, type=question, repeat=weekly, days=daily, confirm=no)<maum_end>` |
+| 열여덟 시에 알람 맞춰줘 | `<maum_1>(command=set, date=none, ampm=none, time=18:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 모레 아침 일곱 시에 깨워 줘 | `<maum_1>(command=set, date=+2, ampm=am, time=07:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 다음 주 월요일 여섯 시에 깨워 줘 | `<maum_1>(command=set, date=next_mon, ampm=none, time=06:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 시월 십오 일 오전 여덟 시에 알람 맞춰줘 | `<maum_1>(command=set, date=10-15, ampm=am, time=08:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 월요일 수요일마다 일곱 시에 깨워줘 | `<maum_1>(command=set, date=none, ampm=none, time=07:00, time_type=absolute, type=none, repeat=weekly, days=mon+wed, confirm=no)<maum_end>` |
+| 내일 딱 한 번만 일곱 시에 깨워줘 | `<maum_1>(command=set, date=tomorrow, ampm=none, time=07:00, time_type=absolute, type=none, repeat=once, days=none, confirm=no)<maum_end>` |
+
+## 알람 시각 바꾸기
+
+| 문장 | 정답 |
+|---|---|
+| 내일은 일곱 시 반으로 바꿔줘 | `<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=tomorrow, ampm=none, time=07:30, time_type=absolute, scope=none)<maum_end>` |
+| 오전 일곱 시 알람을 오후 여덟 시로 바꿔줘 | `<maum_1>(command=change_time, target=07:00, target_ampm=am, target_days=none, date=none, ampm=pm, time=08:00, time_type=absolute, scope=none)<maum_end>` |
+| 알람 여덟 시로 바꿔 줘 | `<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=none, ampm=none, time=08:00, time_type=absolute, scope=none)<maum_end>` |
+| 일곱 시 알람 여섯 시 반으로 바꿔 주세요 | `<maum_1>(command=change_time, target=07:00, target_ampm=none, target_days=none, date=none, ampm=none, time=06:30, time_type=absolute, scope=none)<maum_end>` |
+| 앞으로 알람 여섯 시로 바꿔 | `<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=none, ampm=none, time=06:00, time_type=absolute, scope=always)<maum_end>` |
+| 이번만 알람 아홉 시로 바꿔 줘 | `<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=none, ampm=none, time=09:00, time_type=absolute, scope=once)<maum_end>` |
+| 알람 시간 바꿔 줘 | `<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=none, ampm=none, time=none, time_type=none, scope=none)<maum_end>` |
+| 아침 알람 일곱 시로 바꿔 주세요 | `<maum_1>(command=change_time, target=none, target_ampm=am, target_days=none, date=none, ampm=none, time=07:00, time_type=absolute, scope=none)<maum_end>` |
+| 여섯 시 알람 앞으로 계속 다섯 시 반으로 해줘 | `<maum_1>(command=change_time, target=06:00, target_ampm=none, target_days=none, date=none, ampm=none, time=05:30, time_type=absolute, scope=always)<maum_end>` |
+| 이번 토요일만 알람 열 시로 바꿔 줘 | `<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=sat, ampm=none, time=10:00, time_type=absolute, scope=once)<maum_end>` |
+
+## 알람 종류 바꾸기
+
+| 문장 | 정답 |
+|---|---|
+| 침대에서 나와야 꺼지는 알람으로 해줘 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=leave_bed, scope=none)<maum_end>` |
+| 기본 알람으로 바꿔 줘 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=basic, scope=none)<maum_end>` |
+| 문제 푸는 알람으로 바꿔 주세요 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=question, scope=none)<maum_end>` |
+| 일곱 시 알람 침대에서 나와야 꺼지게 해 줘 | `<maum_1>(command=change_type, target=07:00, target_ampm=none, target_days=none, date=none, type=leave_bed, scope=none)<maum_end>` |
+| 알람 종류 바꿔 줘 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=none, scope=none)<maum_end>` |
+| 덧셈 문제 내는 알람으로 해줘 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=question, scope=none)<maum_end>` |
+| 오전 여섯 시 알람 그냥 기본 알람으로 해 | `<maum_1>(command=change_type, target=06:00, target_ampm=am, target_days=none, date=none, type=basic, scope=none)<maum_end>` |
+| 일어나서 나가야 꺼지는 걸로 바꿔 주세요 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=leave_bed, scope=none)<maum_end>` |
+| 그냥 소리만 나는 알람으로 해줘 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=none, type=basic, scope=none)<maum_end>` |
+| 여덟 시 알람 문제 알람으로 바꿔 | `<maum_1>(command=change_type, target=08:00, target_ampm=none, target_days=none, date=none, type=question, scope=none)<maum_end>` |
+
+## 한 번 건너뛰기
+
+| 문장 | 정답 |
+|---|---|
+| 내일만 건너뛰어 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=tomorrow)<maum_end>` |
+| 내일 알람 한 번만 쉬어 줘 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=tomorrow)<maum_end>` |
+| 이번 알람 건너뛰어 줘 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=none)<maum_end>` |
+| 금요일 알람 건너뛰어 주세요 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=fri)<maum_end>` |
+| 일곱 시 알람 내일만 울리지 마 | `<maum_1>(command=skip, target=07:00, target_ampm=none, target_days=none, date=tomorrow)<maum_end>` |
+| 오늘 알람은 넘어가 줘 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=today)<maum_end>` |
+| 다음 알람 한 번 건너뛰어 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=none)<maum_end>` |
+| 내일 아침 알람 빼 줘 | `<maum_1>(command=skip, target=none, target_ampm=am, target_days=none, date=tomorrow)<maum_end>` |
+| 월요일만 알람 쉬게 해 줘 | `<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=mon)<maum_end>` |
+| 여섯 시 반 알람 이번만 건너뛰어 주세요 | `<maum_1>(command=skip, target=06:30, target_ampm=none, target_days=none, date=none)<maum_end>` |
+
+## 잠시 끄기
+
+| 문장 | 정답 |
+|---|---|
+| 이 알람 당분간 꺼 둬 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 알람 잠깐 꺼 놔 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 일곱 시 알람 당분간 쓰지 마 | `<maum_1>(command=disable, target=07:00, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 알람 한동안 꺼 둬 주세요 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 휴가라서 알람 좀 꺼 둘래 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 아침 알람 잠시 꺼 둬 | `<maum_1>(command=disable, target=none, target_ampm=am, target_days=none, until=none, period=none)<maum_end>` |
+| 알람 지우지 말고 꺼만 놔 줘 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 여섯 시 알람 당분간 안 울리게 해 줘 | `<maum_1>(command=disable, target=06:00, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 당분간 알람 안 쓸게요 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+| 알람 잠시 멈춰 두세요 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=none)<maum_end>` |
+
+## 다시 켜기
+
+| 문장 | 정답 |
+|---|---|
+| 아침 알람 다시 켜줘 | `<maum_1>(command=enable, target=none, target_ampm=am, target_days=none)<maum_end>` |
+| 꺼 둔 알람 다시 켜 줘 | `<maum_1>(command=enable, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 일곱 시 알람 다시 울리게 해 줘 | `<maum_1>(command=enable, target=07:00, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 다시 켜 주세요 | `<maum_1>(command=enable, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 다시 쓸래 | `<maum_1>(command=enable, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 꺼 놨던 알람 켜 줘 | `<maum_1>(command=enable, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 여섯 시 반 알람 다시 켜 | `<maum_1>(command=enable, target=06:30, target_ampm=none, target_days=none)<maum_end>` |
+| 쉬게 했던 알람 다시 살려 줘 | `<maum_1>(command=enable, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 다시 울리게 해 주세요 | `<maum_1>(command=enable, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 오전 여덟 시 알람 다시 켜 줘 | `<maum_1>(command=enable, target=08:00, target_ampm=am, target_days=none)<maum_end>` |
+
+## 삭제
+
+| 문장 | 정답 |
+|---|---|
+| 이 알람 삭제해 | `<maum_1>(command=delete, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 일곱 시 알람 지워 줘 | `<maum_1>(command=delete, target=07:00, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 목록에서 지워 주세요 | `<maum_1>(command=delete, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 그 알람 완전히 삭제해 줘 | `<maum_1>(command=delete, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 오전 여섯 시 알람 없애 줘 | `<maum_1>(command=delete, target=06:00, target_ampm=am, target_days=none)<maum_end>` |
+| 여덟 시 반 알람 삭제해 주세요 | `<maum_1>(command=delete, target=08:30, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 하나 지워 줘 | `<maum_1>(command=delete, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 필요 없는 알람 삭제해 | `<maum_1>(command=delete, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 아침 알람 지워 | `<maum_1>(command=delete, target=none, target_ampm=am, target_days=none)<maum_end>` |
+| 열 시 알람 아예 없애 주세요 | `<maum_1>(command=delete, target=10:00, target_ampm=none, target_days=none)<maum_end>` |
+
+## 끄기
+
+| 문장 | 정답 |
+|---|---|
+| 알람 꺼줘 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 꺼 주세요 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 일곱 시 알람 꺼 줘 | `<maum_1>(command=off, target=07:00, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 끄고 싶어 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 아침 알람 꺼 | `<maum_1>(command=off, target=none, target_ampm=am, target_days=none)<maum_end>` |
+| 알람 좀 꺼 줄래 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 여섯 시 알람 끌래 | `<maum_1>(command=off, target=06:00, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 그만 울리게 해 줘 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 오전 아홉 시 알람 꺼 주세요 | `<maum_1>(command=off, target=09:00, target_ampm=am, target_days=none)<maum_end>` |
+| 알람 꺼 버려 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+| 알람 취소해 | `<maum_1>(command=off, target=none, target_ampm=none, target_days=none)<maum_end>` |
+
+## 질문 알람 미루기
+
+| 문장 | 정답 |
+|---|---|
+| 십 분만 더 | `<maum_1>(command=snooze, minutes=10)<maum_end>` |
+| 오 분만 더 잘게 | `<maum_1>(command=snooze, minutes=5)<maum_end>` |
+| 조금만 더 잘래 | `<maum_1>(command=snooze, minutes=none)<maum_end>` |
+| 이십 분 뒤에 다시 깨워 줘 | `<maum_1>(command=snooze, minutes=20)<maum_end>` |
+| 십오 분만 더 잘게요 | `<maum_1>(command=snooze, minutes=15)<maum_end>` |
+| 삼 분만 | `<maum_1>(command=snooze, minutes=3)<maum_end>` |
+| 조금 이따 다시 깨워 줘 | `<maum_1>(command=snooze, minutes=none)<maum_end>` |
+| 칠 분만 더 잘래 | `<maum_1>(command=snooze, minutes=7)<maum_end>` |
+| 오 분 뒤에 다시 울려 줘 | `<maum_1>(command=snooze, minutes=5)<maum_end>` |
+| 십 분 더 잘 수 있게 해 주세요 | `<maum_1>(command=snooze, minutes=10)<maum_end>` |
+| 한 시간만 더 잘래 | `<maum_1>(command=snooze, minutes=60)<maum_end>` |
+
+## 대답
+
+| 문장 | 정답 |
+|---|---|
+| 응 | `<maum_2>(type=yes, value=none)<maum_end>` |
+| 네 | `<maum_2>(type=yes, value=none)<maum_end>` |
+| 아니 | `<maum_2>(type=no, value=none)<maum_end>` |
+| 아니요 | `<maum_2>(type=no, value=none)<maum_end>` |
+| 딱 좋아 | `<maum_2>(type=good, value=none)<maum_end>` |
+| 이거 좋네 | `<maum_2>(type=good, value=none)<maum_end>` |
+| 오전 | `<maum_2>(type=ampm, value=am)<maum_end>` |
+| 오후요 | `<maum_2>(type=ampm, value=pm)<maum_end>` |
+| 아니 오후야 | `<maum_2>(type=ampm, value=pm)<maum_end>` |
+| 오전 일곱 시 | `<maum_2>(type=time, value=am_07:00)<maum_end>` |
+| 일곱 시 반 | `<maum_2>(type=time, value=07:30)<maum_end>` |
+| 내일 | `<maum_2>(type=date, value=tomorrow)<maum_end>` |
+| 다리 | `<maum_2>(type=part, value=leg)<maum_end>` |
+| 머리요 | `<maum_2>(type=part, value=head)<maum_end>` |
+
+## 목적 자세 부르기
+
+| 문장 | 정답 |
+|---|---|
+| 독서 | `<maum_0>(command=call, purpose=read)<maum_end>` |
+
+## 대답
+
+| 문장 | 정답 |
+|---|---|
+| 내일만 | `<maum_2>(type=date, value=tomorrow)<maum_end>` |
+| 오 일 뒤만 | `<maum_2>(type=date, value=+5)<maum_end>` |
+| 이번만 | `<maum_2>(type=scope, value=once)<maum_end>` |
+| 앞으로 계속 | `<maum_2>(type=scope, value=always)<maum_end>` |
+| 그거 취소해 | `<maum_2>(type=cancel, value=none)<maum_end>` |
+| 취소 | `<maum_2>(type=cancel, value=none)<maum_end>` |
+| 십오 | `<maum_2>(type=number, value=15)<maum_end>` |
+| 칠이요 | `<maum_2>(type=number, value=7)<maum_end>` |
+| 이십삼 | `<maum_2>(type=number, value=23)<maum_end>` |
+| 오십육이요 | `<maum_2>(type=number, value=56)<maum_end>` |
+| 스물셋이요 | `<maum_2>(type=number, value=23)<maum_end>` |
+| 마흔여덟 | `<maum_2>(type=number, value=48)<maum_end>` |
+| 백구십팔 | `<maum_2>(type=number, value=198)<maum_end>` |
+| 영 | `<maum_2>(type=number, value=0)<maum_end>` |
+| 십오 십육 | `<maum_2>(type=unclear, value=none)<maum_end>` |
+| 칠 아니 팔 | `<maum_2>(type=number, value=8)<maum_end>` |
+| 칠 아니 팔 아니 구 아니 십 아니 팔이다 | `<maum_2>(type=number, value=8)<maum_end>` |
+
+## 지원하지 않는 요청
+
+| 문장 | 정답 |
+|---|---|
+| 불 좀 꺼줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 음악 틀어 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 에어컨 켜 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 허리가 아파 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 커튼 좀 쳐 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 마사지 해 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 침대 따뜻하게 해 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 물 좀 갖다 줄래 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 문 잠가 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+| 라디오 켜 주세요 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+
+## 일반 대화
+
+| 문장 | 정답 |
+|---|---|
+| 안녕 | `<General_Conversation>()<maum_end>` |
+| 좋은 아침 | `<General_Conversation>()<maum_end>` |
+| 오늘 날씨 어때 | `<General_Conversation>()<maum_end>` |
+| 고마워 | `<General_Conversation>()<maum_end>` |
+| 너 이름이 뭐야 | `<General_Conversation>()<maum_end>` |
+| 오늘 너무 피곤하다 | `<General_Conversation>()<maum_end>` |
+| 배고프다 | `<General_Conversation>()<maum_end>` |
+| 심심해 | `<General_Conversation>()<maum_end>` |
+| 오늘 하루 길었어 | `<General_Conversation>()<maum_end>` |
+| 수고했어요 | `<General_Conversation>()<maum_end>` |
+
+## 자세 조절
+
+| 문장 | 정답 |
+|---|---|
+| 평평하게 해줘 | `<maum_0>(command=adjust, part=both, direction=down, amount=0, amount_type=target)<maum_end>` |
+| 머리 끝까지 올려 | `<maum_0>(command=adjust, part=head, direction=up, amount=max, amount_type=target)<maum_end>` |
+| 다리 최대한 내려 줘 | `<maum_0>(command=adjust, part=leg, direction=down, amount=max, amount_type=target)<maum_end>` |
+| 최대한 | `<maum_0>(command=adjust, part=none, direction=same, amount=max, amount_type=target)<maum_end>` |
+
+## 목적 자세 부르기
+
+| 문장 | 정답 |
+|---|---|
+| 기본으로 가자 | `<maum_0>(command=call, purpose=base)<maum_end>` |
+| 늘 하던 그 자세로 해줘 | `<maum_0>(command=call, purpose=base)<maum_end>` |
+
+## 기본 정하기
+
+| 문장 | 정답 |
+|---|---|
+| 이 자세 기본 자세로 저장해 | `<maum_0>(command=set_default, purpose=base)<maum_end>` |
+
+## 자세 조절
+
+| 문장 | 정답 |
+|---|---|
+| 올려 | `<maum_0>(command=adjust, part=none, direction=up, amount=none, amount_type=none)<maum_end>` |
+| 내려 주세요 | `<maum_0>(command=adjust, part=none, direction=down, amount=none, amount_type=none)<maum_end>` |
+
+## 대답
+
+| 문장 | 정답 |
+|---|---|
+| 불편해 | `<maum_2>(type=bad, value=none)<maum_end>` |
+| 별로야 | `<maum_2>(type=bad, value=none)<maum_end>` |
+| 이십구 일 | `<maum_2>(type=date, value=D29)<maum_end>` |
+
+## 알람 설정
+
+| 문장 | 정답 |
+|---|---|
+| 삼십 분 뒤에 깨워 줘 | `<maum_1>(command=set, date=none, ampm=none, time=00:30, time_type=relative, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 한 시간 뒤에 알람 울려 주세요 | `<maum_1>(command=set, date=none, ampm=none, time=01:00, time_type=relative, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 이십구 일 아침 여섯 시에 알람 맞춰줘 | `<maum_1>(command=set, date=D29, ampm=am, time=06:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+
+## 알람 시각 바꾸기
+
+| 문장 | 정답 |
+|---|---|
+| 아침 알람 삼십 분 당겨 줘 | `<maum_1>(command=change_time, target=none, target_ampm=am, target_days=none, date=none, ampm=none, time=00:30, time_type=earlier, scope=none)<maum_end>` |
+| 일곱 시 알람 십 분 늦춰 | `<maum_1>(command=change_time, target=07:00, target_ampm=none, target_days=none, date=none, ampm=none, time=00:10, time_type=later, scope=none)<maum_end>` |
+
+## 알람 종류 바꾸기
+
+| 문장 | 정답 |
+|---|---|
+| 내일은 침대에서 나와야 꺼지게 해줘 | `<maum_1>(command=change_type, target=none, target_ampm=none, target_days=none, date=tomorrow, type=leave_bed, scope=once)<maum_end>` |
+
+## 질문 알람 난이도 바꾸기
+
+| 문장 | 정답 |
+|---|---|
+| 알람 문제 두 자리로 내 줘 | `<maum_1>(command=change_level, target=none, target_ampm=none, target_days=none, level=two)<maum_end>` |
+| 문제 너무 쉬워 | `<maum_1>(command=change_level, target=none, target_ampm=none, target_days=none, level=up)<maum_end>` |
+| 알람 덧셈 한 자리로 바꿔 주세요 | `<maum_1>(command=change_level, target=none, target_ampm=none, target_days=none, level=one)<maum_end>` |
+
+## 잠시 끄기
+
+| 문장 | 정답 |
+|---|---|
+| 이십칠 일까지 알람 다 꺼 | `<maum_1>(command=disable, target=all, target_ampm=none, target_days=none, until=D27, period=none)<maum_end>` |
+| 오 일간 알람 꺼 줘 | `<maum_1>(command=disable, target=none, target_ampm=none, target_days=none, until=none, period=5)<maum_end>` |
+
+## 다시 켜기
+
+| 문장 | 정답 |
+|---|---|
+| 알람 다 다시 켜 | `<maum_1>(command=enable, target=all, target_ampm=none, target_days=none)<maum_end>` |
+
+## 삭제
+
+| 문장 | 정답 |
+|---|---|
+| 수요일 오전 일곱 시 알람 삭제해 | `<maum_1>(command=delete, target=07:00, target_ampm=am, target_days=wed)<maum_end>` |
+| 알람 전부 지워 줘 | `<maum_1>(command=delete, target=all, target_ampm=none, target_days=none)<maum_end>` |
+
+## 앱에서만 되는 요청
+
+| 문장 | 정답 |
+|---|---|
+| 알람 소리 좀 줄여 | `<maum_3>(reason=app_only)<maum_end>` |
+| 알람 소리 키워 줘 | `<maum_3>(reason=app_only)<maum_end>` |
+
+## 지원하지 않는 요청
+
+| 문장 | 정답 |
+|---|---|
+| 삼십 분 뒤에 음악 틀어 줘 | `<maum_3>(reason=out_of_scope)<maum_end>` |
+
+## 예약 취소
+
+| 문장 | 정답 |
+|---|---|
+| 오늘은 그냥 안 잘래 | `<maum_0>(command=cancel_reserve, purpose=sleep, confirm=yes)<maum_end>` |
+
+## 예약 늦추기
+
+| 문장 | 정답 |
+|---|---|
+| 독서 자세 예약 삼십 분 늦춰 줘 | `<maum_0>(command=change_reserve, purpose=read, date=none, ampm=none, time=00:30, time_type=later)<maum_end>` |
+
+## 알람 설정
+
+| 문장 | 정답 |
+|---|---|
+| 한 시간 뒤에 소리 좀 내 줘 | `<maum_1>(command=set, date=none, ampm=none, time=01:00, time_type=relative, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+| 이십사 시에 깨워 줘 | `<maum_1>(command=set, date=none, ampm=none, time=24:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>` |
+
+## 안내 요청
+
+| 문장 | 정답 |
+|---|---|
+| 몇 시야 | `<maum_4>(command=tell_time)<maum_end>` |
+| 지금 몇 시예요 | `<maum_4>(command=tell_time)<maum_end>` |
+| 뭐라고 | `<maum_4>(command=repeat_last)<maum_end>` |
+| 다시 말해 줘 | `<maum_4>(command=repeat_last)<maum_end>` |
+| 알람 뭐 있어 | `<maum_4>(command=tell_alarms)<maum_end>` |
+| 내일 알람 몇 시야 | `<maum_4>(command=tell_alarms)<maum_end>` |
