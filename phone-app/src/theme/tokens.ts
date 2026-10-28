@@ -18,6 +18,8 @@ export const color = {
   grab: '#cbbdb7',
   line: '#e2d8d3',
   switchOff: '#d8ccc6',
+  // 고를 수 없는 날·달 버튼
+  disabled: '#c4b6b0',
   white: '#ffffff',
 } as const
 
@@ -69,4 +71,7 @@ export const motion = {
   switch: { duration: 250, bezier: [0.32, 0.72, 0, 1] },
   rippleIn: { duration: 420, bezier: [0.2, 0.8, 0.2, 1] },
   rippleOut: { duration: 260 },
+  // 목록 줄 펼침: 칸이 늘고 줄면서 화살표가 아래로 돈다
+  rowPanel: { duration: 550, bezier: [0.4, 0, 0.2, 1] },
+  rowArrow: { duration: 450, bezier: [0.4, 0, 0.2, 1] },
 } as const
