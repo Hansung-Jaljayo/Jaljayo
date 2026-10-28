@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  AccessibilityInfo,
   Animated,
   BackHandler,
   Easing,
@@ -14,6 +13,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { color, motion, radius } from '@/theme/tokens'
+
+import { useReduceMotion } from './useReduceMotion'
 
 type Props = {
   open: boolean
@@ -30,15 +31,9 @@ export function BottomSheet({ open, onClose, tall, children }: Props) {
   // 닫히는 움직임이 끝날 때까지는 그려 둔다
   const [mounted, setMounted] = useState(open)
   if (open && !mounted) setMounted(true)
-  const [reduceMotion, setReduceMotion] = useState(false)
+  const reduceMotion = useReduceMotion()
   const [shown] = useState(() => new Animated.Value(open ? 1 : 0))
   const [drag] = useState(() => new Animated.Value(0))
-
-  useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion)
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion)
-    return () => sub.remove()
-  }, [])
 
   useEffect(() => {
     // 닫힘은 조금 더 빠르게
