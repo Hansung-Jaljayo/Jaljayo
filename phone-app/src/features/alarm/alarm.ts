@@ -27,8 +27,8 @@ export const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 export const WAY_NAMES: Record<AlarmWay, string> = {
   basic: '기본',
   leave_bed: '침대 이탈',
-  q1: '질문 · 한 자리',
-  q2: '질문 · 두 자리',
+  q1: '질문 · 한 자리 덧셈',
+  q2: '질문 · 두 자리 덧셈',
 }
 
 // 끄는 방법 펼친 칸의 고르는 칸들
