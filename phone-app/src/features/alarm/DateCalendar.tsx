@@ -121,8 +121,9 @@ export function DateCalendar({ value, time, onPick }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // 시안은 달력 왼쪽에만 16을 두고 7칸(44씩)이 줄 오른쪽 끝까지 닿는다
-  cal: { gap: space[4], paddingLeft: space[16] },
+  // 7칸(44씩)을 줄 가운데에 두어 좌우 여백을 같게 한다(360 화면에서 양쪽 8).
+  // 시안은 왼쪽에만 16을 두어 오른쪽 끝에 붙어 있었다
+  cal: { gap: space[4], paddingHorizontal: space[8] },
   head: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   monthButton: { width: 44, height: 44, borderRadius: radius[22], alignItems: 'center', justifyContent: 'center' },
   month: { fontFamily: font.bold, fontSize: 17, color: color.fg },
