@@ -1,4 +1,4 @@
-import { type ComponentRef, useRef, useState } from 'react'
+import { type ComponentRef, useEffect, useRef, useState } from 'react'
 import {
   Animated,
   Easing,
@@ -21,14 +21,16 @@ type Props = Omit<PressableProps, 'style' | 'children'> & {
   children?: React.ReactNode
 }
 
+type RippleState = { key: number; x: number; y: number; d: number; released: boolean }
+
 // 시안의 "누를 때 효과": 누른 점에서 가장 먼 모서리까지 닿는 원이 퍼지고, 손을 떼면 사라진다.
 // 갤럭시와 아이폰이 같은 모양이 되게 직접 그린다.
+// 누를 때마다 물결을 새로 하나씩 만들어, 연달아 눌러도 매번 처음부터 퍼진다.
 export function RippleButton({ style, rippleColor = color.fg, children, onPressIn, onPressOut, disabled, ...rest }: Props) {
   const host = useRef<ComponentRef<typeof View>>(null)
   const size = useRef({ w: 0, h: 0 })
-  const [ripple, setRipple] = useState<{ x: number; y: number; d: number; key: number } | null>(null)
-  const [scale] = useState(() => new Animated.Value(0))
-  const [opacity] = useState(() => new Animated.Value(0))
+  const nextKey = useRef(0)
+  const [ripples, setRipples] = useState<RippleState[]>([])
 
   const onLayout = (e: LayoutChangeEvent) => {
     size.current = { w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height }
@@ -41,26 +43,17 @@ export function RippleButton({ style, rippleColor = color.fg, children, onPressI
     const x = box ? e.nativeEvent.pageX - box.left : e.nativeEvent.locationX
     const y = box ? e.nativeEvent.pageY - box.top : e.nativeEvent.locationY
     const d = 2 * Math.hypot(Math.max(x, w - x), Math.max(y, h - y)) + 2
-    scale.stopAnimation()
-    opacity.stopAnimation()
-    scale.setValue(0)
-    opacity.setValue(1)
-    setRipple({ x, y, d, key: Date.now() })
-    Animated.timing(scale, {
-      toValue: 1,
-      duration: motion.rippleIn.duration,
-      easing: Easing.bezier(...motion.rippleIn.bezier),
-      useNativeDriver: true,
-    }).start()
+    const key = nextKey.current++
+    // 이전 물결은 손을 뗀 것으로 보고 사라지게 둔다
+    setRipples((rs) => [...rs.map((r) => ({ ...r, released: true })), { key, x, y, d, released: false }])
   }
 
   const end = () => {
-    Animated.timing(opacity, {
-      toValue: 0,
-      duration: motion.rippleOut.duration,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start()
+    setRipples((rs) => rs.map((r) => (r.released ? r : { ...r, released: true })))
+  }
+
+  const remove = (key: number) => {
+    setRipples((rs) => rs.filter((r) => r.key !== key))
   }
 
   return (
@@ -80,26 +73,68 @@ export function RippleButton({ style, rippleColor = color.fg, children, onPressI
       style={[styles.host, style]}
     >
       {children}
-      {ripple && (
-        <Animated.View
-          key={ripple.key}
-          pointerEvents="none"
-          style={[
-            styles.ripple,
-            {
-              width: ripple.d,
-              height: ripple.d,
-              borderRadius: ripple.d / 2,
-              left: ripple.x - ripple.d / 2,
-              top: ripple.y - ripple.d / 2,
-              backgroundColor: rippleColor,
-              opacity: Animated.multiply(opacity, 0.12),
-              transform: [{ scale }],
-            },
-          ]}
+      {ripples.map((r) => (
+        <Ripple
+          key={r.key}
+          x={r.x}
+          y={r.y}
+          d={r.d}
+          released={r.released}
+          color={rippleColor}
+          onDone={() => remove(r.key)}
         />
-      )}
+      ))}
     </Pressable>
+  )
+}
+
+// 물결 하나. 자기 애니메이션 값을 따로 가져서 다른 물결과 섞이지 않는다
+type RippleProps = Omit<RippleState, 'key'> & { color: string; onDone: () => void }
+
+function Ripple({ x, y, d, released, color: fill, onDone }: RippleProps) {
+  const [scale] = useState(() => new Animated.Value(0))
+  const [opacity] = useState(() => new Animated.Value(1))
+  const [faded] = useState(() => Animated.multiply(opacity, 0.12))
+  useEffect(() => {
+    Animated.timing(scale, {
+      toValue: 1,
+      duration: motion.rippleIn.duration,
+      easing: Easing.bezier(...motion.rippleIn.bezier),
+      useNativeDriver: true,
+    }).start()
+  }, [scale])
+
+  useEffect(() => {
+    if (!released) return
+    Animated.timing(opacity, {
+      toValue: 0,
+      duration: motion.rippleOut.duration,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) onDone()
+    })
+    // 손을 뗀 순간 한 번만 사라지기 시작하면 되므로 onDone은 의존성에서 뺀다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [released, opacity])
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.ripple,
+        {
+          width: d,
+          height: d,
+          borderRadius: d / 2,
+          left: x - d / 2,
+          top: y - d / 2,
+          backgroundColor: fill,
+          opacity: faded,
+          transform: [{ scale }],
+        },
+      ]}
+    />
   )
 }
 
