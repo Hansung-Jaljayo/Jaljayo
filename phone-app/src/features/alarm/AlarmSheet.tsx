@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native'
 
 import { BottomSheet } from '@/components/BottomSheet'
 import { ExpandRow } from '@/components/ExpandRow'
+import { OptionRows } from '@/components/OptionRows'
 import { RippleButton } from '@/components/RippleButton'
 import { Switch } from '@/components/Switch'
 import { TimeWheels } from '@/components/TimeWheels'
@@ -21,12 +22,13 @@ import {
   pauseLabel,
   VOLUME_NAMES,
   WAY_NAMES,
+  WAY_OPTIONS,
   whenLabel,
 } from './alarm'
 import { DateCalendar } from './DateCalendar'
 
 // 펼칠 수 있는 줄. 한 번에 하나만 펼친다
-type RowKey = 'date'
+type RowKey = 'date' | 'way'
 
 type Props = {
   open: boolean
@@ -114,7 +116,23 @@ export function AlarmSheet({ open, onClose, onSave }: Props) {
               />
             </ExpandRow>
           )}
-          <ExpandRow name="끄는 방법" value={WAY_NAMES[draft.way]} />
+          <ExpandRow
+            name="끄는 방법"
+            value={WAY_NAMES[draft.way]}
+            open={openRow === 'way'}
+            onPress={() => toggleRow('way')}
+          >
+            {/* 고르면 줄을 접는다 */}
+            <OptionRows
+              label="끄는 방법"
+              options={WAY_OPTIONS}
+              value={draft.way}
+              onPick={(way) => {
+                update({ way })
+                setOpenRow(null)
+              }}
+            />
+          </ExpandRow>
           <ExpandRow name="소리 크기" value={VOLUME_NAMES[draft.volume]} />
           <View style={[styles.row, styles.switchRow]}>
             <View>
