@@ -12,11 +12,15 @@ import {
   type AlarmDraft,
   DAY_NAMES,
   DAY_ORDER,
+  clockLabel,
   dateLabel,
-  fixDate,
+  fixDraft,
   newAlarmDraft,
+  nextRings,
+  pauseLabel,
   VOLUME_NAMES,
   WAY_NAMES,
+  whenLabel,
 } from './alarm'
 
 type Props = {
@@ -26,7 +30,8 @@ type Props = {
   onSave?: (draft: AlarmDraft) => void
 }
 
-// 피그마 "알람 창 / 한 번 알람": 알람 탭의 "알람 추가"로 여는 키 큰 시트. 요일을 고르지 않으면 한 번 울리는 알람이다
+// 알람 탭의 "알람 추가"로 여는 키 큰 시트. 피그마 "알람 창 / 한 번 알람"과 "알람 창 / 반복 알람"은 이 창의 두 모습이다.
+// 요일을 고르지 않으면 한 번 울리는 알람, 고르면 반복 알람이다
 export function AlarmSheet({ open, onClose, onSave }: Props) {
   const [draft, setDraft] = useState<AlarmDraft>(newAlarmDraft)
   // 열 때마다 새 알람으로 시작한다
@@ -36,8 +41,10 @@ export function AlarmSheet({ open, onClose, onSave }: Props) {
     if (open) setDraft(newAlarmDraft())
   }
 
-  const update = (patch: Partial<AlarmDraft>) => setDraft((d) => fixDate({ ...d, ...patch }))
+  const update = (patch: Partial<AlarmDraft>) => setDraft((d) => fixDraft({ ...d, ...patch }))
   const repeat = draft.days.length > 0
+  // 건너뛰기가 켜져 있으면 고른 그 날, 꺼져 있으면 켰을 때 건너뛸 다음 회차
+  const skipOff = draft.skipOff ?? nextRings(draft)[0]
 
   const toggleDay = (day: number) =>
     update({ days: draft.days.includes(day) ? draft.days.filter((x) => x !== day) : [...draft.days, day] })
@@ -66,11 +73,11 @@ export function AlarmSheet({ open, onClose, onSave }: Props) {
               <RippleButton
                 key={day}
                 style={[styles.day, on && styles.dayOn]}
-                rippleColor={on ? color['on-ink'] : color.fg}
+                rippleColor={color.fg}
                 accessibilityState={{ selected: on }}
                 onPress={() => toggleDay(day)}
               >
-                <Text style={[styles.dayText, on && styles.dayTextOn]}>{DAY_NAMES[day]}</Text>
+                <Text style={styles.dayText}>{DAY_NAMES[day]}</Text>
               </RippleButton>
             )
           })}
@@ -92,6 +99,26 @@ export function AlarmSheet({ open, onClose, onSave }: Props) {
               accessibilityLabel="알람 때 머리 올리기"
             />
           </View>
+          {/* 건너뛰기·잠시 끄기는 반복 알람에만 */}
+          {repeat && (
+            <View style={[styles.row, styles.switchRow]}>
+              <View>
+                <Text style={styles.rowName}>다음 한 번 건너뛰기</Text>
+                {skipOff != null && (
+                  <Text style={styles.rowSub}>
+                    {whenLabel(skipOff)} {clockLabel(draft.time)}만 울리지 않아요
+                  </Text>
+                )}
+              </View>
+              <Switch
+                value={draft.skipOff != null}
+                // 켜는 순간 보이는 다음 회차의 날짜를 저장한다. 그 뒤로는 그 날짜만 건너뛴다
+                onValueChange={(on) => update({ skipOff: on ? (nextRings(draft)[0] ?? null) : null })}
+                accessibilityLabel="다음 한 번 건너뛰기"
+              />
+            </View>
+          )}
+          {repeat && <RowButton name="잠시 끄기" value={pauseLabel(draft.pauseTo)} />}
         </View>
       </View>
 
@@ -140,9 +167,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayOn: { backgroundColor: color.ink },
+  dayOn: { backgroundColor: color.accent },
   dayText: { fontFamily: font.bold, fontSize: 17, color: color.fg },
-  dayTextOn: { color: color['on-ink'] },
 
   // 줄 사이 선은 아래쪽 1, 다음 줄과 겹쳐 한 줄로 보인다
   row: {
