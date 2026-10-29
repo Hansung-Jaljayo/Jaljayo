@@ -41,6 +41,13 @@ export const WAY_OPTIONS: { value: AlarmWay; name: string; sub: string }[] = [
 
 export const VOLUME_NAMES: Record<AlarmVolume, string> = { 1: '작게', 2: '보통', 3: '크게' }
 
+// 소리 크기 펼친 칸의 고르는 칸들
+export const VOLUME_OPTIONS: { value: AlarmVolume; name: string }[] = [
+  { value: 1, name: '작게' },
+  { value: 2, name: '보통' },
+  { value: 3, name: '크게' },
+]
+
 export const nowMinutes = (now = new Date()) => now.getHours() * 60 + now.getMinutes()
 
 // 반복 알람이 앞으로 울릴 날(오늘부터 며칠 뒤)을 count개. 잠시 꺼 둔 기간과 건너뛸 날은 뺀다
