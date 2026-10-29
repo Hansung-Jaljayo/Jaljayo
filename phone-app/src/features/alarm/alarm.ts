@@ -27,9 +27,17 @@ export const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 export const WAY_NAMES: Record<AlarmWay, string> = {
   basic: '기본',
   leave_bed: '침대 이탈',
-  q1: '질문 · 한 자리',
-  q2: '질문 · 두 자리',
+  q1: '질문 · 한 자리 덧셈',
+  q2: '질문 · 두 자리 덧셈',
 }
+
+// 끄는 방법 펼친 칸의 고르는 칸들
+export const WAY_OPTIONS: { value: AlarmWay; name: string; sub: string }[] = [
+  { value: 'basic', name: '기본', sub: '버튼으로 꺼요' },
+  { value: 'leave_bed', name: '침대 이탈', sub: '침대에서 나와야 꺼져요' },
+  { value: 'q1', name: '질문 · 한 자리 덧셈', sub: '예: 7 + 8' },
+  { value: 'q2', name: '질문 · 두 자리 덧셈', sub: '예: 36 + 27' },
+]
 
 export const VOLUME_NAMES: Record<AlarmVolume, string> = { 1: '작게', 2: '보통', 3: '크게' }
 
