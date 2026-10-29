@@ -21,6 +21,7 @@ import {
   nextRings,
   pauseLabel,
   VOLUME_NAMES,
+  VOLUME_OPTIONS,
   WAY_NAMES,
   WAY_OPTIONS,
   whenLabel,
@@ -28,7 +29,7 @@ import {
 import { DateCalendar } from './DateCalendar'
 
 // 펼칠 수 있는 줄. 한 번에 하나만 펼친다
-type RowKey = 'date' | 'way'
+type RowKey = 'date' | 'way' | 'volume'
 
 type Props = {
   open: boolean
@@ -133,7 +134,23 @@ export function AlarmSheet({ open, onClose, onSave }: Props) {
               }}
             />
           </ExpandRow>
-          <ExpandRow name="소리 크기" value={VOLUME_NAMES[draft.volume]} />
+          <ExpandRow
+            name="소리 크기"
+            value={VOLUME_NAMES[draft.volume]}
+            open={openRow === 'volume'}
+            onPress={() => toggleRow('volume')}
+          >
+            {/* 고르면 줄을 접는다 */}
+            <OptionRows
+              label="소리 크기"
+              options={VOLUME_OPTIONS}
+              value={draft.volume}
+              onPick={(volume) => {
+                update({ volume })
+                setOpenRow(null)
+              }}
+            />
+          </ExpandRow>
           <View style={[styles.row, styles.switchRow]}>
             <View>
               <Text style={styles.rowName}>알람 때 머리 올리기</Text>
