@@ -18,6 +18,8 @@ export type AlarmDraft = {
   skipOff: number | null
   // 반복 알람만: 잠시 꺼 둔 마지막 날(오늘부터 며칠 뒤, 그날까지 울리지 않음)
   pauseTo: number | null
+  // 반복 알람만: 잠시 끄기로 고른 기간(3·7·14일)
+  pauseDays: number | null
 }
 
 export const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
@@ -72,14 +74,15 @@ export function fixDraft(d: AlarmDraft, now = nowMinutes()): AlarmDraft {
       return { ...d, skipOff: null }
     return d
   }
-  if (d.skipOff != null || d.pauseTo != null) d = { ...d, skipOff: null, pauseTo: null }
+  if (d.skipOff != null || d.pauseTo != null || d.pauseDays != null)
+    d = { ...d, skipOff: null, pauseTo: null, pauseDays: null }
   if (d.dateOff == null || (d.dateOff === 0 && d.time <= now)) return { ...d, dateOff: d.time > now ? 0 : 1 }
   return d
 }
 
 // 새 알람: 오전 7:00, 끄는 방법 기본, 소리 보통
 export const newAlarmDraft = (): AlarmDraft =>
-  fixDraft({ time: 7 * 60, days: [], dateOff: null, way: 'basic', volume: 2, lift: false, skipOff: null, pauseTo: null })
+  fixDraft({ time: 7 * 60, days: [], dateOff: null, way: 'basic', volume: 2, lift: false, skipOff: null, pauseTo: null, pauseDays: null })
 
 // "10월 16일 금요일"
 export function dateLabel(off: number | null, today = new Date()) {
@@ -107,6 +110,22 @@ export function pauseLabel(pauseTo: number | null, today = new Date()) {
   const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + pauseTo)
   return `${d.getMonth() + 1}월 ${d.getDate()}일까지`
 }
+
+// 잠시 끄기 펼친 칸의 고르는 칸들. 0은 끄지 않음
+export const PAUSE_OPTIONS = [
+  { value: 0, name: '끄지 않음' },
+  { value: 3, name: '3일' },
+  { value: 7, name: '1주' },
+  { value: 14, name: '2주' },
+]
+
+// 잠시 끄기는 실제로 다음에 울릴 회차(건너뛰기 반영)가 오늘이면 오늘부터, 아니면 내일부터 센다
+export function pauseFrom(d: AlarmDraft, now = nowMinutes()) {
+  return nextRings({ ...d, pauseTo: null }, 1, now)[0] === 0 ? 0 : 1
+}
+
+// days일 동안 끄면 울리지 않는 마지막 날(오늘부터 며칠 뒤)
+export const pauseEnd = (d: AlarmDraft, days: number, now = nowMinutes()) => pauseFrom(d, now) + days - 1
 
 // 알람 탭 목록의 알람 한 개
 export type Alarm = AlarmDraft & { id: number; on: boolean }
