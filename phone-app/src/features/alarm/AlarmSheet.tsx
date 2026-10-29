@@ -33,22 +33,25 @@ type RowKey = 'date' | 'way' | 'volume'
 
 type Props = {
   open: boolean
+  // 고칠 알람. 없으면 새 알람을 추가한다
+  alarm?: AlarmDraft | null
   onClose: () => void
   // 저장은 흉내 내지 않는다. 침대에 보내고 침대가 저장했다고 답할 때 화면이 "저장되었어요"로 바뀐다
   onSave?: (draft: AlarmDraft) => void
 }
 
-// 알람 탭의 "알람 추가"로 여는 키 큰 시트. 피그마 "알람 창 / 한 번 알람"과 "알람 창 / 반복 알람"은 이 창의 두 모습이다.
+// 알람 탭의 "알람 추가"나 알람 줄로 여는 키 큰 시트. 알람 줄로 열면 그 알람을 고치는 "알람 고치기"가 된다.
+// 피그마 "알람 창 / 한 번 알람"과 "알람 창 / 반복 알람"은 이 창의 두 모습이다.
 // 요일을 고르지 않으면 한 번 울리는 알람, 고르면 반복 알람이다
-export function AlarmSheet({ open, onClose, onSave }: Props) {
+export function AlarmSheet({ open, alarm, onClose, onSave }: Props) {
   const [draft, setDraft] = useState<AlarmDraft>(newAlarmDraft)
   const [openRow, setOpenRow] = useState<RowKey | null>(null)
-  // 열 때마다 새 알람으로, 줄은 모두 접은 채 시작한다
+  // 열 때마다 새 알람(고칠 때는 그 알람)으로, 줄은 모두 접은 채 시작한다
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
-      setDraft(newAlarmDraft())
+      setDraft(alarm ? fixDraft(alarm) : newAlarmDraft())
       setOpenRow(null)
     }
   }
@@ -68,7 +71,7 @@ export function AlarmSheet({ open, onClose, onSave }: Props) {
       {/* shead · 시트 머리 */}
       <View style={styles.head}>
         <Text style={styles.title} role="heading">
-          알람 추가
+          {alarm ? '알람 고치기' : '알람 추가'}
         </Text>
         <RippleButton style={styles.close} onPress={onClose} accessibilityLabel="닫기">
           <Image source={require('../../../assets/icons/x.svg')} style={styles.icon22} />
