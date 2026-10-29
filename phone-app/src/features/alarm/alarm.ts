@@ -107,3 +107,79 @@ export function pauseLabel(pauseTo: number | null, today = new Date()) {
   const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + pauseTo)
   return `${d.getMonth() + 1}월 ${d.getDate()}일까지`
 }
+
+// 알람 탭 목록의 알람 한 개
+export type Alarm = AlarmDraft & { id: number; on: boolean }
+
+// 요약 카드 아래 줄: "침대 이탈 알람"
+export const WAY_FULL_NAMES: Record<AlarmWay, string> = {
+  basic: '기본 알람',
+  leave_bed: '침대 이탈 알람',
+  q1: '질문 알람',
+  q2: '질문 알람',
+}
+
+// 시각을 작은 글과 큰 글로: { ampm: '오전', hm: '7:00' }
+export function clockParts(time: number) {
+  const h = Math.floor(time / 60)
+  return { ampm: h < 12 ? '오전' : '오후', hm: `${h % 12 || 12}:${String(time % 60).padStart(2, '0')}` }
+}
+
+// 반복 요일: "평일", "주말", "매일", "월 수 금"
+export function daysLabel(days: number[]) {
+  const k = [...days].sort().join('')
+  if (days.length === 7) return '매일'
+  if (k === '12345') return '평일'
+  if (k === '06') return '주말'
+  return DAY_ORDER.filter((d) => days.includes(d))
+    .map((d) => DAY_NAMES[d])
+    .join(' ')
+}
+
+// "10월 17일"
+export function monthDayLabel(off: number, today = new Date()) {
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + off)
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`
+}
+
+// 목록 줄 아래 글: 반복이면 요일, 한 번이면 날짜
+export const alarmMetaLabel = (a: AlarmDraft) =>
+  a.days.length ? daysLabel(a.days) : a.dateOff != null ? monthDayLabel(a.dateOff) : '한 번'
+
+// "8시간 30분 뒤", "1일 2시간 뒤"
+export function inLabel(mins: number) {
+  const d = Math.floor(mins / 1440)
+  const h = Math.floor((mins % 1440) / 60)
+  const m = mins % 60
+  if (d) return `${d}일 ${h}시간 뒤`
+  if (h) return `${h}시간${m ? ` ${m}분` : ''} 뒤`
+  return `${m}분 뒤`
+}
+
+// 켜진 알람 가운데 실제로 다음에 울릴 것. 없으면 null
+export function nextAlarm(alarms: Alarm[], now = nowMinutes(), today = new Date()) {
+  let best: { alarm: Alarm; off: number; mins: number } | null = null
+  for (const a of alarms) {
+    if (!a.on) continue
+    const off = a.days.length
+      ? nextRings(a, 1, now, today)[0]
+      : a.dateOff != null && (a.dateOff > 0 || a.time > now)
+        ? a.dateOff
+        : undefined
+    if (off == null) continue
+    const mins = off * 1440 + a.time - now
+    if (!best || mins < best.mins) best = { alarm: a, off, mins }
+  }
+  return best
+}
+
+// 처음 목록: 시안(index.html)의 보기 알람 세 개. 평일 알람은 내일 한 번 건너뛴다
+export const sampleAlarms = (): Alarm[] => [
+  { ...fixDraft({ ...newAlarmDraft(), days: [1, 2, 3, 4, 5], skipOff: 1 }), id: 1, on: true },
+  {
+    ...fixDraft({ ...newAlarmDraft(), time: 8 * 60 + 30, days: [0, 6], way: 'leave_bed', volume: 3, lift: true }),
+    id: 2,
+    on: true,
+  },
+  { ...fixDraft({ ...newAlarmDraft(), time: 14 * 60, dateOff: 2, way: 'q2' }), id: 3, on: false },
+]
