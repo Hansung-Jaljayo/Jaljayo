@@ -17,8 +17,11 @@ import {
   clockLabel,
   dateLabel,
   fixDraft,
+  monthDayLabel,
   newAlarmDraft,
   nextRings,
+  PAUSE_OPTIONS,
+  pauseEnd,
   pauseLabel,
   VOLUME_NAMES,
   VOLUME_OPTIONS,
@@ -29,7 +32,7 @@ import {
 import { DateCalendar } from './DateCalendar'
 
 // 펼칠 수 있는 줄. 한 번에 하나만 펼친다
-type RowKey = 'date' | 'way' | 'volume'
+type RowKey = 'date' | 'way' | 'volume' | 'pause'
 
 type Props = {
   open: boolean
@@ -38,14 +41,18 @@ type Props = {
   onClose: () => void
   // 저장은 흉내 내지 않는다. 침대에 보내고 침대가 저장했다고 답할 때 화면이 "저장되었어요"로 바뀐다
   onSave?: (draft: AlarmDraft) => void
+  // 고치는 알람 지우기. 저장처럼 침대가 지웠다고 답한 뒤에 목록에서 빠진다
+  onDelete?: () => void
 }
 
 // 알람 탭의 "알람 추가"나 알람 줄로 여는 키 큰 시트. 알람 줄로 열면 그 알람을 고치는 "알람 고치기"가 된다.
 // 피그마 "알람 창 / 한 번 알람"과 "알람 창 / 반복 알람"은 이 창의 두 모습이다.
 // 요일을 고르지 않으면 한 번 울리는 알람, 고르면 반복 알람이다
-export function AlarmSheet({ open, alarm, onClose, onSave }: Props) {
+export function AlarmSheet({ open, alarm, onClose, onSave, onDelete }: Props) {
   const [draft, setDraft] = useState<AlarmDraft>(newAlarmDraft)
   const [openRow, setOpenRow] = useState<RowKey | null>(null)
+  // 이 창에서 잠시 끄기를 새로 골랐는지. 고른 뒤 시각·요일을 바꾸면 끄는 기간을 다시 센다
+  const [pauseNew, setPauseNew] = useState(false)
   // 열 때마다 새 알람(고칠 때는 그 알람)으로, 줄은 모두 접은 채 시작한다
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
@@ -53,10 +60,15 @@ export function AlarmSheet({ open, alarm, onClose, onSave }: Props) {
     if (open) {
       setDraft(alarm ? fixDraft(alarm) : newAlarmDraft())
       setOpenRow(null)
+      setPauseNew(false)
     }
   }
 
-  const update = (patch: Partial<AlarmDraft>) => setDraft((d) => fixDraft({ ...d, ...patch }))
+  const update = (patch: Partial<AlarmDraft>, recount = pauseNew) =>
+    setDraft((d) => {
+      const next = fixDraft({ ...d, ...patch })
+      return recount && next.pauseDays ? { ...next, pauseTo: pauseEnd(next, next.pauseDays) } : next
+    })
   const repeat = draft.days.length > 0
   // 건너뛰기가 켜져 있으면 고른 그 날, 꺼져 있으면 켰을 때 건너뛸 다음 회차
   const skipOff = draft.skipOff ?? nextRings(draft)[0]
@@ -184,15 +196,46 @@ export function AlarmSheet({ open, alarm, onClose, onSave }: Props) {
               />
             </View>
           )}
-          {repeat && <ExpandRow name="잠시 끄기" value={pauseLabel(draft.pauseTo)} />}
+          {repeat && (
+            <ExpandRow
+              name="잠시 끄기"
+              value={pauseLabel(draft.pauseTo)}
+              open={openRow === 'pause'}
+              onPress={() => toggleRow('pause')}
+            >
+              {/* 고를 때마다 끝나는 날을 보여 준다. 고르면 줄을 접는다 */}
+              <OptionRows
+                label="잠시 끄기"
+                options={PAUSE_OPTIONS.map((o) => ({
+                  ...o,
+                  sub: o.value ? `${monthDayLabel(pauseEnd(draft, o.value))}까지 울리지 않아요` : undefined,
+                }))}
+                value={draft.pauseTo != null ? (draft.pauseDays ?? 0) : 0}
+                onPick={(days) => {
+                  setPauseNew(days > 0)
+                  update({ pauseDays: days || null, pauseTo: null }, days > 0)
+                  setOpenRow(null)
+                }}
+              />
+            </ExpandRow>
+          )}
         </View>
       </View>
 
-      {/* action · 시트 버튼 */}
-      <RippleButton style={styles.action} rippleColor={color['on-ink']} onPress={() => onSave?.(draft)}>
-        <Image source={require('../../../assets/icons/check.svg')} style={[styles.icon22, styles.checkIcon]} />
-        <Text style={styles.actionText}>저장</Text>
-      </RippleButton>
+      {/* actions · 버튼 묶음 */}
+      <View style={styles.actions}>
+        {/* action · 시트 버튼 */}
+        <RippleButton style={styles.action} rippleColor={color['on-ink']} onPress={() => onSave?.(draft)}>
+          <Image source={require('../../../assets/icons/check.svg')} style={[styles.icon22, styles.checkIcon]} />
+          <Text style={styles.actionText}>저장</Text>
+        </RippleButton>
+        {/* del · 지우기 버튼: 알람을 고칠 때만 */}
+        {alarm && (
+          <RippleButton style={styles.del} rippleColor={color.red} onPress={onDelete}>
+            <Text style={styles.delText}>이 알람 삭제</Text>
+          </RippleButton>
+        )}
+      </View>
     </BottomSheet>
   )
 }
@@ -235,6 +278,7 @@ const styles = StyleSheet.create({
   rowSub: { fontFamily: font.medium, fontSize: 15, color: color.muted },
   switchRow: { height: 55, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[12] },
 
+  actions: { gap: space[8] },
   action: {
     height: 60,
     borderRadius: radius[20],
@@ -247,4 +291,6 @@ const styles = StyleSheet.create({
   // 체크 그림 칸 양옆 빈 여백(약 3.6)을 잘라, 눈에 보이는 체크+글자가 가운데 오게
   checkIcon: { marginHorizontal: -3.6 },
   actionText: { fontFamily: font.bold, fontSize: 17, color: color['on-ink'] },
+  del: { height: 50, paddingHorizontal: space[6], alignItems: 'center', justifyContent: 'center' },
+  delText: { fontFamily: font.bold, fontSize: 17, color: color.red, textDecorationLine: 'underline' },
 })
