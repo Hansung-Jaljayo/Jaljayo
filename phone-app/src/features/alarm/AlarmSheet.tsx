@@ -12,17 +12,23 @@ import { color, font, radius, space } from '@/theme/tokens'
 
 import {
   type AlarmDraft,
+  type AlarmScope,
   DAY_NAMES,
   DAY_ORDER,
   clockLabel,
   dateLabel,
   fixDraft,
   monthDayLabel,
+  needsScope,
   newAlarmDraft,
   nextRings,
+  nowMinutes,
+  onceBase,
+  onceTarget,
   PAUSE_OPTIONS,
   pauseEnd,
   pauseLabel,
+  scopeLabel,
   VOLUME_NAMES,
   VOLUME_OPTIONS,
   WAY_NAMES,
@@ -40,7 +46,9 @@ type Props = {
   alarm?: AlarmDraft | null
   onClose: () => void
   // 저장은 흉내 내지 않는다. 침대에 보내고 침대가 저장했다고 답할 때 화면이 "저장되었어요"로 바뀐다
-  onSave?: (draft: AlarmDraft) => void
+  // 반복 알람의 시각·끄는 방법을 고치면 scope가 온다. 이번만이면 onceOff(오늘부터 며칠 뒤) 회차 하나만
+  // draft의 시각·끄는 방법으로 바꾸고, 반복의 시각·끄는 방법은 원래 알람 그대로 둔다
+  onSave?: (draft: AlarmDraft, scope?: AlarmScope, onceOff?: number) => void
   // 고치는 알람 지우기. 저장처럼 침대가 지웠다고 답한 뒤에 목록에서 빠진다
   onDelete?: () => void
 }
@@ -53,6 +61,8 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete }: Props) {
   const [openRow, setOpenRow] = useState<RowKey | null>(null)
   // 이 창에서 잠시 끄기를 새로 골랐는지. 고른 뒤 시각·요일을 바꾸면 끄는 기간을 다시 센다
   const [pauseNew, setPauseNew] = useState(false)
+  // 저장을 눌러 이번만·앞으로 계속을 묻는 중인지
+  const [asking, setAsking] = useState(false)
   // 열 때마다 새 알람(고칠 때는 그 알람)으로, 줄은 모두 접은 채 시작한다
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
@@ -61,17 +71,39 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete }: Props) {
       setDraft(alarm ? fixDraft(alarm) : newAlarmDraft())
       setOpenRow(null)
       setPauseNew(false)
+      setAsking(false)
     }
   }
 
-  const update = (patch: Partial<AlarmDraft>, recount = pauseNew) =>
+  // 묻는 중에 값을 바꾸면 묻기를 닫고 저장 버튼으로 되돌린다(묻는 글의 날짜가 바뀐 값과 어긋나지 않게)
+  const update = (patch: Partial<AlarmDraft>, recount = pauseNew) => {
+    setAsking(false)
     setDraft((d) => {
       const next = fixDraft({ ...d, ...patch })
       return recount && next.pauseDays ? { ...next, pauseTo: pauseEnd(next, next.pauseDays) } : next
     })
+  }
   const repeat = draft.days.length > 0
   // 건너뛰기가 켜져 있으면 고른 그 날, 꺼져 있으면 켰을 때 건너뛸 다음 회차
   const skipOff = draft.skipOff ?? nextRings(draft)[0]
+
+  const save = () => {
+    if (needsScope(alarm, draft)) setAsking(true)
+    else onSave?.(draft)
+  }
+
+  const saveScope = (scope: AlarmScope) => {
+    if (!alarm) return
+    if (scope === 'all') {
+      onSave?.(draft, 'all')
+      return
+    }
+    const off = onceTarget(alarm, draft, pauseNew)
+    if (off == null) return
+    // 바꿀 회차의 날에 고른 시각이 이미 지났으면 저장하지 않는다. 시안은 "이미 지난 시각이에요" 확인 창을 띄운다(확인 창은 아직 없음)
+    if (off * 1440 + draft.time <= nowMinutes()) return
+    onSave?.({ ...draft, pauseTo: onceBase(alarm, draft, pauseNew).pauseTo }, 'once', off)
+  }
 
   const toggleRow = (key: RowKey) => setOpenRow(openRow === key ? null : key)
 
@@ -222,13 +254,31 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete }: Props) {
         </View>
       </View>
 
+      {/* scope · 반복 알람을 이번만 바꿀지 앞으로 계속 바꿀지. 묻는 동안 저장 버튼은 숨긴다 */}
+      {asking && alarm && (
+        <View style={styles.scope}>
+          <Text style={styles.scopeText}>{scopeLabel(alarm, draft, pauseNew)}</Text>
+          {/* twin2 · 두 버튼 */}
+          <View style={styles.twin2}>
+            <RippleButton style={[styles.action, styles.half, styles.actionAlt]} rippleColor={color.fg} onPress={() => saveScope('once')}>
+              <Text style={[styles.actionText, styles.actionAltText]}>이번만</Text>
+            </RippleButton>
+            <RippleButton style={[styles.action, styles.half]} rippleColor={color['on-ink']} onPress={() => saveScope('all')}>
+              <Text style={styles.actionText}>앞으로 계속</Text>
+            </RippleButton>
+          </View>
+        </View>
+      )}
+
       {/* actions · 버튼 묶음 */}
       <View style={styles.actions}>
         {/* action · 시트 버튼 */}
-        <RippleButton style={styles.action} rippleColor={color['on-ink']} onPress={() => onSave?.(draft)}>
-          <Image source={require('../../../assets/icons/check.svg')} style={[styles.icon22, styles.checkIcon]} />
-          <Text style={styles.actionText}>저장</Text>
-        </RippleButton>
+        {!asking && (
+          <RippleButton style={styles.action} rippleColor={color['on-ink']} onPress={save}>
+            <Image source={require('../../../assets/icons/check.svg')} style={[styles.icon22, styles.checkIcon]} />
+            <Text style={styles.actionText}>저장</Text>
+          </RippleButton>
+        )}
         {/* del · 지우기 버튼: 알람을 고칠 때만 */}
         {alarm && (
           <RippleButton style={styles.del} rippleColor={color.red} onPress={onDelete}>
@@ -277,6 +327,13 @@ const styles = StyleSheet.create({
   rowName: { fontFamily: font.bold, fontSize: 17, color: color.fg },
   rowSub: { fontFamily: font.medium, fontSize: 15, color: color.muted },
   switchRow: { height: 55, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space[12] },
+
+  scope: { gap: space[8] },
+  scopeText: { fontFamily: font.semiBold, fontSize: 15, lineHeight: 22.5, color: color['fg-2'] },
+  twin2: { flexDirection: 'row', gap: space[8] },
+  half: { flex: 1 },
+  actionAlt: { backgroundColor: color.accent },
+  actionAltText: { color: color.fg },
 
   actions: { gap: space[8] },
   action: {
