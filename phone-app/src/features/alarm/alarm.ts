@@ -127,6 +127,40 @@ export function pauseFrom(d: AlarmDraft, now = nowMinutes()) {
 // days일 동안 끄면 울리지 않는 마지막 날(오늘부터 며칠 뒤)
 export const pauseEnd = (d: AlarmDraft, days: number, now = nowMinutes()) => pauseFrom(d, now) + days - 1
 
+// 반복 알람을 고칠 때 바꾸는 범위. 이번만은 다음 한 회차의 시각·끄는 방법만 바꾼다
+export type AlarmScope = 'once' | 'all'
+
+// 반복 알람을 반복인 채로 시각이나 끄는 방법을 바꾸면 저장 전에 이번만·앞으로 계속을 묻는다
+export const needsScope = (before: AlarmDraft | null | undefined, d: AlarmDraft) =>
+  !!before && before.days.length > 0 && d.days.length > 0 && (d.time !== before.time || d.way !== before.way)
+
+// 이번만으로 저장하면 반복의 시각·끄는 방법은 그대로다. 그 일정으로 끄는 기간을 다시 센다(pauseNew: 이 창에서 잠시 끄기를 새로 고름)
+export function onceBase(before: AlarmDraft, d: AlarmDraft, pauseNew: boolean, now = nowMinutes()): AlarmDraft {
+  const b = { ...d, time: before.time, way: before.way }
+  return pauseNew && b.pauseDays ? { ...b, pauseTo: pauseEnd(b, b.pauseDays, now) } : b
+}
+
+// 이번만 바꿀 회차(오늘부터 며칠 뒤): 바꾼 요일·건너뛰기·잠시 끄기로, 원래 시각 기준 다음 회차
+export const onceTarget = (before: AlarmDraft, d: AlarmDraft, pauseNew: boolean, now = nowMinutes()) =>
+  nextRings(onceBase(before, d, pauseNew, now), 1, now)[0] as number | undefined
+
+// 묻는 글: "반복 알람이에요. 10월 17일 토요일 한 번만 바꿀까요, 앞으로 계속 바꿀까요?"
+// 잠시 끄기를 새로 골랐으면 두 범위마다 끄는 기간이 달라 줄을 나눠 보여 준다
+export function scopeLabel(before: AlarmDraft, d: AlarmDraft, pauseNew: boolean, now = nowMinutes(), today = new Date()) {
+  const b = onceBase(before, d, pauseNew, now)
+  const f = nextRings(b, 1, now, today)[0]
+  const fDay = f != null ? `${monthDayLabel(f, today)} ${DAY_NAMES[(today.getDay() + f) % 7]}요일` : ''
+  if (pauseNew && d.pauseDays && b.pauseTo != null) {
+    const allTo = pauseEnd(d, d.pauseDays, now)
+    return (
+      '반복 알람이에요. 어떻게 바꿀까요?\n' +
+      `이번만: ${monthDayLabel(b.pauseTo, today)}까지 끄고${fDay ? `, ${fDay}만 ${clockLabel(d.time)}` : ''}\n` +
+      `앞으로 계속: ${monthDayLabel(allTo, today)}까지 끄고, 그 뒤로 ${clockLabel(d.time)}`
+    )
+  }
+  return fDay ? `반복 알람이에요. ${fDay} 한 번만 바꿀까요, 앞으로 계속 바꿀까요?` : '반복 알람이에요. 어떻게 바꿀까요?'
+}
+
 // 알람 탭 목록의 알람 한 개
 export type Alarm = AlarmDraft & { id: number; on: boolean }
 
