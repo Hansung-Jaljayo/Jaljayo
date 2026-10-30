@@ -11,6 +11,7 @@ import { TimeWheels } from '@/components/TimeWheels'
 import { color, font, radius, space } from '@/theme/tokens'
 
 import {
+  type Alarm,
   type AlarmDraft,
   type AlarmScope,
   DAY_NAMES,
@@ -43,7 +44,7 @@ type RowKey = 'date' | 'way' | 'volume' | 'pause'
 type Props = {
   open: boolean
   // 고칠 알람. 없으면 새 알람을 추가한다
-  alarm?: AlarmDraft | null
+  alarm?: Alarm | null
   onClose: () => void
   // 저장은 흉내 내지 않는다. 침대에 보내고 침대가 저장했다고 답할 때 화면이 "저장되었어요"로 바뀐다
   // 반복 알람의 시각·끄는 방법을 고치면 scope가 온다. 이번만이면 onceOff(오늘부터 며칠 뒤) 회차 하나만
@@ -55,7 +56,8 @@ type Props = {
 
 // 알람 탭의 "알람 추가"나 알람 줄로 여는 키 큰 시트. 알람 줄로 열면 그 알람을 고치는 "알람 고치기"가 된다.
 // 피그마 "알람 창 / 한 번 알람"과 "알람 창 / 반복 알람"은 이 창의 두 모습이다.
-// 요일을 고르지 않으면 한 번 울리는 알람, 고르면 반복 알람이다
+// 요일을 고르지 않으면 한 번 울리는 알람, 고르면 반복 알람이다.
+// 피그마 "알람 창 / 울리지 못한 이유": 지난 회차를 울리지 못한 알람을 고칠 때는 머리 아래에 그 이유를 보여 준다
 export function AlarmSheet({ open, alarm, onClose, onSave, onDelete }: Props) {
   const [draft, setDraft] = useState<AlarmDraft>(newAlarmDraft)
   const [openRow, setOpenRow] = useState<RowKey | null>(null)
@@ -121,6 +123,9 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete }: Props) {
           <Image source={require('../../../assets/icons/x.svg')} style={styles.icon22} />
         </RippleButton>
       </View>
+
+      {/* hint · 울리지 못한 이유 */}
+      {alarm?.missed ? <Text style={styles.hint}>{alarm.missed}</Text> : null}
 
       <TimeWheels value={draft.time} onChange={(time) => update({ time })} />
 
@@ -302,6 +307,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon22: { width: 22, height: 22 },
+  hint: { fontFamily: font.regular, fontSize: 15, color: color.muted },
 
   apart: { gap: space[8] },
   label: { fontFamily: font.bold, fontSize: 15, color: color['fg-2'] },
