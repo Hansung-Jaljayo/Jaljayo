@@ -162,7 +162,8 @@ export function scopeLabel(before: AlarmDraft, d: AlarmDraft, pauseNew: boolean,
 }
 
 // 알람 탭 목록의 알람 한 개
-export type Alarm = AlarmDraft & { id: number; on: boolean }
+// missed: 지난 회차를 울리지 못했을 때 침대가 알려 준 이유. 알람 고치기 창 맨 위에 보여 준다
+export type Alarm = AlarmDraft & { id: number; on: boolean; missed?: string | null }
 
 // 요약 카드 아래 줄: "침대 이탈 알람"
 export const WAY_FULL_NAMES: Record<AlarmWay, string> = {
@@ -226,13 +227,14 @@ export function nextAlarm(alarms: Alarm[], now = nowMinutes(), today = new Date(
   return best
 }
 
-// 처음 목록: 시안(index.html)의 보기 알람 세 개. 평일 알람은 내일 한 번 건너뛴다
+// 처음 목록: 시안(index.html)의 보기 알람 세 개. 평일 알람은 내일 한 번 건너뛰고, 주말 알람은 지난 토요일에 울리지 못했다
 export const sampleAlarms = (): Alarm[] => [
   { ...fixDraft({ ...newAlarmDraft(), days: [1, 2, 3, 4, 5], skipOff: 1 }), id: 1, on: true },
   {
     ...fixDraft({ ...newAlarmDraft(), time: 8 * 60 + 30, days: [0, 6], way: 'leave_bed', volume: 3, lift: true }),
     id: 2,
     on: true,
+    missed: '지난 토요일 오전 8:30은 앞 알람이 끝나지 않아 울리지 않았어요.',
   },
   { ...fixDraft({ ...newAlarmDraft(), time: 14 * 60, dateOff: 2, way: 'q2' }), id: 3, on: false },
 ]
