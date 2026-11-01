@@ -1,5 +1,7 @@
 // 자세 예약. 시안(index.html)의 r = { item, fail }과 같은 모양이다
 
+import { useSyncExternalStore } from 'react'
+
 import { nowMinutes } from '@/features/alarm/alarm'
 
 // 자세 이름. 시안의 PRESETS와 같다
@@ -74,10 +76,34 @@ export function resvFromDraft(d: ResvDraft, old: Resv | null, now = nowMinutes()
 
 // 처음 모습: 피그마 "예약 탭 / 있음"처럼 오후 11:10에 잠 자세로 바꾸는 예약 하나(지났으면 내일).
 // 지난 예약 하나는 알람과 겹쳐 실행되지 못했다. 예약을 취소하면 "예약 탭 / 없음 + 실패 카드"가 된다
-export const sampleResv = (now = nowMinutes()): { item: Resv | null; fail: ResvFail | null } => {
+export type ResvState = { item: Resv | null; fail: ResvFail | null }
+
+export const sampleResv = (now = nowMinutes()): ResvState => {
   const time = 23 * 60 + 10
   return {
     item: { time, off: time > now ? 0 : 1, purpose: 'sleep', head: 0, leg: 0 },
     fail: { title: '오전 7:00 예약한 독서 자세 실행 실패', reason: '알람이 끝나지 않아 실행하지 않았어요' },
   }
 }
+
+// 침대가 알려 주는 예약 상태(지금 예약, 실행하지 못한 기록). 예약 탭은 useResvState()로 읽는다.
+// 침대가 저장했다고 답하거나 새 상태를 알려 줄 때 setResvState로 바꾼다
+let state: ResvState = sampleResv()
+const listeners = new Set<() => void>()
+
+export const getResvState = () => state
+
+// 바뀐 값만 넘기면 된다
+export function setResvState(patch: Partial<ResvState>) {
+  state = { ...state, ...patch }
+  listeners.forEach((l) => l())
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+export const useResvState = () => useSyncExternalStore(subscribe, getResvState, getResvState)
