@@ -1,0 +1,292 @@
+import { Image } from 'expo-image'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { RippleButton } from '@/components/RippleButton'
+import { Switch } from '@/components/Switch'
+import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
+import { TabTop } from '@/components/TabTop'
+import { type BedRequest, startBedRequest } from '@/features/bed/requests'
+import { color, font, radius, shadow, space } from '@/theme/tokens'
+
+import {
+  type Alarm,
+  type AlarmDraft,
+  type AlarmScope,
+  alarmMetaLabel,
+  applyOverwrite,
+  clashLabel,
+  clockLabel,
+  clockParts,
+  findClashes,
+  fixDraft,
+  inLabel,
+  nextAlarm,
+  sampleAlarms,
+  WAY_FULL_NAMES,
+  whenLabel,
+} from './alarm'
+import { AlarmSheet } from './AlarmSheet'
+
+// 피그마 "알람 탭 / 목록". 맨 위 요약 카드, 알람 줄들, "알람 추가" 버튼.
+// "알람 추가"를 누르면 새 알람 창이, 알람 줄을 누르면 그 알람을 고치는 창이 열린다
+export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
+  const insets = useSafeAreaInsets()
+  const [alarms, setAlarms] = useState<Alarm[]>(sampleAlarms)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  // 고칠 알람. 닫는 동안 제목이 바뀌지 않게 닫을 때는 두고, 열 때 정한다
+  const [editing, setEditing] = useState<Alarm | null>(null)
+  const closeSheet = useCallback(() => setSheetOpen(false), [])
+  const openSheet = (alarm: Alarm | null) => {
+    setEditing(alarm)
+    setSheetOpen(true)
+  }
+
+  // 창에서 저장·삭제를 누르면 침대에 보내고 답을 기다린다. 답이 오면 목록에 반영하고 창을 닫는다.
+  // 5초 넘게 답이 없으면 창이 "다시 시도·취소"를 보여 준다
+  const [wait, setWait] = useState<'saving' | 'failed' | null>(null)
+  const request = useRef<BedRequest | null>(null)
+  useEffect(() => () => request.current?.cancel(), [])
+  const send = (message: Parameters<typeof startBedRequest>[0], apply: () => void) => {
+    request.current = startBedRequest(message, {
+      onAck: () => {
+        request.current = null
+        setWait(null)
+        apply()
+        setSheetOpen(false)
+      },
+      onTimeout: () => setWait('failed'),
+    })
+    setWait('saving')
+  }
+  const retry = () => {
+    request.current?.retry()
+    setWait('saving')
+  }
+  const cancelWait = () => {
+    request.current?.cancel()
+    request.current = null
+    setWait(null)
+    setSheetOpen(false)
+  }
+
+  // 같은 날 같은 시각에 울리는 다른 켜진 알람이 있으면 저장 전에 확인 창으로 덮어쓸지 묻는다
+  const [clash, setClash] = useState<{ message: string; ok: () => void } | null>(null)
+  const closeClash = useCallback(() => setClash(null), [])
+
+  const save = (draft: AlarmDraft, scope?: AlarmScope, onceOff?: number) => {
+    const target = editing
+    // 이번만은 그 날짜 회차 하나만 새 시각으로 울리므로 그 회차만 견준다
+    const rings = scope === 'once' && onceOff != null ? { ...draft, days: [], dateOff: onceOff } : draft
+    const clashes = findClashes(rings, alarms, target?.id)
+    const go = () =>
+      send({ type: 'alarm-save', body: { id: target?.id ?? null, draft, scope, onceOff, overwrite: clashes.map((c) => c.alarm.id) } }, () =>
+        setAlarms((list) => {
+          const rest = clashes.length ? applyOverwrite(list, rings, clashes) : list
+          // 이번만은 그 날짜 회차 하나만 바꾸는데, 날짜별로 바꾼 회차를 담는 칸이 아직 없어 그 알람은 그대로 둔다
+          if (scope === 'once') return rest
+          return target
+            ? rest.map((a) => (a.id === target.id ? { ...a, ...draft, on: true } : a))
+            : [...rest, { ...draft, id: Math.max(0, ...rest.map((a) => a.id)) + 1, on: true }]
+        }),
+      )
+    if (clashes.length) setClash({ message: clashLabel(clashes[0]), ok: go })
+    else go()
+  }
+  const remove = () => {
+    const target = editing
+    if (!target) return
+    send({ type: 'alarm-delete', body: { id: target.id } }, () =>
+      setAlarms((list) => list.filter((a) => a.id !== target.id)),
+    )
+  }
+
+  // 켤 때는 지난 한 번 알람의 날짜도 다음에 울릴 날로 맞춘다
+  const toggle = (id: number, on: boolean) =>
+    setAlarms((list) => list.map((a) => (a.id === id ? { ...a, ...fixDraft(a), on } : a)))
+
+  const sorted = [...alarms].sort((x, y) => x.time - y.time)
+
+  return (
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.body,
+          { paddingTop: insets.top + space[6], paddingBottom: TAB_BAR_SPACE + insets.bottom },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <TabTop />
+        <NextCard alarms={alarms} />
+        <View style={styles.group}>
+          {sorted.map((a) => (
+            <AlarmRow key={a.id} alarm={a} onPress={() => openSheet(a)} onToggle={(on) => toggle(a.id, on)} />
+          ))}
+        </View>
+        <View style={styles.addShadow}>
+          <RippleButton style={styles.add} onPress={() => openSheet(null)}>
+            <Image source={require('../../../assets/icons/plus.svg')} style={styles.icon20} />
+            <Text style={styles.addText}>알람 추가</Text>
+          </RippleButton>
+        </View>
+      </ScrollView>
+      <TabBar current="alarm" onPick={onTab} />
+      <AlarmSheet
+        open={sheetOpen}
+        alarm={editing}
+        onClose={closeSheet}
+        onSave={save}
+        onDelete={remove}
+        wait={wait}
+        onRetry={retry}
+        onCancelWait={cancelWait}
+      />
+      {/* dlg · 겹치는 알람 확인 창: 덮어쓰기를 누르면 저장을 이어 가고, 취소는 확인 창만 닫는다 */}
+      <ConfirmDialog
+        open={clash != null}
+        title="겹치는 알람이 있어요"
+        message={clash?.message ?? ''}
+        okLabel="덮어쓰기"
+        noLabel="취소"
+        onOk={() => {
+          const ok = clash?.ok
+          setClash(null)
+          ok?.()
+        }}
+        onClose={closeClash}
+      />
+    </View>
+  )
+}
+
+// tcard · 요약 카드: 실제로 다음에 울릴 알람. 켜진 알람이 없으면 안내
+function NextCard({ alarms }: { alarms: Alarm[] }) {
+  const next = nextAlarm(alarms)
+  if (!next) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.eyebrow}>다음 알람</Text>
+        <Text style={styles.none}>켜진 알람이 없어요</Text>
+        <Text style={styles.noneSub}>알람을 켜거나 새로 추가해 주세요</Text>
+      </View>
+    )
+  }
+  const { alarm, off, mins } = next
+  const { ampm, hm } = clockParts(alarm.time)
+  return (
+    <View style={styles.card} accessible accessibilityLabel={`다음 알람 ${whenLabel(off)} ${clockLabel(alarm.time)}`}>
+      {/* 하루 안이면 남은 시간도 */}
+      <Text style={styles.eyebrow}>
+        다음 알람 · {whenLabel(off)}
+        {mins < 1440 ? ` · ${inLabel(mins)}` : ''}
+      </Text>
+      <View style={styles.big}>
+        <Text style={styles.bigAmpm}>{ampm}</Text>
+        <Text style={styles.bigTime}>{hm}</Text>
+      </View>
+      <Text style={styles.sub}>
+        {WAY_FULL_NAMES[alarm.way]}
+        {alarm.lift ? ' · 머리 올림' : ''}
+      </Text>
+    </View>
+  )
+}
+
+// arow · 알람 줄: 시각과 반복 요일(또는 날짜), 오른쪽 켜기 스위치. 꺼진 알람은 글이 흐리다. 누르면 고치기
+function AlarmRow({ alarm, onPress, onToggle }: { alarm: Alarm; onPress: () => void; onToggle: (on: boolean) => void }) {
+  const { ampm, hm } = clockParts(alarm.time)
+  const dim = !alarm.on && styles.off
+  return (
+    <View style={styles.rowShadow}>
+      <RippleButton style={styles.row} onPress={onPress} accessibilityLabel={`${clockLabel(alarm.time)} 알람 고치기`}>
+        <View style={styles.main}>
+          <View style={[styles.at, dim]}>
+            <Text style={styles.atAmpm}>{ampm}</Text>
+            <Text style={styles.atTime}>{hm}</Text>
+          </View>
+          <Text style={[styles.meta, dim]}>{alarmMetaLabel(alarm)}</Text>
+        </View>
+        <Switch value={alarm.on} onValueChange={onToggle} accessibilityLabel={`${clockLabel(alarm.time)} 알람 켜기`} />
+      </RippleButton>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: color.bg },
+  body: { paddingHorizontal: 18, gap: space[8] },
+
+  card: {
+    paddingHorizontal: 20,
+    paddingVertical: space[16],
+    gap: space[2],
+    borderRadius: radius[34],
+    backgroundColor: color.ink,
+    boxShadow: shadow.sheetTop,
+  },
+  eyebrow: { fontFamily: font.medium, fontSize: 15, color: color['on-ink-muted'] },
+  big: { height: 48.3, flexDirection: 'row', alignItems: 'flex-start' },
+  bigAmpm: { marginTop: 23, marginRight: 6, fontFamily: font.medium, fontSize: 20, lineHeight: 21, color: color['on-ink'] },
+  bigTime: {
+    marginTop: -0.65,
+    fontFamily: font.extraLight,
+    fontSize: 46,
+    lineHeight: 48.3,
+    letterSpacing: -1.38,
+    color: color['on-ink'],
+  },
+  sub: { fontFamily: font.regular, fontSize: 17, lineHeight: 20.4, color: color['on-ink-muted'] },
+  // 켜진 알람이 없을 때
+  none: {
+    marginTop: space[2],
+    fontFamily: font.bold,
+    fontSize: 20,
+    lineHeight: 25,
+    letterSpacing: -0.2,
+    color: color['on-ink'],
+  },
+  noneSub: { fontFamily: font.regular, fontSize: 15, lineHeight: 22.5, color: color['on-ink-muted'] },
+
+  group: { gap: space[8] },
+  // 그림자가 잘리지 않게 바깥 칸에 그림자, 안쪽 버튼에 물결
+  rowShadow: { borderRadius: radius[24], boxShadow: shadow.card },
+  row: {
+    padding: space[4],
+    paddingRight: space[16],
+    borderRadius: radius[24],
+    backgroundColor: color.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[8],
+  },
+  main: { flex: 1, paddingHorizontal: space[12], paddingVertical: space[8], gap: space[2] },
+  at: { height: 30.8, flexDirection: 'row', alignItems: 'flex-start' },
+  atAmpm: { marginTop: 11, marginRight: 6, fontFamily: font.semiBold, fontSize: 15, lineHeight: 16.5, color: color.fg },
+  atTime: {
+    marginTop: -0.4,
+    fontFamily: font.light,
+    fontSize: 28,
+    lineHeight: 30.8,
+    letterSpacing: -0.56,
+    color: color.fg,
+  },
+  meta: { fontFamily: font.medium, fontSize: 15, lineHeight: 18.75, color: color.muted },
+  off: { opacity: 0.5 },
+
+  // 그림자가 잘리지 않게 바깥 칸에 그림자, 안쪽 버튼에 물결
+  addShadow: { borderRadius: radius[20], boxShadow: shadow.card },
+  add: {
+    height: 56,
+    paddingHorizontal: space[6],
+    borderRadius: radius[20],
+    backgroundColor: color.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space[8],
+  },
+  icon20: { width: 20, height: 20 },
+  addText: { fontFamily: font.bold, fontSize: 17, color: color.fg },
+})
