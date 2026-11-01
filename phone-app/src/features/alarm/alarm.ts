@@ -238,3 +238,63 @@ export const sampleAlarms = (): Alarm[] => [
   },
   { ...fixDraft({ ...newAlarmDraft(), time: 14 * 60, dateOff: 2, way: 'q2' }), id: 3, on: false },
 ]
+
+// 알람이 앞으로 울릴 날(오늘부터 며칠 뒤) 모두. 한 번 알람은 그 날 하나(이미 지났으면 없음)
+export function ringOffs(a: AlarmDraft, now = nowMinutes(), today = new Date()): number[] {
+  if (a.days.length) return nextRings(a, Infinity, now, today)
+  return a.dateOff != null && (a.dateOff > 0 || a.time > now) ? [a.dateOff] : []
+}
+
+// 겹치는 다른 알람과 겹치는 날들
+export type Clash = { alarm: Alarm; offs: number[] }
+
+// 같은 날 같은 시각에 울리는 다른 켜진 알람. 시각만이 아니라 실제로 울리는 날짜로 본다(건너뛰기·잠시 끄기 반영)
+export function findClashes(d: AlarmDraft, alarms: Alarm[], selfId?: number | null, now = nowMinutes(), today = new Date()) {
+  const mine = ringOffs(d, now, today)
+  const out: Clash[] = []
+  for (const a of alarms) {
+    if (a.id === selfId || !a.on || a.time !== d.time) continue
+    const offs = ringOffs(a, now, today).filter((o) => mine.includes(o))
+    if (offs.length) out.push({ alarm: a, offs })
+  }
+  return out
+}
+
+// 겹치는 알람 확인 창 글: "평일 오전 7시 알람과 10월 19일 월요일 오전 7시에 겹쳐요. 덮어쓸까요?"
+export function clashLabel(c: Clash, today = new Date()) {
+  const a = c.alarm
+  const off = c.offs[0]
+  const which = a.days.length ? daysLabel(a.days) : monthDayLabel(a.dateOff ?? off, today)
+  const day = `${monthDayLabel(off, today)} ${DAY_NAMES[(today.getDay() + off) % 7]}요일`
+  return `${which} ${clockLabel(a.time)} 알람과 ${day} ${clockLabel(a.time)}에 겹쳐요. 덮어쓸까요?`
+}
+
+// 덮어쓰기: 기존 알람에서 새 알람과 겹친 회차만 뺀다. 나머지 회차는 그대로 울린다
+// - 한 번 알람은 그 한 회차가 겹친 것이라 지운다
+// - 반복끼리(겹치면 시각이 같다): 새 알람이 맡는 요일을 기존 알람에서 뺀다. 그 요일의 기존 회차 중 겹치지 않은 것
+//   (새 알람이 건너뛰거나 꺼 둔 날)은 그 날짜의 한 번 알람으로 남긴다. 요일이 다 빠지면 지운다
+// - 새 알람이 한 번이고 기존이 반복이면 그 날짜 하나만 빼야 하는데, 날짜별로 빼 두는 칸이 아직 없어 반영하지 않는다
+export function applyOverwrite(list: Alarm[], d: AlarmDraft, clashes: Clash[], now = nowMinutes(), today = new Date()) {
+  let out = [...list]
+  let id = Math.max(0, ...list.map((a) => a.id))
+  for (const { alarm: a, offs } of clashes) {
+    if (!out.some((x) => x.id === a.id)) continue
+    if (!a.days.length) {
+      out = out.filter((x) => x.id !== a.id)
+      continue
+    }
+    if (!d.days.length) continue
+    const gone = d.days.filter((x) => a.days.includes(x))
+    const { missed: _missed, ...rest } = a
+    for (const off of ringOffs(a, now, today)) {
+      if (!gone.includes((today.getDay() + off) % 7) || offs.includes(off)) continue
+      out.push({ ...rest, id: ++id, days: [], dateOff: off, skipOff: null, pauseTo: null, pauseDays: null })
+    }
+    // 요일이 줄어 건너뛸 날이 빠졌으면 fixDraft가 건너뛰기를 푼다
+    const days = a.days.filter((x) => !gone.includes(x))
+    out = days.length
+      ? out.map((x) => (x.id === a.id ? { ...x, ...fixDraft({ ...x, days }, now) } : x))
+      : out.filter((x) => x.id !== a.id)
+  }
+  return out
+}
