@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { ClockBand } from '@/components/ClockBand'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { RippleButton } from '@/components/RippleButton'
 import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
@@ -110,6 +111,8 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         showsVerticalScrollIndicator={false}
       >
         <TabTop />
+        {/* tban · 시계 무효 띠(침대가 시각을 모를 때만) */}
+        <ClockBand />
 
         {/* tcard · 요약 카드 */}
         {item ? (
