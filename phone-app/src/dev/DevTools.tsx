@@ -9,7 +9,7 @@ import { DevSwitch } from './DevSwitch'
 
 // 개발할 때만 쓰는 시험 도구 모음. 침대가 알려 줄 정보를 손으로 바꿔 화면을 확인한다.
 // 앱은 이 폴더를 모른다(침대 정보만 바꾼다). 떼려면 src/dev 폴더와 src/app/_layout.tsx의 DevTools 두 줄을 지우면 되고,
-// 떼어도 앱은 침대 정보의 처음 값(버튼 있는 집 침대)으로 그대로 움직인다.
+// 떼어도 앱은 침대 정보의 처음 값(시각을 아는, 버튼 있는 집 침대)으로 그대로 움직인다.
 // README대로 시험 도구는 실제 앱에 넣지 않으므로 개발 빌드(__DEV__)에서만 그린다
 export function DevTools() {
   const bed = useBedInfo()
@@ -19,6 +19,8 @@ export function DevTools() {
   return (
     // 탭 막대 바로 위 오른쪽에 쌓아 띄운다. 빈 자리는 누름이 아래 화면으로 지나간다
     <View style={[styles.stack, { bottom: TAB_BAR_SPACE + insets.bottom }]} pointerEvents="box-none">
+      {/* 침대가 지금 시각을 모르는 상태: 알람·예약 탭에 시계 무효 띠가 뜬다 */}
+      <DevSwitch label="시각 모름" value={!bed.clockOk} onValueChange={(on) => setBedInfo({ clockOk: !on })} />
       <DevSwitch
         label="버튼 없는 침대"
         value={!bed.hasButton}

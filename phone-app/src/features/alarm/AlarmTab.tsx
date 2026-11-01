@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
+import { ClockBand } from '@/components/ClockBand'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { RippleButton } from '@/components/RippleButton'
 import { Switch } from '@/components/Switch'
@@ -158,6 +159,8 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
           />
         ) : (
           <>
+            {/* tban · 시계 무효 띠(침대가 시각을 모를 때만) */}
+            <ClockBand />
             <NextCard alarms={alarms} />
             <View style={styles.group}>
               {sorted.map((a) => (

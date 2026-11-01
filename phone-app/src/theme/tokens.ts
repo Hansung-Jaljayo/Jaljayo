@@ -20,6 +20,9 @@ export const color = {
   switchOff: '#d8ccc6',
   // 고를 수 없는 날·달 버튼
   disabled: '#c4b6b0',
+  // 시계 무효 띠 바탕·글
+  warnBg: '#f6e2db',
+  warnFg: '#7a3524',
   white: '#ffffff',
 } as const
 
