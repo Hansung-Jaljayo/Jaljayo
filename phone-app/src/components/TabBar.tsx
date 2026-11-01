@@ -37,15 +37,18 @@ type Props = {
   current: TabKey
   // 탭을 누르면. 아직 화면이 없는 탭(자세)은 눌러도 그대로다
   onPick?: (key: TabKey) => void
+  // 쓸 수 없는 탭(예: 버튼 없는 침대의 알람). 고른 표시는 그대로 두고 그림과 글만 흐리게(40%)
+  dimmed?: TabKey[]
 }
 
 // 피그마 "tabs · 아래 탭 막대". 화면 아래에 떠 있는 둥근 막대
-export function TabBar({ current, onPick }: Props) {
+export function TabBar({ current, onPick, dimmed = [] }: Props) {
   const insets = useSafeAreaInsets()
   return (
     <View style={[styles.bar, { bottom: insets.bottom + 12 }]} role="tablist">
       {TABS.map((t) => {
         const on = t.key === current
+        const dim = dimmed.includes(t.key) && styles.dim
         return (
           <RippleButton
             key={t.key}
@@ -55,8 +58,8 @@ export function TabBar({ current, onPick }: Props) {
             rippleColor={on ? color['on-ink'] : color.muted}
             onPress={() => onPick?.(t.key)}
           >
-            <Image source={(on && t.iconOn) || t.icon} style={styles.icon22} />
-            <Text style={[styles.name, on && styles.nameOn]}>{t.name}</Text>
+            <Image source={(on && t.iconOn) || t.icon} style={[styles.icon22, dim]} />
+            <Text style={[styles.name, on && styles.nameOn, dim]}>{t.name}</Text>
           </RippleButton>
         )
       })}
@@ -88,6 +91,7 @@ const styles = StyleSheet.create({
   },
   tabOn: { backgroundColor: color.ink },
   icon22: { width: 22, height: 22 },
+  dim: { opacity: 0.4 },
   name: { fontFamily: font.semiBold, fontSize: 13, lineHeight: 16, color: color.muted },
   nameOn: { color: color['on-ink'] },
 })

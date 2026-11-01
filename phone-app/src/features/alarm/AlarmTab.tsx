@@ -8,6 +8,7 @@ import { RippleButton } from '@/components/RippleButton'
 import { Switch } from '@/components/Switch'
 import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
 import { TabTop } from '@/components/TabTop'
+import { useBedInfo } from '@/features/bed/bed'
 import { type BedRequest, startBedRequest } from '@/features/bed/requests'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
@@ -28,10 +29,12 @@ import {
   WAY_FULL_NAMES,
   whenLabel,
 } from './alarm'
+import { AlarmOff } from './AlarmOff'
 import { AlarmSheet } from './AlarmSheet'
 
 // 피그마 "알람 탭 / 목록". 맨 위 요약 카드, 알람 줄들, "알람 추가" 버튼.
 // "알람 추가"를 누르면 새 알람 창이, 알람 줄을 누르면 그 알람을 고치는 창이 열린다
+// 피그마 "알람 탭 / 버튼 없는 침대 안내": 침대에 알람을 끄는 버튼이 없으면 머리 아래를 안내로 채우고 알람을 쓸 수 없게 한다
 export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const insets = useSafeAreaInsets()
   const [alarms, setAlarms] = useState<Alarm[]>(sampleAlarms)
@@ -109,30 +112,58 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 
   const sorted = [...alarms].sort((x, y) => x.time - y.time)
 
+  // 버튼이 없는 침대가 되면 열려 있던 알람 창과 확인 창을 닫고, 기다리던 저장은 그만둔다
+  const noButton = !useBedInfo().hasButton
+  const [wasNoButton, setWasNoButton] = useState(noButton)
+  if (noButton !== wasNoButton) {
+    setWasNoButton(noButton)
+    if (noButton) {
+      setSheetOpen(false)
+      setWait(null)
+      setClash(null)
+    }
+  }
+  useEffect(() => {
+    if (!noButton) return
+    request.current?.cancel()
+    request.current = null
+  }, [noButton])
+
   return (
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={[
           styles.body,
+          noButton && styles.bodyFill,
           { paddingTop: insets.top + space[6], paddingBottom: TAB_BAR_SPACE + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <TabTop />
-        <NextCard alarms={alarms} />
-        <View style={styles.group}>
-          {sorted.map((a) => (
-            <AlarmRow key={a.id} alarm={a} onPress={() => openSheet(a)} onToggle={(on) => toggle(a.id, on)} />
-          ))}
-        </View>
-        <View style={styles.addShadow}>
-          <RippleButton style={styles.add} onPress={() => openSheet(null)}>
-            <Image source={require('../../../assets/icons/plus.svg')} style={styles.icon20} />
-            <Text style={styles.addText}>알람 추가</Text>
-          </RippleButton>
-        </View>
+        {noButton ? (
+          // aoff · 꺼짐 안내
+          <AlarmOff
+            title="알람을 쓸 수 없는 침대예요"
+            lines={['이 침대에는 알람을 끄는 버튼이 없어요.', '버튼이 있는 침대에서만 알람을 쓸 수 있어요.']}
+          />
+        ) : (
+          <>
+            <NextCard alarms={alarms} />
+            <View style={styles.group}>
+              {sorted.map((a) => (
+                <AlarmRow key={a.id} alarm={a} onPress={() => openSheet(a)} onToggle={(on) => toggle(a.id, on)} />
+              ))}
+            </View>
+            <View style={styles.addShadow}>
+              <RippleButton style={styles.add} onPress={() => openSheet(null)}>
+                <Image source={require('../../../assets/icons/plus.svg')} style={styles.icon20} />
+                <Text style={styles.addText}>알람 추가</Text>
+              </RippleButton>
+            </View>
+          </>
+        )}
       </ScrollView>
-      <TabBar current="alarm" onPick={onTab} />
+      <TabBar current="alarm" onPick={onTab} dimmed={noButton ? ['alarm'] : []} />
       <AlarmSheet
         open={sheetOpen}
         alarm={editing}
@@ -217,6 +248,8 @@ function AlarmRow({ alarm, onPress, onToggle }: { alarm: Alarm; onPress: () => v
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   body: { paddingHorizontal: 18, gap: space[8] },
+  // 안내가 머리 아래 남은 자리를 채운다
+  bodyFill: { flexGrow: 1 },
 
   card: {
     paddingHorizontal: 20,

@@ -3,6 +3,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
+import { DevTools } from '@/dev/DevTools' // 개발용 시험 도구(떼려면 이 줄과 아래 <DevTools />를 지운다)
 import { color } from '@/theme/tokens'
 
 export default function RootLayout() {
@@ -20,6 +21,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg } }} />
+      <DevTools />
     </SafeAreaProvider>
   )
 }
