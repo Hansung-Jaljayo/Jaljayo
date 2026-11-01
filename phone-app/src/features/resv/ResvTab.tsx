@@ -12,7 +12,16 @@ import { clockLabel, clockParts, inLabel, nowMinutes } from '@/features/alarm/al
 import { type BedMessage, type BedRequest, startBedRequest } from '@/features/bed/requests'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
-import { type Resv, type ResvDraft, resvFromDraft, resvMinsLeft, resvSubLabel, sampleResv, shiftResv } from './resv'
+import {
+  type Resv,
+  type ResvDraft,
+  resvFromDraft,
+  resvMinsLeft,
+  resvSubLabel,
+  setResvState,
+  shiftResv,
+  useResvState,
+} from './resv'
 import { ResvSheet } from './ResvSheet'
 
 // 예약 탭. 피그마 "예약 탭 / 있음"과 "예약 탭 / 없음 + 실패 카드"는 이 탭의 두 모습이다.
@@ -20,7 +29,7 @@ import { ResvSheet } from './ResvSheet'
 // 예약이 있으면 그 아래 10분 앞당기기·늦추기·예약 취소, 맨 아래 지난 예약을 실행하지 못한 이유 카드
 export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const insets = useSafeAreaInsets()
-  const [{ item, fail }, setResv] = useState(() => sampleResv())
+  const { item, fail } = useResvState()
   // 남은 시간이 바뀌도록 30초마다 다시 그린다
   const [now, setNow] = useState(nowMinutes)
   useEffect(() => {
@@ -57,9 +66,9 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
     if (!item) return
     const next = shiftResv(item, by, nowMinutes())
     if (!next) return
-    send({ type: 'resv-save', body: next }, () => setResv((r) => ({ ...r, item: next })))
+    send({ type: 'resv-save', body: next }, () => setResvState({ item: next }))
   }
-  const cancel = () => send({ type: 'resv-cancel', body: null }, () => setResv((r) => ({ ...r, item: null })))
+  const cancel = () => send({ type: 'resv-cancel', body: null }, () => setResvState({ item: null }))
 
   // 자세 예약 창: "자세 예약하기"나 요약 카드의 시각으로 연다. 저장하면 침대에 보내고 창에서 답을 기다린다
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -82,7 +91,7 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         onAck: () => {
           sheetRequest.current = null
           setSheetWait(null)
-          setResv((r) => ({ ...r, item: next }))
+          setResvState({ item: next })
           setSheetOpen(false)
         },
         onTimeout: () => setSheetWait('failed'),
