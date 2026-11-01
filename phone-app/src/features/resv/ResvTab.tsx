@@ -11,7 +11,8 @@ import { clockLabel, clockParts, inLabel, nowMinutes } from '@/features/alarm/al
 import { type BedMessage, type BedRequest, startBedRequest } from '@/features/bed/requests'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
-import { type Resv, resvMinsLeft, resvSubLabel, sampleResv, shiftResv } from './resv'
+import { type Resv, type ResvDraft, resvFromDraft, resvMinsLeft, resvSubLabel, sampleResv, shiftResv } from './resv'
+import { ResvSheet } from './ResvSheet'
 
 // 예약 탭. 피그마 "예약 탭 / 있음"과 "예약 탭 / 없음 + 실패 카드"는 이 탭의 두 모습이다.
 // 맨 위 요약 카드: 예약이 있으면 시각·남은 시간·바꿀 자세, 없으면 "자세 예약하기".
@@ -59,6 +60,46 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   }
   const cancel = () => send({ type: 'resv-cancel', body: null }, () => setResv((r) => ({ ...r, item: null })))
 
+  // 자세 예약 창: "자세 예약하기"나 요약 카드의 시각으로 연다. 저장하면 침대에 보내고 창에서 답을 기다린다
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const closeSheet = useCallback(() => setSheetOpen(false), [])
+  const [sheetWait, setSheetWait] = useState<'saving' | 'failed' | null>(null)
+  const sheetRequest = useRef<BedRequest | null>(null)
+  useEffect(() => () => sheetRequest.current?.cancel(), [])
+  // 지금부터 24시간 안이 아닌 시각을 고르면 확인 창으로 알린다(날짜를 몰래 바꾸지 않는다)
+  const [badTime, setBadTime] = useState(false)
+  const closeBadTime = useCallback(() => setBadTime(false), [])
+  const saveSheet = (draft: ResvDraft) => {
+    const next = resvFromDraft(draft, item, nowMinutes())
+    if (!next) {
+      setBadTime(true)
+      return
+    }
+    sheetRequest.current = startBedRequest(
+      { type: 'resv-save', body: next },
+      {
+        onAck: () => {
+          sheetRequest.current = null
+          setSheetWait(null)
+          setResv((r) => ({ ...r, item: next }))
+          setSheetOpen(false)
+        },
+        onTimeout: () => setSheetWait('failed'),
+      },
+    )
+    setSheetWait('saving')
+  }
+  const retrySheet = () => {
+    sheetRequest.current?.retry()
+    setSheetWait('saving')
+  }
+  const cancelSheetWait = () => {
+    sheetRequest.current?.cancel()
+    sheetRequest.current = null
+    setSheetWait(null)
+    setSheetOpen(false)
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -72,14 +113,14 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 
         {/* tcard · 요약 카드 */}
         {item ? (
-          <ResvCard item={item} now={now} waiting={waiting} />
+          <ResvCard item={item} now={now} waiting={waiting} onEdit={() => setSheetOpen(true)} />
         ) : (
           <View style={styles.card}>
             <Text style={styles.eyebrow}>자세 예약</Text>
             <Text style={styles.none}>예약이 없어요</Text>
             <Text style={styles.noneSub}>정한 시각에 침대가 소리 없이 자세를 바꿔요</Text>
-            {/* act · 버튼: "자세 예약 창"을 만들면 연결한다 */}
-            <RippleButton style={styles.act}>
+            {/* act · 버튼: 자세 예약 창을 연다 */}
+            <RippleButton style={styles.act} onPress={() => setSheetOpen(true)}>
               <Image source={require('../../../assets/icons/plus.svg')} style={styles.icon20} />
               <Text style={styles.actText}>자세 예약하기</Text>
             </RippleButton>
@@ -119,6 +160,22 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         )}
       </ScrollView>
       <TabBar current="resv" onPick={onTab} />
+      <ResvSheet
+        open={sheetOpen}
+        item={item}
+        onClose={closeSheet}
+        onSave={saveSheet}
+        wait={sheetWait}
+        onRetry={retrySheet}
+        onCancelWait={cancelSheetWait}
+      />
+      <ConfirmDialog
+        open={badTime}
+        title="예약할 수 없는 시각이에요"
+        message="자세 예약은 지금부터 24시간 이내로만 설정할 수 있어요."
+        onOk={closeBadTime}
+        onClose={closeBadTime}
+      />
       <ConfirmDialog
         open={noReply}
         title="연결이 원활하지 않아요"
@@ -131,8 +188,8 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 }
 
 // 예약이 있을 때 요약 카드: "오늘 · 28분 뒤" / 오후 11:10 > / "잠 자세로 바꿔요 · 머리 0° 다리 0°".
-// 시각을 누르면 예약을 바꾼다("자세 예약 창"을 만들면 연결한다)
-function ResvCard({ item, now, waiting }: { item: Resv; now: number; waiting: boolean }) {
+// 시각을 누르면 자세 예약 창으로 예약을 바꾼다
+function ResvCard({ item, now, waiting, onEdit }: { item: Resv; now: number; waiting: boolean; onEdit: () => void }) {
   const { ampm, hm } = clockParts(item.time)
   return (
     <View style={[styles.card, styles.cardOn, waiting && styles.waiting]} pointerEvents={waiting ? 'none' : 'auto'}>
@@ -142,6 +199,7 @@ function ResvCard({ item, now, waiting }: { item: Resv; now: number; waiting: bo
       <RippleButton
         style={styles.big}
         rippleColor={color['on-ink']}
+        onPress={onEdit}
         accessibilityLabel={`예약 바꾸기, ${clockLabel(item.time)}`}
       >
         <Text style={styles.bigAmpm}>{ampm}</Text>
