@@ -4,13 +4,14 @@ import { StyleSheet, Text, View } from 'react-native'
 import { color, font, shadow, space } from '@/theme/tokens'
 
 type Props = {
+  // 줄을 나누려면 \n
   title: string
   // 문장마다 줄을 나눈다
   lines: string[]
 }
 
 // 피그마 "aoff · 꺼짐 안내": 알람을 쓸 수 없을 때 알람 탭 머리 아래를 채우는 안내(가운데 아이콘·제목·설명).
-// "알람 탭 / 버튼 없는 침대 안내"에서 쓴다
+// "알람 탭 / 버튼 없는 침대 안내"와 "알람 탭 / 병원에서 알람을 막음"에서 쓴다
 export function AlarmOff({ title, lines }: Props) {
   return (
     <View style={styles.box}>
