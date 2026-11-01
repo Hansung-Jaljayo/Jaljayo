@@ -34,7 +34,8 @@ import { AlarmSheet } from './AlarmSheet'
 
 // 피그마 "알람 탭 / 목록". 맨 위 요약 카드, 알람 줄들, "알람 추가" 버튼.
 // "알람 추가"를 누르면 새 알람 창이, 알람 줄을 누르면 그 알람을 고치는 창이 열린다
-// 피그마 "알람 탭 / 버튼 없는 침대 안내": 침대에 알람을 끄는 버튼이 없으면 머리 아래를 안내로 채우고 알람을 쓸 수 없게 한다
+// 피그마 "알람 탭 / 버튼 없는 침대 안내"·"알람 탭 / 병원에서 알람을 막음": 침대에 알람을 끄는 버튼이 없거나
+// 병원에서 알람을 막았으면 머리 아래를 안내로 채우고 알람을 쓸 수 없게 한다(둘 다면 버튼 안내를 보인다)
 export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const insets = useSafeAreaInsets()
   const [alarms, setAlarms] = useState<Alarm[]>(sampleAlarms)
@@ -112,39 +113,48 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 
   const sorted = [...alarms].sort((x, y) => x.time - y.time)
 
-  // 버튼이 없는 침대가 되면 열려 있던 알람 창과 확인 창을 닫고, 기다리던 저장은 그만둔다
-  const noButton = !useBedInfo().hasButton
-  const [wasNoButton, setWasNoButton] = useState(noButton)
-  if (noButton !== wasNoButton) {
-    setWasNoButton(noButton)
-    if (noButton) {
+  // 알람을 쓸 수 없게 되면 열려 있던 알람 창과 확인 창을 닫고, 기다리던 저장은 그만둔다
+  const bed = useBedInfo()
+  const noButton = !bed.hasButton
+  const blocked = !!bed.ward && !bed.ward.alarmAllowed
+  const alarmOff = noButton || blocked
+  const [wasOff, setWasOff] = useState(alarmOff)
+  if (alarmOff !== wasOff) {
+    setWasOff(alarmOff)
+    if (alarmOff) {
       setSheetOpen(false)
       setWait(null)
       setClash(null)
     }
   }
   useEffect(() => {
-    if (!noButton) return
+    if (!alarmOff) return
     request.current?.cancel()
     request.current = null
-  }, [noButton])
+  }, [alarmOff])
 
   return (
     <View style={styles.screen}>
       <ScrollView
         contentContainerStyle={[
           styles.body,
-          noButton && styles.bodyFill,
+          alarmOff && styles.bodyFill,
           { paddingTop: insets.top + space[6], paddingBottom: TAB_BAR_SPACE + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <TabTop />
+        {/* aoff · 꺼짐 안내 */}
         {noButton ? (
-          // aoff · 꺼짐 안내
           <AlarmOff
             title="알람을 쓸 수 없는 침대예요"
             lines={['이 침대에는 알람을 끄는 버튼이 없어요.', '버튼이 있는 침대에서만 알람을 쓸 수 있어요.']}
+          />
+        ) : blocked ? (
+          // 줄 나눔은 피그마 그대로
+          <AlarmOff
+            title={'병원에서 알람을 쓰지\n않도록 정했어요'}
+            lines={['병실에서는 알람 소리가 옆 환자에게도 들려요.', '예약은 소리 없이 자세만 바꾸니', '그대로 쓸 수 있어요.']}
           />
         ) : (
           <>
@@ -163,7 +173,7 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
           </>
         )}
       </ScrollView>
-      <TabBar current="alarm" onPick={onTab} dimmed={noButton ? ['alarm'] : []} />
+      <TabBar current="alarm" onPick={onTab} dimmed={alarmOff ? ['alarm'] : []} />
       <AlarmSheet
         open={sheetOpen}
         alarm={editing}

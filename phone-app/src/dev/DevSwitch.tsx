@@ -1,8 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { Switch } from '@/components/Switch'
-import { TAB_BAR_SPACE } from '@/components/TabBar'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
 type Props = {
@@ -11,13 +9,10 @@ type Props = {
   onValueChange: (next: boolean) => void
 }
 
-// 시험용 스위치 한 줄(탭 막대 바로 위 오른쪽). DevTools에서만 쓴다.
-// README대로 시험 도구는 실제 앱에 넣지 않으므로 개발 빌드(__DEV__)에서만 그린다
+// 시험용 스위치 한 줄. 자리는 DevTools가 정한다
 export function DevSwitch({ label, value, onValueChange }: Props) {
-  const insets = useSafeAreaInsets()
-  if (!__DEV__) return null
   return (
-    <View style={[styles.box, { bottom: TAB_BAR_SPACE + insets.bottom }]}>
+    <View style={styles.box}>
       <Text style={styles.tag}>시험</Text>
       <Text style={styles.label}>{label}</Text>
       <Switch value={value} onValueChange={onValueChange} accessibilityLabel={`시험: ${label}`} />
@@ -26,10 +21,7 @@ export function DevSwitch({ label, value, onValueChange }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // 탭 막대 바로 위 오른쪽에 떠 있다
   box: {
-    position: 'absolute',
-    right: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[8],

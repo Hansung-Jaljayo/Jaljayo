@@ -6,10 +6,17 @@ import { useSyncExternalStore } from 'react'
 export type BedInfo = {
   // 알람을 끄는 버튼이 있는지. 없으면 알람을 쓸 수 없다
   hasButton: boolean
+  // 병원용 침대면 병원에서 정한 값. 집에서 쓰는 침대면 null
+  ward: {
+    // 병원에서 붙인 이름(예: 사과). 머리에 "사과 침대"로 보인다
+    name: string
+    // 병원에서 알람을 쓰도록 했는지. 막으면 알람을 쓸 수 없다(예약은 소리가 없어 그대로 쓴다)
+    alarmAllowed: boolean
+  } | null
 }
 
-// 처음 값: 시안처럼 버튼이 있는 침대
-let info: BedInfo = { hasButton: true }
+// 처음 값: 시안처럼 버튼이 있는 집 침대
+let info: BedInfo = { hasButton: true, ward: null }
 const listeners = new Set<() => void>()
 
 export const getBedInfo = () => info
@@ -28,3 +35,6 @@ function subscribe(listener: () => void) {
 }
 
 export const useBedInfo = () => useSyncExternalStore(subscribe, getBedInfo, getBedInfo)
+
+// 머리에 보이는 침대 이름: 병원용이면 "사과 침대", 집 침대면 "잘자요"
+export const bedName = (b: BedInfo) => (b.ward ? `${b.ward.name} 침대` : '잘자요')

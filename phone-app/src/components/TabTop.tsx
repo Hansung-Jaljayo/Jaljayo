@@ -1,6 +1,7 @@
 import { Image } from 'expo-image'
 import { StyleSheet, Text, View } from 'react-native'
 
+import { bedName, useBedInfo } from '@/features/bed/bed'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
 import { RippleButton } from './RippleButton'
@@ -10,8 +11,9 @@ type Props = {
   onGear?: () => void
 }
 
-// 모든 탭 맨 위 머리: 침대 사진 · 연결 상태 · 침대 이름, 오른쪽 설정 버튼
+// 모든 탭 맨 위 머리: 침대 사진 · 연결 상태 · 침대 이름(병원용이면 "사과 침대"), 오른쪽 설정 버튼
 export function TabTop({ onGear }: Props) {
+  const bed = useBedInfo()
   return (
     <View style={styles.top}>
       <View style={styles.who}>
@@ -21,7 +23,7 @@ export function TabTop({ onGear }: Props) {
             <View style={styles.dot} />
             <Text style={styles.stateText}>연결됨</Text>
           </View>
-          <Text style={styles.name}>잘자요</Text>
+          <Text style={styles.name}>{bedName(bed)}</Text>
         </View>
       </View>
       {/* 그림자가 잘리지 않게 바깥 칸에 그림자, 안쪽 버튼에 물결 */}
