@@ -28,8 +28,15 @@
     },
     "plugins": [
       "expo-asset",
+      "expo-camera",
       "expo-font",
+      "expo-image",
+      "expo-router",
       "expo-status-bar"
-    ]
+    ],
+    "scheme": "jaljayo",
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
