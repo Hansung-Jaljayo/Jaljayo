@@ -1,6 +1,6 @@
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -85,7 +85,7 @@ export default function SettingsScreen({
                 <Image
                   source={require('../../assets/images/bed.png')}
                   style={styles.bedImg}
-                  resizeMode="contain"
+                  contentFit="contain"
                 />
                 <View style={styles.bedInfo}>
                   <Text style={styles.bedName}>{bedName}</Text>

@@ -1,11 +1,13 @@
+import { Image } from 'expo-image';
 import {
-  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import { TabBar, TAB_BAR_SPACE, type TabKey } from '@/components/TabBar';
 
 const PRESETS = [
   { label: '독서', icon: require('../../assets/images/preset-reading.png') },
@@ -40,7 +42,7 @@ interface Props {
   onStop?: () => void;
   onUndo?: () => void;
   onDismissDisconnectDialog?: () => void;
-  onTabChange?: (tab: string) => void;
+  onTabChange?: (tab: TabKey) => void;
 }
 
 function AngleRow({
@@ -143,7 +145,7 @@ export default function PostureScreen({
             <Image
               source={require('../../assets/images/bed.png')}
               style={styles.bedThumb}
-              resizeMode="contain"
+              contentFit="contain"
             />
             <View style={styles.whoText}>
               <View style={styles.statusRow}>
@@ -157,9 +159,8 @@ export default function PostureScreen({
           </View>
           <TouchableOpacity style={styles.gearBtn} onPress={onGear}>
             <Image
-              source={require('../../assets/images/gear.png')}
+              source={require('../../assets/icons/gear.svg')}
               style={styles.gearIcon}
-              resizeMode="contain"
             />
           </TouchableOpacity>
         </View>
@@ -181,7 +182,7 @@ export default function PostureScreen({
               <Image
                 source={require('../../assets/images/undo.png')}
                 style={[styles.undoIcon, undoDisabled && styles.undoIconDisabled]}
-                resizeMode="contain"
+                contentFit="contain"
               />
               <Text style={[styles.undoText, undoDisabled && styles.undoTextDisabled]}>되돌리기</Text>
             </TouchableOpacity>
@@ -223,7 +224,7 @@ export default function PostureScreen({
           <Image
             source={require('../../assets/images/adjust.png')}
             style={[styles.editIcon, isControlsDisabled && { tintColor: '#C4B6B0' }]}
-            resizeMode="contain"
+            contentFit="contain"
           />
           <Text style={[styles.editText, isControlsDisabled && styles.editTextDisabled]}>자세별 기본 각도 수정</Text>
           <Text style={[styles.editChevron, isControlsDisabled && styles.editChevronDisabled]}>›</Text>
@@ -266,7 +267,7 @@ export default function PostureScreen({
                           isControlsDisabled && isActive && styles.presetIconActive,
                           isControlsDisabled && !isActive && styles.presetIconDisabled,
                         ]}
-                        resizeMode="contain"
+                        contentFit="contain"
                       />
                     )}
                   </View>
@@ -287,25 +288,8 @@ export default function PostureScreen({
         )}
 
         <View style={styles.spacer} />
-
-        {/* Bottom Tabs */}
-        <View style={styles.tabs}>
-          {([
-            { label: '자세', icon: require('../../assets/images/tab-posture.png') },
-            { label: '알람', icon: require('../../assets/images/tab-alarm.png') },
-            { label: '예약', icon: require('../../assets/images/tab-reservation.png') },
-          ] as const).map(({ label, icon }, i) => (
-            <TouchableOpacity
-              key={label}
-              style={[styles.tab, i === 0 && styles.tabActive]}
-              onPress={() => onTabChange?.(label)}
-            >
-              <Image source={icon} style={[styles.tabIcon, i === 0 && styles.tabIconOn]} resizeMode="contain" />
-              <Text style={[styles.tabLabel, i === 0 && styles.tabLabelOn]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
       </View>
+      <TabBar current="pose" onPick={onTabChange} />
 
       {/* Disconnect Dialog */}
       {showDisconnectDialog && (
@@ -483,6 +467,7 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     paddingHorizontal: 18,
+    paddingBottom: TAB_BAR_SPACE,
   },
   sectionDisabled: {
     opacity: 0.5,
@@ -789,57 +774,5 @@ const styles = StyleSheet.create({
   },
   spacer: {
     flex: 1,
-  },
-  // Bottom tabs
-  tabs: {
-    height: 68,
-    backgroundColor: '#FFFCFA',
-    borderRadius: 34,
-    marginBottom: 8,
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
-    flexDirection: 'row',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    gap: 4,
-  },
-  tab: {
-    flex: 1,
-    height: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-    borderRadius: 26,
-  },
-  tabActive: {
-    backgroundColor: '#342724',
-  },
-  tabIcon: {
-    width: 22,
-    height: 22,
-    tintColor: '#705A54',
-  },
-  tabIconOn: {
-    tintColor: '#ECB0A0',
-  },
-  tabIconPlaceholder: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 1.8,
-    borderColor: '#705A54',
-  },
-  tabLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 16,
-    textAlign: 'center',
-    color: '#705A54',
-  },
-  tabLabelOn: {
-    color: '#FFFAF7',
   },
 });

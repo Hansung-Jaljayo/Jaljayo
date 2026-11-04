@@ -1,8 +1,8 @@
+import { Image } from 'expo-image';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
   Easing,
-  Image,
   Modal,
   StyleSheet,
   Text,
@@ -233,9 +233,8 @@ export default function EditPresetsSheet({
               disabled={isBlocked}
             >
               <Image
-                source={require('../../assets/images/tab-posture.png')}
+                source={require('../../assets/icons/tab-pose.svg')}
                 style={styles.actionIconPrimary}
-                resizeMode="contain"
               />
               <Text style={styles.actionPrimaryText}>이 각도로 침대 움직이기</Text>
             </TouchableOpacity>
@@ -254,13 +253,13 @@ export default function EditPresetsSheet({
                 <Image
                   source={require('../../assets/images/save-angle.png')}
                   style={styles.actionIconSecondary}
-                  resizeMode="contain"
+                  contentFit="contain"
                 />
               ) : isSaved ? (
                 <Image
                   source={require('../../assets/images/save-angle.png')}
                   style={[styles.actionIconSecondary, styles.actionIconSecondarySaved]}
-                  resizeMode="contain"
+                  contentFit="contain"
                 />
               ) : null}
               <Text style={[styles.actionSecondaryText, isSaved && styles.actionSecondaryTextSaved]}>
