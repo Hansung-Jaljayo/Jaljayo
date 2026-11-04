@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { TabBar, TAB_BAR_SPACE, type TabKey } from '@/components/TabBar';
+import { TabTop } from '@/components/TabTop';
 
 const PRESETS = [
   { label: '독서', icon: require('../../assets/images/preset-reading.png') },
@@ -17,7 +18,6 @@ const PRESETS = [
 ];
 
 interface Props {
-  bedName?: string;
   headAngle?: number;
   footAngle?: number;
   activePreset?: number;
@@ -106,7 +106,6 @@ function AngleRow({
 }
 
 export default function PostureScreen({
-  bedName = '잘자요',
   headAngle = 45,
   footAngle = 45,
   activePreset = 0,
@@ -140,30 +139,7 @@ export default function PostureScreen({
     <SafeAreaView style={styles.container}>
       <View style={styles.inner}>
         {/* Header */}
-        <View style={styles.top}>
-          <View style={styles.who}>
-            <Image
-              source={require('../../assets/images/bed.png')}
-              style={styles.bedThumb}
-              contentFit="contain"
-            />
-            <View style={styles.whoText}>
-              <View style={styles.statusRow}>
-                <View style={[styles.statusDot, isDisconnected && styles.statusDotDisconnected]} />
-                <Text style={styles.statusLabel}>
-                  {isDisconnected ? '연결 끊김' : isLoading ? '불러오는 중' : '연결됨'}
-                </Text>
-              </View>
-              <Text style={styles.bedName}>{bedName}</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.gearBtn} onPress={onGear}>
-            <Image
-              source={require('../../assets/icons/gear.svg')}
-              style={styles.gearIcon}
-            />
-          </TouchableOpacity>
-        </View>
+        <TabTop onGear={onGear} />
 
         {/* Hero */}
         <View style={[styles.hero, isLoading && styles.sectionDisabled]}>
@@ -471,71 +447,6 @@ const styles = StyleSheet.create({
   },
   sectionDisabled: {
     opacity: 0.5,
-  },
-  // Header
-  top: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    height: 50,
-    marginTop: 6,
-  },
-  who: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  bedThumb: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-  },
-  whoText: {
-    gap: 2,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#D9816D',
-  },
-  statusDotDisconnected: {
-    backgroundColor: '#AD332C',
-  },
-  statusLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    lineHeight: 16,
-    color: '#705A54',
-  },
-  bedName: {
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: -0.6,
-    lineHeight: 24,
-    color: '#2D2220',
-  },
-  gearBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFCFA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
-  },
-  gearIcon: {
-    width: 22,
-    height: 22,
   },
   // Hero
   hero: {
