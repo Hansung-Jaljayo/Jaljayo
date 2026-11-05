@@ -4,6 +4,8 @@
 import { useSyncExternalStore } from 'react'
 
 export type BedInfo = {
+  // 앱과 침대가 연결돼 있는지
+  connected: boolean
   // 침대가 지금 시각을 아는지. 모르면 시각에 맞춰 움직이는 알람·예약이 실행되지 않는다
   clockOk: boolean
   // 알람을 끄는 버튼이 있는지. 없으면 알람을 쓸 수 없다
@@ -17,8 +19,8 @@ export type BedInfo = {
   } | null
 }
 
-// 처음 값: 시안처럼 시각을 아는, 버튼이 있는 집 침대
-let info: BedInfo = { clockOk: true, hasButton: true, ward: null }
+// 처음 값: 시안처럼 연결된, 시각을 아는, 버튼이 있는 집 침대
+let info: BedInfo = { connected: true, clockOk: true, hasButton: true, ward: null }
 const listeners = new Set<() => void>()
 
 export const getBedInfo = () => info

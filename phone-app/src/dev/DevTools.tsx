@@ -26,6 +26,12 @@ export function DevTools() {
     <View style={[styles.stack, { bottom: TAB_BAR_SPACE + insets.bottom }]} pointerEvents="box-none">
       {open && (
         <>
+          {/* 자세 탭: 연결이 끊기면 버튼이 잠기고 연결 끊김 안내가 뜬다 */}
+          <DevSwitch
+            label="연결 끊김"
+            value={!bed.connected}
+            onValueChange={(on) => setBedInfo({ connected: !on })}
+          />
           {/* 침대가 지금 시각을 모르는 상태: 알람·예약 탭에 시계 무효 띠가 뜬다 */}
           <DevSwitch label="시각 모름" value={!bed.clockOk} onValueChange={(on) => setBedInfo({ clockOk: !on })} />
           <DevSwitch

@@ -1,17 +1,22 @@
 {
   "expo": {
     "name": "잘자요",
-    "slug": "phone-app",
+    "slug": "jaljayo-phone",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/bed.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/bed.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F4F0ED"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F4F0ED",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -22,9 +27,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "expo-asset",
+      "expo-camera",
       "expo-font",
+      "expo-image",
       "expo-router",
-      "expo-image"
+      "expo-status-bar"
     ],
     "scheme": "jaljayo",
     "experiments": {
