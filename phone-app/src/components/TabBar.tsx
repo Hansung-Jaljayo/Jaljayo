@@ -1,5 +1,5 @@
 import { Image } from 'expo-image'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, Platform } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { color, font, radius, shadow, space } from '@/theme/tokens'
@@ -45,8 +45,9 @@ type Props = {
 // 피그마 "tabs · 아래 탭 막대". 화면 아래에 떠 있는 둥근 막대
 export function TabBar({ current, onPick, dimmed = [] }: Props) {
   const insets = useSafeAreaInsets()
+  // 시안: 아이폰은 화면 아래에서 30(홈 막대 위), 갤럭시는 아래 버튼 막대 위 12
   return (
-    <View style={[styles.bar, { bottom: insets.bottom + 12 }]} role="tablist">
+    <View style={[styles.bar, { bottom: Platform.OS === 'ios' ? Math.max(insets.bottom - 4, 12) : insets.bottom + 12 }]} role="tablist">
       {TABS.map((t) => {
         const on = t.key === current
         const dim = dimmed.includes(t.key) && styles.dim

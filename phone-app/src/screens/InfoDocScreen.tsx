@@ -6,6 +6,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { keepAll } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 export type DocSection = {
   heading: string;
@@ -48,13 +50,13 @@ export default function InfoDocScreen({ visible = false, title, sections, onClos
           {sections.map((section, i) => (
             <View key={i} style={styles.section}>
               <Text style={styles.h3}>{section.heading}</Text>
-              {section.text && <Text style={styles.p}>{section.text}</Text>}
+              {section.text && <Text style={styles.p}>{keepAll(section.text)}</Text>}
               {section.items && (
                 <View style={styles.ul}>
                   {section.items.map((item, j) => (
                     <View key={j} style={styles.li}>
                       <View style={styles.liMarker} />
-                      <Text style={styles.liText}>{item}</Text>
+                      <Text style={styles.liText}>{keepAll(item)}</Text>
                     </View>
                   ))}
                 </View>
@@ -100,7 +102,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 25,
     color: '#2D2220',
   },
@@ -119,7 +121,7 @@ const styles = StyleSheet.create({
   // draft
   draft: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 16,
     color: '#705A54',
   },
@@ -130,13 +132,13 @@ const styles = StyleSheet.create({
   },
   h3: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 21,
     color: '#2D2220',
   },
   p: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 22,
     color: '#513E39',
   },
@@ -160,7 +162,7 @@ const styles = StyleSheet.create({
   liText: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 22,
     color: '#513E39',
   },

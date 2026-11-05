@@ -1,4 +1,7 @@
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   networks: string[];
@@ -12,8 +15,8 @@ export default function WifiSelectScreen({ networks, onSelect, onRescan, onHome 
     <SafeAreaView style={styles.container}>
       <View style={styles.body}>
         <View style={styles.top}>
-          <Text style={styles.title}>와이파이를 골라 주세요</Text>
-          <Text style={styles.lead}>침대가 앞으로 연결할 와이파이예요.</Text>
+          <Text style={styles.title}>{keepAll(balance('와이파이를 골라 주세요'))}</Text>
+          <Text style={styles.lead}>{keepAll(bySentence('침대가 앞으로 연결할 와이파이예요.'))}</Text>
 
           {networks.length === 0 ? (
             <View style={styles.note}>
@@ -38,7 +41,7 @@ export default function WifiSelectScreen({ networks, onSelect, onRescan, onHome 
 
           <View style={styles.links}>
             <TouchableOpacity style={styles.link} onPress={onRescan}>
-              <Text style={styles.linkText}>다시 찾기</Text>
+              <LinkText style={styles.linkText}>다시 찾기</LinkText>
             </TouchableOpacity>
           </View>
         </View>
@@ -68,14 +71,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     lineHeight: 30,
   },
   lead: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
   },
@@ -102,7 +105,7 @@ const styles = StyleSheet.create({
   },
   ssid: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     color: '#2D2220',
     lineHeight: 20,
   },
@@ -118,7 +121,7 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 22,
     color: '#AD332C',
   },
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,
@@ -152,7 +155,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },

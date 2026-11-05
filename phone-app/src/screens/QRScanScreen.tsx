@@ -2,6 +2,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pressable, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   // 잘자요 침대 QR을 읽었을 때(한 번만 부른다)
@@ -45,10 +47,8 @@ export default function QRScanScreen({ onScanned, onDenied, onSettings }: Props)
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>침대 등록</Text>
-      <Text style={styles.description}>
-        {'침대 모듈에 붙은 QR 코드를 네모 안에\n비춰 주세요'}
-      </Text>
+      <Text style={styles.title}>{keepAll(balance('침대 등록'))}</Text>
+      <Text style={styles.description}>{keepAll(bySentence('침대 모듈에 붙은 QR 코드를 네모 안에 비춰 주세요'))}</Text>
 
       <View style={styles.fill}>
         <Pressable
@@ -110,10 +110,10 @@ export default function QRScanScreen({ onScanned, onDenied, onSettings }: Props)
 
       <View style={styles.links}>
         <TouchableOpacity style={styles.link} onPress={() => { setShowWhere(!showWhere); setWrongQR(false); }}>
-          <Text style={styles.linkText}>{showWhere ? '접기' : 'QR 코드가 안 보여요'}</Text>
+          <LinkText style={styles.linkText}>{showWhere ? '접기' : 'QR 코드가 안 보여요'}</LinkText>
         </TouchableOpacity>
         <TouchableOpacity style={styles.link} onPress={onSettings}>
-          <Text style={styles.linkText}>설정</Text>
+          <LinkText style={styles.linkText}>설정</LinkText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -131,14 +131,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     lineHeight: Platform.OS === 'ios' ? 36 : 30,
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
   },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 22,
     color: '#AD332C',
   },
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   whereText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 26,
     textAlign: 'center',
     color: '#2D2220',
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   },
   permissionButtonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     fontSize: 15,
   },
 });

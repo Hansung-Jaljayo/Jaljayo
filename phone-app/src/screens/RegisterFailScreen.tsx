@@ -1,4 +1,7 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   onRetry?: () => void;
@@ -19,11 +22,9 @@ export default function RegisterFailScreen({ onRetry, onHome }: Props) {
             />
           </View>
 
-          <Text style={styles.title}>등록됐는지 확인하지 못했어요</Text>
+          <Text style={styles.title}>{keepAll(balance('등록됐는지 확인하지 못했어요'))}</Text>
 
-          <Text style={styles.description}>
-            {'침대와 연결이 잠시 끊겼어요. 침대 전원과\n와이파이를 확인한 뒤 다시 확인해 주세요.'}
-          </Text>
+          <Text style={styles.description}>{keepAll(bySentence('침대와 연결이 잠시 끊겼어요. 침대 전원과 와이파이를 확인한 뒤 다시 확인해 주세요.'))}</Text>
         </View>
 
         {/* 버튼 묶음 */}
@@ -38,7 +39,7 @@ export default function RegisterFailScreen({ onRetry, onHome }: Props) {
 
           <View style={styles.links}>
             <TouchableOpacity style={styles.link}>
-              <Text style={styles.linkText}>설정</Text>
+              <LinkText style={styles.linkText}>설정</LinkText>
             </TouchableOpacity>
           </View>
         </View>
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
@@ -92,7 +93,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
     textAlign: 'center',
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,

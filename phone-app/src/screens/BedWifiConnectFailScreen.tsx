@@ -1,4 +1,7 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   onRetry?: () => void;
@@ -19,9 +22,9 @@ export default function BedWifiConnectFailScreen({ onRetry, onHome, onSettings }
             />
           </View>
 
-          <Text style={styles.title}>침대가 와이파이에{'\n'}연결하지 못했어요</Text>
+          <Text style={styles.title}>{keepAll(balance('침대가 와이파이에 연결하지 못했어요'))}</Text>
 
-          <Text style={styles.description}>공유기 전원과 비밀번호를 확인해 주세요.</Text>
+          <Text style={styles.description}>{keepAll(bySentence('공유기 전원과 비밀번호를 확인해 주세요.'))}</Text>
         </View>
 
         <View style={styles.actions}>
@@ -35,7 +38,7 @@ export default function BedWifiConnectFailScreen({ onRetry, onHome, onSettings }
 
           <View style={styles.links}>
             <TouchableOpacity style={styles.link} onPress={onSettings}>
-              <Text style={styles.linkText}>설정</Text>
+              <LinkText style={styles.linkText}>설정</LinkText>
             </TouchableOpacity>
           </View>
         </View>
@@ -81,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
@@ -89,7 +92,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
     textAlign: 'center',
@@ -108,7 +111,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -127,7 +130,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,

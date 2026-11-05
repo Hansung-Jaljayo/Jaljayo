@@ -92,6 +92,13 @@ export default function Index() {
     return () => clearTimeout(t)
   }, [toast])
 
+  // 개발 도구가 고르라고 한 탭으로 바꾼다(새 요청일 때만)
+  const [askSeen, setAskSeen] = useState(0)
+  if (flow.tabAsk && flow.tabAsk.n !== askSeen) {
+    setAskSeen(flow.tabAsk.n)
+    setTab(flow.tabAsk.key)
+  }
+
   const pick = (key: TabKey) => setTab(key)
   // 설정을 등록 화면에서 열면 침대 묶음 없이 앱·병원 관리만
   const noBed = !!flow.ob && flow.ob !== 'splash'

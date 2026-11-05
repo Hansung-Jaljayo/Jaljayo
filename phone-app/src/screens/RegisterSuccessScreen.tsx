@@ -1,4 +1,7 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   description?: string;
@@ -22,9 +25,9 @@ export default function RegisterSuccessScreen({
             />
           </View>
 
-          <Text style={styles.title}>등록됐어요</Text>
+          <Text style={styles.title}>{keepAll(balance('등록됐어요'))}</Text>
 
-          <Text style={styles.description}>{description}</Text>
+          <Text style={styles.description}>{keepAll(bySentence(description))}</Text>
         </View>
 
         <TouchableOpacity style={styles.primaryButton} onPress={onStart}>
@@ -67,7 +70,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
@@ -75,7 +78,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
     textAlign: 'center',
@@ -90,7 +93,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },

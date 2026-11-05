@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SvgXml } from 'react-native-svg'
 
-import { ObScreen, obStyles } from '@/components/ObScreen'
+import { Ko, ObScreen, obStyles } from '@/components/ObScreen'
 import { useInnerBack } from '@/features/app/flow'
 import { setBedInfo, useBedInfo } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
@@ -70,7 +70,8 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
         onPress: save,
         disabled: blocked || waiting || !pick || (!pending && renaming && pick === current),
       }}
-      secondary={{
+      // 시안: 취소는 이름을 바꿀 때나 저장을 기다릴 때만 보인다(처음 등록할 때는 이름을 꼭 정한다)
+      secondary={renaming || pending ? {
         label: '취소',
         onPress: () => {
           if (waiting) return
@@ -78,17 +79,17 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
           onCancel()
         },
         disabled: waiting,
-      }}
+      } : undefined}
     >
       <FruitGrid label="부르는 이름" value={pick} used={used} disabled={pending} onPick={setPick} />
       {(blocked || r.timedOut || taken) && (
-        <Text style={obStyles.noteBad} role="status">
+        <Ko style={obStyles.noteBad} role="status">
           {blocked
             ? '침대와 연결되어 정보를 확인한 뒤 저장할 수 있어요.'
             : taken
               ? '다른 침대가 먼저 사용한 이름이에요. 다른 이름을 골라 주세요.'
               : '저장 결과를 확인하지 못했어요. 다시 시도하거나 기다리기를 취소해 주세요.'}
-        </Text>
+        </Ko>
       )}
     </ObScreen>
   )

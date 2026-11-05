@@ -10,6 +10,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { font } from '@/theme/tokens';
 
 const PRESET_LABELS = ['독서', 'TV', '휴식', '잠'];
 
@@ -312,13 +313,13 @@ const sctlStyles = StyleSheet.create({
   },
   name: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#2D2220',
   },
   range: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: font.medium,
     lineHeight: 18,
     color: '#705A54',
   },
@@ -360,14 +361,14 @@ const sctlStyles = StyleSheet.create({
   },
   valNum: {
     fontSize: 46,
-    fontWeight: '200',
+    fontFamily: font.extraLight,
     letterSpacing: -1.84,
     color: '#2D2220',
     lineHeight: 46,
   },
   valDeg: {
     fontSize: 20,
-    fontWeight: '300',
+    fontFamily: font.light,
     letterSpacing: -1.84,
     color: '#705A54',
     lineHeight: 20,
@@ -440,7 +441,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 30,
     letterSpacing: -0.48,
     color: '#2D2220',
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
   },
   xLine: {
     position: 'absolute',
-    width: 12,
+    width: 17,
     height: 2,
     borderRadius: 1,
     backgroundColor: '#2D2220',
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
   },
   purposeText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 20,
     textAlign: 'center',
     color: '#2D2220',
@@ -495,18 +496,18 @@ const styles = StyleSheet.create({
   },
   pairText: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: font.medium,
     lineHeight: 18,
     color: '#705A54',
   },
   saveNote: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     color: '#AD332C',
     textAlign: 'center',
   },
   pairTextSaved: {
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
   },
   // 미리보기
@@ -516,15 +517,11 @@ const styles = StyleSheet.create({
     borderRadius: 24,
   },
   // 각도 조절 카드
+  // 시안 .sheet .sctl: 흰 바탕 그대로(그림자 없음)
   sctl: {
     backgroundColor: '#FFFCFA',
     borderRadius: 26,
     gap: 8,
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
   },
   actionDisabled: {
     opacity: 0.45,
@@ -549,7 +546,7 @@ const styles = StyleSheet.create({
   },
   actionPrimaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 20,
     color: '#FFFAF7',
   },
@@ -583,7 +580,7 @@ const styles = StyleSheet.create({
   },
   actionSecondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 20,
     color: '#2D2220',
   },
@@ -600,7 +597,7 @@ const styles = StyleSheet.create({
   },
   actionCancelText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 20,
     color: '#2D2220',
   },
@@ -611,7 +608,7 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 20,
     color: '#AD332C',
     textDecorationLine: 'underline',

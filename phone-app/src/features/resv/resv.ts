@@ -88,7 +88,8 @@ export const sampleResv = (now = nowMinutes()): ResvState => {
 
 // 침대가 알려 주는 예약 상태(지금 예약, 실행하지 못한 기록). 예약 탭은 useResvState()로 읽는다.
 // 침대가 저장했다고 답하거나 새 상태를 알려 줄 때 setResvState로 바꾼다
-let state: ResvState = sampleResv()
+// 처음 상태는 시안과 같게: 예약 없음 + 실행하지 못한 기록 하나(개발 도구의 "예약 없음"을 끄면 표본 예약이 생긴다)
+let state: ResvState = { ...sampleResv(), item: null }
 const listeners = new Set<() => void>()
 
 export const getResvState = () => state
