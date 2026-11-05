@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, SafeAreaView, StyleSheet, Text, View, Platform } from 'react-native';
 
 interface Props {
   ssid: string;
@@ -55,9 +55,9 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
     lineHeight: 30,

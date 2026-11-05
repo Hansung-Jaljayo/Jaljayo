@@ -3,7 +3,7 @@ import { AppState, Linking, StyleSheet, View } from 'react-native'
 
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { ObScreen } from '@/components/ObScreen'
-import { getFlow, goOb, type ObState, openSettings, setFlow, useFlow } from '@/features/app/flow'
+import { getFlow, goOb, innerBack, type ObState, openSettings, setFlow, useFlow } from '@/features/app/flow'
 import { type BedInfo, getBedInfo, setBedInfo, wardDefault } from '@/features/bed/bed'
 import { type BedReply } from '@/features/bed/requests'
 import { useBedRequest } from '@/features/bed/useBedRequest'
@@ -50,8 +50,10 @@ type Reg = {
   renaming: boolean
   // 다른 폰에서 넘겨받은 병원 침대면 쓰던 이름을 이름 고르기에서 미리 골라 둔다
   keepName: string
+  // 침대를 찾는 동안 그대로 보여 줄 화면(QR 화면·못 찾음 화면·와이파이 옮기는 중)
+  findFrom: 'scan' | 'notfound' | 'wmove'
 }
-const REG0: Reg = { qr: '', taken: false, wardName: null, ssid: '', wifiBad: false, networks: [], fromApp: false, renaming: false, keepName: '' }
+const REG0: Reg = { qr: '', taken: false, wardName: null, ssid: '', wifiBad: false, networks: [], fromApp: false, renaming: false, keepName: '', findFrom: 'scan' }
 
 // 침대 답에서 병원용 정보를 읽는다(형식은 보드 담당 규격을 따른다)
 const wardFrom = (reply: BedReply): BedInfo['ward'] =>
@@ -92,6 +94,8 @@ export function RegisterFlow() {
 
   // 화면마다 침대에 보내는 요청. 화면에 들어올 때 한 번 보낸다
   const find = useCallback(() => {
+    const cur = getFlow().ob
+    setReg({ findFrom: cur === 'notfound' || cur === 'wmove' ? cur : 'scan' })
     goOb('finding')
     r.send(
       { type: 'bed-find', body: { qr: regRef.current.qr } },
@@ -191,6 +195,7 @@ export function RegisterFlow() {
     obBack.current = () => {
       const cur = getFlow().ob
       if (!cur) return false
+      if (innerBack.current?.()) return true
       const back: Partial<Record<ObState, () => void>> = {
         apw: adminExit,
         admin: adminExit,
@@ -229,6 +234,11 @@ export function RegisterFlow() {
       case 'splash':
         return <StartScreen />
       case 'scan':
+      case 'finding':
+        if (ob === 'finding' && reg.findFrom === 'notfound') {
+          return <BedNotFoundScreen finding onSettings={settings} />
+        }
+        if (ob === 'finding' && reg.findFrom === 'wmove') return <BedWifiConnectingScreen ssid={reg.ssid} />
         return (
           <QRScanScreen
             onScanned={(qr) => {
@@ -239,8 +249,6 @@ export function RegisterFlow() {
             onSettings={settings}
           />
         )
-      case 'finding':
-        return <ObScreen spinner title="침대를 찾고 있어요" lead="잠시만 기다려 주세요." />
       case 'swap':
         return (
           <RegisterOtherDeviceScreen

@@ -49,6 +49,8 @@ interface Props {
   onTabChange?: (tab: TabKey) => void;
   // 병원용 밤 시간 안내 한 줄
   nightNote?: string;
+  // 밤 안내 줄을 읽어 줄 때 쓰는 긴 글
+  nightLabel?: string;
 }
 
 function AngleRow({
@@ -138,6 +140,7 @@ export default function PostureScreen({
   onDismissDisconnectDialog,
   onTabChange,
   nightNote,
+  nightLabel,
 }: Props) {
   const isAnyPressing = !!pressingButton;
   const showMovingChip = isMoving || isAnyPressing;
@@ -173,7 +176,7 @@ export default function PostureScreen({
         </View>
 
         {!!nightNote && (
-          <View style={styles.nightNote} role="status">
+          <View style={styles.nightNote} role="status" accessible accessibilityLabel={nightLabel}>
             <SvgXml xml={MOON} width={16} height={16} />
             <Text style={styles.nightNoteText}>{nightNote}</Text>
           </View>
@@ -450,18 +453,20 @@ const rowStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  // 시안 .nightnote: 높이 32, 반투명 어두운 바탕, 13 글자
   nightNote: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: '#342724',
+    height: 32,
+    paddingLeft: 10,
+    paddingRight: 12,
+    borderRadius: 16,
+    backgroundColor: 'rgba(29, 22, 20, 0.62)',
     marginBottom: 8,
   },
-  nightNoteText: { fontSize: 15, fontWeight: '600', color: '#FFFAF7' },
+  nightNoteText: { fontSize: 13, fontWeight: '600', color: '#FFFAF7' },
   container: {
     flex: 1,
     backgroundColor: '#F4F0ED',
@@ -643,7 +648,7 @@ const styles = StyleSheet.create({
     tintColor: '#ECB0A0',  // 활성: 다크 배경 위 살몬
   },
   presetIconOff: {
-    tintColor: '#705A54',  // 비활성: 흰 배경 위 브라운
+    tintColor: '#513E39',  // 비활성: 흰 배경 위 글자색(시안 fg-2)
   },
   presetIconActive: {
     tintColor: '#FFFAF7',  // 비활성화 + 활성

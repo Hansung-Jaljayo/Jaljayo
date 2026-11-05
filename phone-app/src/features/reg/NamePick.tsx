@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SvgXml } from 'react-native-svg'
 
 import { ObScreen, obStyles } from '@/components/ObScreen'
+import { useInnerBack } from '@/features/app/flow'
 import { setBedInfo, useBedInfo } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
 import { FRUITS, fruitXml, MY_BED, getHospital, setHospital, useHospital, usedNames } from '@/features/hospital/hospital'
@@ -31,6 +32,8 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
   const blocked = !bed.connected || bed.loading
   const pending = r.waiting
   const waiting = r.waiting && !r.timedOut
+  // 저장 중에는 뒤로도 막는다(취소 버튼도 막혀 있다)
+  useInnerBack(() => waiting)
 
   const save = () => {
     if (blocked || !pick || waiting) return
@@ -77,29 +80,9 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
         disabled: waiting,
       }}
     >
-      <View style={styles.grid} role="radiogroup" accessibilityLabel="부르는 이름">
-        {FRUITS.map((f) => {
-          const isUsed = used.includes(f.name)
-          const on = f.name === pick
-          return (
-            <Pressable
-              key={f.name}
-              style={[styles.fruit, on && styles.fruitOn, isUsed && styles.fruitUsed]}
-              onPress={() => !pending && setPick(f.name)}
-              disabled={isUsed || pending}
-              role="radio"
-              aria-checked={on}
-              accessibilityLabel={isUsed ? `${f.name}, 사용 중` : f.name}
-            >
-              <SvgXml xml={fruitXml(f.svg, on ? color['on-ink'] : color.fg)} width={28} height={28} />
-              <Text style={[styles.name, on && styles.nameOn]}>{f.name}</Text>
-              <Text style={styles.used}>{isUsed ? '사용 중' : ' '}</Text>
-            </Pressable>
-          )
-        })}
-      </View>
+      <FruitGrid label="부르는 이름" value={pick} used={used} disabled={pending} onPick={setPick} />
       {(blocked || r.timedOut || taken) && (
-        <Text style={obStyles.note} role="status">
+        <Text style={obStyles.noteBad} role="status">
           {blocked
             ? '침대와 연결되어 정보를 확인한 뒤 저장할 수 있어요.'
             : taken
@@ -111,21 +94,65 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
   )
 }
 
+// 과일 이름 고르기(시안 .fruits): 세 줄 격자, 동그라미 그림 아래 이름. 같은 병실에서 쓰는 이름은 흐리게 막는다
+export function FruitGrid({
+  label,
+  value,
+  used,
+  disabled,
+  onPick,
+}: {
+  label: string
+  value: string
+  used: string[]
+  disabled?: boolean
+  onPick: (name: string) => void
+}) {
+  return (
+    <View style={styles.grid} role="radiogroup" accessibilityLabel={label}>
+      {FRUITS.map((f) => {
+        const isUsed = used.includes(f.name)
+        const on = f.name === value
+        return (
+          <Pressable
+            key={f.name}
+            style={styles.fruit}
+            onPress={() => !disabled && onPick(f.name)}
+            disabled={isUsed || disabled}
+            role="radio"
+            aria-checked={on}
+            accessibilityLabel={isUsed ? `${f.name}, 사용 중` : f.name}
+          >
+            <View style={[styles.ic, on && styles.icOn, isUsed && styles.dim]}>
+              <SvgXml xml={fruitXml(f.svg, on ? color.accent : color.fg)} width={IC_SVG} height={IC_SVG} />
+            </View>
+            <Text style={[styles.name, on && styles.nameOn, isUsed && styles.dim]}>{f.name}</Text>
+            <Text style={styles.used}>{isUsed ? '사용 중' : ''}</Text>
+          </Pressable>
+        )
+      })}
+    </View>
+  )
+}
+
+const IC = Platform.OS === 'ios' ? 52 : 46
+const IC_SVG = Platform.OS === 'ios' ? 28 : 25
+
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
-  fruit: {
-    width: '31.5%',
-    height: 92,
-    borderRadius: 20,
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Platform.OS === 'ios' ? 10 : 6 },
+  fruit: { width: '33.33%', paddingVertical: 4, alignItems: 'center', gap: 4 },
+  ic: {
+    width: IC,
+    height: IC,
+    borderRadius: IC / 2,
     backgroundColor: color.card,
+    boxShadow: '0px 1px 2px 0px rgba(52, 39, 36, 0.06), 0px 12px 32px -8px rgba(52, 39, 36, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    boxShadow: '0px 12px 32px -8px rgba(52, 39, 36, 0.16)',
   },
-  fruitOn: { backgroundColor: color.ink },
-  fruitUsed: { opacity: 0.4 },
-  name: { fontFamily: font.bold, fontSize: 17, color: color.fg },
-  nameOn: { color: color['on-ink'] },
-  used: { fontFamily: font.medium, fontSize: 12, color: color.muted },
+  icOn: { backgroundColor: color.ink },
+  dim: { opacity: 0.4 },
+  name: { fontFamily: font.semiBold, fontSize: 16, color: color['fg-2'] },
+  nameOn: { fontFamily: font.bold, color: color.fg },
+  used: { minHeight: 16, fontFamily: font.regular, fontSize: 13, color: color.muted },
 })

@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { SvgXml } from 'react-native-svg'
 
 import { ExpandRow } from '@/components/ExpandRow'
 import { ObScreen, obStyles } from '@/components/ObScreen'
 import { Switch } from '@/components/Switch'
 import { TimeWheels } from '@/components/TimeWheels'
 import { clockLabel } from '@/features/alarm/alarm'
+import { useInnerBack } from '@/features/app/flow'
 import { type NightTime, setBedInfo, useBedInfo, wardDefault } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
-import { CONTACT, FRUITS, fruitXml, MY_BED, ROOMS, getHospital, setHospital, useHospital, usedNames } from '@/features/hospital/hospital'
+import { CONTACT, MY_BED, ROOMS, getHospital, setHospital, useHospital, usedNames } from '@/features/hospital/hospital'
 import { color, font } from '@/theme/tokens'
+
+import { FruitGrid } from './NamePick'
 
 const digits6 = (t: string) => t.replace(/\D/g, '').slice(0, 6)
 const nightSummary = (n: NightTime) =>
@@ -22,6 +24,7 @@ export function AdminPassword({ onIn, onOut }: { onIn: () => void; onOut: () => 
   const [bad, setBad] = useState(false)
   const [help, setHelp] = useState(false)
   const r = useBedRequest()
+  useInnerBack(() => r.waiting && !r.timedOut)
   const go = () => {
     if (pw.length !== 6 || r.waiting) return
     if (r.timedOut) return r.retry()
@@ -50,8 +53,8 @@ export function AdminPassword({ onIn, onOut }: { onIn: () => void; onOut: () => 
         accessibilityLabel="관리 비밀번호"
         onSubmitEditing={go}
       />
-      {bad && <Text style={obStyles.noteBad} role="alert">비밀번호가 맞지 않아요. 다시 넣어 주세요.</Text>}
-      {r.timedOut && <Text style={obStyles.note}>침대와 연결이 잠시 끊겼어요. 다시 시도해 주세요.</Text>}
+      {bad && <Text style={obStyles.err} role="alert">비밀번호가 맞지 않아요. 다시 넣어 주세요.</Text>}
+      {r.timedOut && <Text style={obStyles.noteBad}>침대와 연결이 잠시 끊겼어요. 다시 시도해 주세요.</Text>}
       {help && (
         <Text style={obStyles.note}>
           {`잘자요 설치 담당자에게 연락해 주세요. 병원 담당자인지 확인한 뒤 새 비밀번호를 정해 드려요.\n문의: ${CONTACT}`}
@@ -71,6 +74,15 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
   const [openT, setOpenT] = useState<'from' | 'to' | null>(null)
   const r = useBedRequest()
   const sending = r.waiting && !r.timedOut
+  // 뒤로: 보내는 중이면 막고, 펼친 시간 바퀴가 있으면 그것만 닫는다
+  useInnerBack(() => {
+    if (sending) return true
+    if (openT) {
+      setOpenT(null)
+      return true
+    }
+    return false
+  })
   const same =
     alarm === saved.alarmAllowed && night.on === saved.night.on && night.from === saved.night.from && night.to === saved.night.to
   const retryOnly = same && hosp.unconfirmed.length > 0
@@ -107,10 +119,10 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
       secondary={{ label: '나가기', onPress: onOut, disabled: sending }}
     >
       <Text style={obStyles.sec}>밤 시간</Text>
-      <View style={obStyles.card}>
-        <View style={obStyles.row}>
+      <View style={[obStyles.card, obStyles.cardSmall]}>
+        <View style={obStyles.switchRow}>
           <View style={styles.flex}>
-            <Text style={obStyles.rowTitle}>밤에 이름 부르기 끄기</Text>
+            <Text style={obStyles.rowTitleBold}>밤에 이름 부르기 끄기</Text>
             <Text style={obStyles.rowSub}>꺼진 동안에도 침대 버튼을 누르면 말할 수 있어요</Text>
           </View>
           <Switch
@@ -133,13 +145,13 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
           </View>
         ))}
       </View>
-      <Text style={obStyles.note}>{nightSummary(night)}</Text>
+      <Text style={obStyles.sum}>{nightSummary(night)}</Text>
 
       <Text style={obStyles.sec}>알람</Text>
-      <View style={obStyles.card}>
-        <View style={obStyles.row}>
+      <View style={[obStyles.card, obStyles.cardSmall]}>
+        <View style={obStyles.switchRow}>
           <View style={styles.flex}>
-            <Text style={obStyles.rowTitle}>알람 쓰기</Text>
+            <Text style={obStyles.rowTitleBold}>알람 쓰기</Text>
             <Text style={obStyles.rowSub}>끄면 환자 앱과 침대 모두 알람을 만들거나 울리지 않아요. 예약은 소리 없이 자세만 바꿔 그대로 써요</Text>
           </View>
           <Switch value={alarm} onValueChange={setAlarm} accessibilityLabel="알람 쓰기" disabled={sending} />
@@ -149,7 +161,7 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
       {!!hosp.message && !sending && (
         <Text style={hosp.unconfirmed.length ? obStyles.noteBad : obStyles.note} role="status">{hosp.message}</Text>
       )}
-      {r.timedOut && <Text style={obStyles.note}>보낸 결과를 확인하지 못했어요. 다시 시도해 주세요.</Text>}
+      {r.timedOut && <Text style={obStyles.noteBad}>보낸 결과를 확인하지 못했어요. 다시 시도해 주세요.</Text>}
 
       <View style={obStyles.card}>
         <Pressable style={obStyles.row} onPress={onBeds} disabled={sending}>
@@ -172,7 +184,7 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
   return (
     <ObScreen
       title="침대 목록"
-      lead="병실을 누르면 침대가 펼쳐져요. 침대를 누르면 병실을 바꾸거나 환자 사용을 끝낼 수 있어요."
+      lead="호실을 누르면 침대가 펼쳐져요. 침대를 누르면 병실을 바꾸거나 환자 사용을 끝낼 수 있어요."
       secondary={{ label: '병원 관리로', onPress: onBack }}
     >
       {ROOMS.filter((r) => hosp.beds.some((b) => b.room === r)).map((room) => {
@@ -180,14 +192,14 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
         const bad = bs.filter((b) => !b.ok).length
         const isOpen = open.includes(room)
         return (
-          <View key={room} style={obStyles.card}>
+          <View key={room} style={[obStyles.card, obStyles.cardSmall]}>
             <Pressable
-              style={obStyles.row}
+              style={styles.rhead}
               onPress={() => setOpen(isOpen ? open.filter((x) => x !== room) : [...open, room])}
               aria-expanded={isOpen}
             >
               <View style={styles.flex}>
-                <Text style={obStyles.rowTitle}>{room}</Text>
+                <Text style={obStyles.rowTitleBold}>{room}</Text>
                 <Text style={obStyles.rowSub}>
                   {`침대 ${bs.length}대 · 환자 ${bs.filter((b) => b.phone).length}명`}
                   {bad ? <Text style={styles.red}>{` · ${bad}대 확인 안 됨`}</Text> : null}
@@ -199,7 +211,7 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
               bs.map((b) => (
                 <Pressable key={b.id} style={[obStyles.row, obStyles.rowLine]} onPress={() => onBed(b.id)}>
                   <View style={styles.flex}>
-                    <Text style={obStyles.rowTitle}>{`${b.name} 침대`}</Text>
+                    <Text style={obStyles.rowTitleBold}>{`${b.name} 침대`}</Text>
                     <Text style={[obStyles.rowSub, !b.ok && styles.red]}>
                       {`${b.phone ? '환자 폰 연결됨' : '환자 없음'} · ${b.ok ? '설정 적용됨' : '설정 확인 안 됨'}`}
                     </Text>
@@ -226,8 +238,21 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
   const [ended, setEnded] = useState(false)
   const mv = useBedRequest()
   const end = useBedRequest()
-  if (!b) return null
   const busy = (mv.waiting && !mv.timedOut) || (end.waiting && !end.timedOut)
+  // 뒤로: 옮기거나 끝내는 중이면 막고, 사용 종료 확인 줄·펼친 병실 목록이 있으면 그것만 닫는다
+  useInnerBack(() => {
+    if (busy) return true
+    if (asking) {
+      setAsking(false)
+      return true
+    }
+    if (roomOpen) {
+      setRoomOpen(false)
+      return true
+    }
+    return false
+  })
+  if (!b) return null
   const used = usedNames(hosp.beds, room, b.id)
   const clash = room !== b.room && used.includes(b.name)
   const needName = clash && (!name || used.includes(name))
@@ -290,26 +315,7 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
       {clash && (
         <>
           <Text style={obStyles.note}>{`${room}에 이미 '${b.name} 침대'가 있어요. 옮길 병실에서 쓸 이름을 골라 주세요.`}</Text>
-          <View style={styles.grid} role="radiogroup" accessibilityLabel="새 부르는 이름">
-            {FRUITS.map((f) => {
-              const u = used.includes(f.name)
-              const on = f.name === name
-              return (
-                <Pressable
-                  key={f.name}
-                  style={[styles.fruit, on && styles.roomOn, u && styles.dim]}
-                  onPress={() => setName(f.name)}
-                  disabled={u || busy}
-                  role="radio"
-                  aria-checked={on}
-                >
-                  <SvgXml xml={fruitXml(f.svg, on ? color['on-ink'] : color.fg)} width={24} height={24} />
-                  <Text style={[styles.roomText, on && styles.roomTextOn]}>{f.name}</Text>
-                  <Text style={obStyles.rowSub}>{u ? '사용 중' : ' '}</Text>
-                </Pressable>
-              )
-            })}
-          </View>
+          <FruitGrid label="새 부르는 이름" value={name} used={used} disabled={busy} onPick={setName} />
         </>
       )}
       <Pressable
@@ -359,6 +365,7 @@ export function AdminPasswordChange({ onDone, onCancel }: { onDone: () => void; 
   const [diff, setDiff] = useState(false)
   const r = useBedRequest()
   const busy = r.waiting && !r.timedOut
+  useInnerBack(() => busy)
   const ok = () => {
     if (p1.length !== 6 || p2.length !== 6 || busy) return
     if (p1 !== p2) return setDiff(true)
@@ -380,8 +387,8 @@ export function AdminPasswordChange({ onDone, onCancel }: { onDone: () => void; 
       <TextInput style={obStyles.input} value={p1} onChangeText={(t) => { setP1(digits6(t)); setDiff(false) }} secureTextEntry keyboardType="number-pad" maxLength={6} accessibilityLabel="새 비밀번호" />
       <Text style={obStyles.label}>한 번 더</Text>
       <TextInput style={[obStyles.input, diff && obStyles.inputBad]} value={p2} onChangeText={(t) => { setP2(digits6(t)); setDiff(false) }} secureTextEntry keyboardType="number-pad" maxLength={6} accessibilityLabel="새 비밀번호 한 번 더" />
-      {diff && <Text style={obStyles.noteBad} role="alert">두 비밀번호가 달라요. 다시 넣어 주세요.</Text>}
-      {r.timedOut && <Text style={obStyles.note}>바꾼 결과를 확인하지 못했어요. 다시 시도해 주세요.</Text>}
+      {diff && <Text style={obStyles.err} role="alert">두 비밀번호가 달라요. 다시 넣어 주세요.</Text>}
+      {r.timedOut && <Text style={obStyles.noteBad}>바꾼 결과를 확인하지 못했어요. 다시 시도해 주세요.</Text>}
     </ObScreen>
   )
 }
@@ -406,29 +413,41 @@ export function NightInfo({ onOk }: { onOk: () => void }) {
   )
 }
 
+const SHADOW = '0px 1px 2px 0px rgba(52, 39, 36, 0.06), 0px 12px 32px -8px rgba(52, 39, 36, 0.16)'
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   dim: { opacity: 0.45 },
-  red: { color: color.red },
+  red: { color: color.red, fontFamily: font.semiBold },
   down: { transform: [{ rotate: '90deg' }] },
+  // 병실 묶음 머리(시안 .rhead)
+  rhead: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingLeft: 18, paddingRight: 16, gap: 10 },
+  // 병실 고르기(시안 .nseg.rooms): 네 칸 격자
   rooms: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingBottom: 12 },
-  roomBtn: { paddingHorizontal: 12, height: 40, borderRadius: 14, backgroundColor: color.inset, alignItems: 'center', justifyContent: 'center' },
+  roomBtn: {
+    width: '23%',
+    flexGrow: 1,
+    minHeight: 48,
+    borderRadius: 16,
+    backgroundColor: color.card,
+    boxShadow: SHADOW,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   roomOn: { backgroundColor: color.ink },
-  roomText: { fontFamily: font.semiBold, fontSize: 15, color: color.fg },
-  roomTextOn: { color: color['on-ink'] },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  fruit: { width: '31.5%', height: 84, borderRadius: 18, backgroundColor: color.card, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  roomText: { fontFamily: font.semiBold, fontSize: 16, color: color.fg },
+  roomTextOn: { fontFamily: font.bold, color: color['on-ink'] },
   pair: { flexDirection: 'row', gap: 8 },
-  btn: { height: 56, borderRadius: 20, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center' },
+  btn: { minHeight: 60, borderRadius: 22, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   btnWarn: { backgroundColor: color.red },
-  btnText: { fontFamily: font.bold, fontSize: 17, color: color['on-ink'] },
+  btnText: { fontFamily: font.bold, fontSize: 20, color: color['on-ink'] },
   btnLight: {
-    height: 56,
+    minHeight: 56,
     borderRadius: 20,
     backgroundColor: color.card,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 12px 32px -8px rgba(52, 39, 36, 0.16)',
+    boxShadow: SHADOW,
   },
   btnLightText: { fontFamily: font.bold, fontSize: 17, color: color.fg },
   btnLightWarn: { fontFamily: font.bold, fontSize: 17, color: color.red },

@@ -58,6 +58,12 @@ type Props = {
   wait?: 'saving' | 'failed' | null
   onRetry?: () => void
   onCancelWait?: () => void
+  // 고치는 알람이 지금 울리는 중이면 끝날 때까지 저장·삭제를 막는다(설계서 4장)
+  ringing?: boolean
+  // "이번만"으로 바꿀 회차의 시각이 이미 지났을 때(확인 창으로 알린다)
+  onPast?: (off: number, time: number) => void
+  // 침대와 연결이 끊겼거나 상태를 읽는 중이면 저장·삭제를 막는다
+  offline?: boolean
 }
 
 const noop = () => {}
@@ -66,7 +72,7 @@ const noop = () => {}
 // 피그마 "알람 창 / 한 번 알람"과 "알람 창 / 반복 알람"은 이 창의 두 모습이다.
 // 요일을 고르지 않으면 한 번 울리는 알람, 고르면 반복 알람이다.
 // 피그마 "알람 창 / 울리지 못한 이유": 지난 회차를 울리지 못한 알람을 고칠 때는 머리 아래에 그 이유를 보여 준다
-export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null, onRetry, onCancelWait }: Props) {
+export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null, onRetry, onCancelWait, ringing = false, offline = false, onPast }: Props) {
   const locked = wait != null
   const saving = wait === 'saving'
   const failed = wait === 'failed'
@@ -113,8 +119,8 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
     }
     const off = onceTarget(alarm, draft, pauseNew)
     if (off == null) return
-    // 바꿀 회차의 날에 고른 시각이 이미 지났으면 저장하지 않는다. 시안은 "이미 지난 시각이에요" 확인 창을 띄운다(확인 창은 아직 없음)
-    if (off * 1440 + draft.time <= nowMinutes()) return
+    // 바꿀 회차의 날에 고른 시각이 이미 지났으면 저장하지 않고 "이미 지난 시각이에요" 확인 창을 띄운다
+    if (off * 1440 + draft.time <= nowMinutes()) return onPast?.(off, draft.time)
     onSave?.({ ...draft, pauseTo: onceBase(alarm, draft, pauseNew).pauseTo }, 'once', off)
   }
 
@@ -300,6 +306,9 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
         </View>
       )}
 
+      {/* busy · 울리는 중인 알람 */}
+      {ringing && <Text style={styles.busyNote}>지금 울리는 중인 알람이에요. 알람이 끝난 뒤에 바꿀 수 있어요.</Text>}
+
       {/* savenote · 답이 없을 때 안내 */}
       {failed && <Text style={styles.saveNote}>연결이 원활하지 않아요. 다시 시도해 주세요</Text>}
 
@@ -310,11 +319,11 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
             답이 없으면 같은 자리가 "다시 시도"가 된다(같은 저장을 다시 보내도 침대는 하나만 저장한다) */}
         {(!asking || locked) && (
           <RippleButton
-            style={styles.action}
+            style={[styles.action, (ringing || offline) && !saving && styles.locked]}
             rippleColor={color['on-ink']}
             onPress={failed ? onRetry : save}
-            disabled={saving}
-            accessibilityState={{ busy: saving, disabled: saving }}
+            disabled={saving || ringing || offline}
+            accessibilityState={{ busy: saving, disabled: saving || ringing || offline }}
           >
             {saving && <Spinner color={color['on-ink']} />}
             {!locked && (
@@ -332,10 +341,10 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
         {/* del · 지우기 버튼: 알람을 고칠 때만 */}
         {alarm && (
           <RippleButton
-            style={[styles.del, locked && styles.locked]}
+            style={[styles.del, (locked || ringing || offline) && styles.locked]}
             rippleColor={color.red}
             onPress={onDelete}
-            disabled={locked}
+            disabled={locked || ringing || offline}
           >
             <Text style={styles.delText}>이 알람 삭제</Text>
           </RippleButton>
@@ -346,6 +355,7 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
 }
 
 const styles = StyleSheet.create({
+  busyNote: { fontFamily: font.semiBold, fontSize: 15, color: color.red },
   head: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: font.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.48, color: color.fg },
   close: {

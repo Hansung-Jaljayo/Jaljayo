@@ -1,7 +1,7 @@
 // 앱 전체 화면 흐름: 등록·오류·병원 관리처럼 탭 위를 덮는 화면, 설정 화면, 약관 글 화면.
 // 탭(자세·알람·예약)은 그대로 두고 이 값에 맞는 화면을 위에 그린다
 
-import { useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 
 // 탭 위를 덮는 화면. null이면 탭이 보인다
 export type ObState =
@@ -62,3 +62,17 @@ export const useFlow = () => useSyncExternalStore(subscribe, getFlow, getFlow)
 export const goOb = (ob: ObState | null) => setFlow({ ob })
 export const openSettings = () => setFlow({ settings: true })
 export const closeSettings = () => setFlow({ settings: false, doc: null })
+
+// 덮은 화면 안에서 먼저 닫을 것(펼친 시간 바퀴·병실 목록·확인 줄)이나 기다리는 중인 저장이 있으면
+// 그 화면이 이 처리기를 걸어 둔다. true를 돌려주면 뒤로 버튼을 거기서 끝낸다
+export const innerBack: { current: (() => boolean) | null } = { current: null }
+
+// 화면이 보이는 동안 innerBack을 걸어 둔다
+export function useInnerBack(handler: () => boolean) {
+  useEffect(() => {
+    innerBack.current = handler
+    return () => {
+      if (innerBack.current === handler) innerBack.current = null
+    }
+  })
+}

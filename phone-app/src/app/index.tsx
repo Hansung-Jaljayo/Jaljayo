@@ -182,14 +182,15 @@ export default function Index() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   hidden: { display: 'none' },
+  // 시안 .toast
   toast: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 64,
     alignSelf: 'center',
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: radius[20],
-    backgroundColor: color.ink,
+    backgroundColor: 'rgba(29, 22, 20, 0.86)',
   },
-  toastText: { fontFamily: font.semiBold, fontSize: 15, color: color['on-ink'] },
+  toastText: { fontFamily: font.semiBold, fontSize: 14, color: color['on-ink'] },
 })

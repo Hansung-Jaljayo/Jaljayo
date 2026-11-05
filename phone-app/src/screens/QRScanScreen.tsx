@@ -1,7 +1,7 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 
 interface Props {
   // 잘자요 침대 QR을 읽었을 때(한 번만 부른다)
@@ -126,14 +126,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F0ED',
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     gap: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 36 : 30,
   },
   description: {
     fontSize: 17,
@@ -147,8 +148,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cameraBox: {
-    width: 250,
-    height: 250,
+    width: Platform.OS === 'ios' ? 300 : 250,
+    height: Platform.OS === 'ios' ? 300 : 250,
     backgroundColor: '#1D1614',
     borderRadius: 30,
     overflow: 'hidden',

@@ -17,6 +17,9 @@ export type BedMessage =
   | { type: 'wifi-join'; body: null }
   | { type: 'wifi-scan'; body: null }
   | { type: 'wifi-set'; body: { ssid: string; password: string } }
+  // 자세별 기본 각도 저장·삭제
+  | { type: 'pose-save'; body: { preset: string; head: number; leg: number } }
+  | { type: 'pose-delete'; body: { preset: string } }
   // 침대 설정
   | { type: 'bed-reset'; body: null }
   | { type: 'name-save'; body: { name: string } }

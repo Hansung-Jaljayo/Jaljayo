@@ -86,7 +86,7 @@ export default function SettingsScreen({
           {/* 침대 섹션 — 등록된 경우에만 표시 */}
           {isRegistered && (
             <>
-              <Text style={styles.sectionLabel}>침대</Text>
+              <Text style={[styles.sectionLabel, styles.sectionLabelTop]}>침대</Text>
 
               {/* bedrow · 침대 줄 */}
               <View style={styles.bedrow}>
@@ -354,8 +354,9 @@ const styles = StyleSheet.create({
     color: '#705A54',
     marginBottom: 12,
   },
+  // 시안: 묶음 사이 12 + 소제목 위 8
   sectionLabelApp: {
-    marginTop: 28,
+    marginTop: 20,
   },
   sectionLabelTop: {
     marginTop: 8,
@@ -376,7 +377,7 @@ const styles = StyleSheet.create({
   bedImg: {
     width: 48,
     height: 48,
-    borderRadius: 8,
+    borderRadius: 14,
   },
   bedInfo: {
     gap: 0,
