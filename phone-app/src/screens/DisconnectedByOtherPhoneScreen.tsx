@@ -1,4 +1,7 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   onRetry?: () => void;
@@ -19,11 +22,9 @@ export default function DisconnectedByOtherPhoneScreen({ onRetry, onSettings }: 
             />
           </View>
 
-          <Text style={styles.title}>{'다른 폰에 등록되어\n조작할 수 없어요'}</Text>
+          <Text style={styles.title}>{keepAll(balance('다른 폰에 등록되어 조작할 수 없어요'))}</Text>
 
-          <Text style={styles.description}>
-            {'이 폰으로 다시 쓰려면 침대 QR을 다시\n찍어 등록하세요.'}
-          </Text>
+          <Text style={styles.description}>{keepAll(bySentence('이 폰으로 다시 쓰려면 침대 QR을 다시 찍어 등록하세요.'))}</Text>
         </View>
 
         {/* 버튼 묶음 */}
@@ -34,7 +35,7 @@ export default function DisconnectedByOtherPhoneScreen({ onRetry, onSettings }: 
 
           <View style={styles.links}>
             <TouchableOpacity style={styles.link} onPress={onSettings}>
-              <Text style={styles.linkText}>설정</Text>
+              <LinkText style={styles.linkText}>설정</LinkText>
             </TouchableOpacity>
           </View>
         </View>
@@ -75,7 +76,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
     textAlign: 'center',
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,

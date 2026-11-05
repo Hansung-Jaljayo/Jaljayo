@@ -1,15 +1,17 @@
 import { Image } from 'expo-image';
 import {
-  SafeAreaView,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TabBar, TAB_BAR_SPACE, type TabKey } from '@/components/TabBar';
 import { TabTop } from '@/components/TabTop';
 import { SvgXml } from 'react-native-svg';
+import { font } from '@/theme/tokens';
 
 // 밤 안내 줄의 달 그림
 const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFAF7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>';
@@ -146,13 +148,20 @@ export default function PostureScreen({
   const showMovingChip = isMoving || isAnyPressing;
   const isControlsDisabled = isLoading || isDisconnected || isMoving || isAnyPressing;
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.inner}>
         {/* Header */}
         <TabTop onGear={onGear} />
 
         {/* Hero */}
         <View style={[styles.hero, isLoading && styles.sectionDisabled]}>
+          {/* 시안: 밤 안내 줄은 사진 칸 왼쪽 위에 얹는다 */}
+          {!!nightNote && (
+            <View style={styles.nightNote} role="status" accessible accessibilityLabel={nightLabel}>
+              <SvgXml xml={MOON} width={16} height={16} />
+              <Text style={styles.nightNoteText}>{nightNote}</Text>
+            </View>
+          )}
           <View style={[styles.chip, showMovingChip && styles.chipMoving]}>
             <View style={[styles.chipDot, showMovingChip && styles.chipDotMoving]} />
             <Text style={[styles.chipText, showMovingChip && styles.chipTextMoving]}>
@@ -174,13 +183,6 @@ export default function PostureScreen({
             </TouchableOpacity>
           )}
         </View>
-
-        {!!nightNote && (
-          <View style={styles.nightNote} role="status" accessible accessibilityLabel={nightLabel}>
-            <SvgXml xml={MOON} width={16} height={16} />
-            <Text style={styles.nightNoteText}>{nightNote}</Text>
-          </View>
-        )}
 
         {/* Angle Card */}
         <View style={[styles.card, isLoading && styles.sectionDisabled]}>
@@ -323,7 +325,7 @@ const dlgStyles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 25,
     color: '#2D2220',
     textAlign: 'center',
@@ -331,7 +333,7 @@ const dlgStyles = StyleSheet.create({
   },
   body: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 22,
     color: '#705A54',
     textAlign: 'center',
@@ -346,7 +348,7 @@ const dlgStyles = StyleSheet.create({
   },
   confirmText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 20,
     color: '#FFFAF7',
   },
@@ -366,13 +368,13 @@ const rowStyles = StyleSheet.create({
   },
   name: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#2D2220',
   },
   range: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: font.medium,
     lineHeight: 16,
     color: '#705A54',
   },
@@ -417,14 +419,14 @@ const rowStyles = StyleSheet.create({
   },
   valNum: {
     fontSize: 46,
-    fontWeight: '200',
+    fontFamily: font.extraLight,
     letterSpacing: -1.84,
     color: '#2D2220',
     lineHeight: 46,
   },
   valDeg: {
     fontSize: 20,
-    fontWeight: '300',
+    fontFamily: font.light,
     letterSpacing: -1.84,
     color: '#705A54',
     lineHeight: 20,
@@ -455,18 +457,20 @@ const rowStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   // 시안 .nightnote: 높이 32, 반투명 어두운 바탕, 13 글자
   nightNote: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    alignSelf: 'flex-start',
     height: 32,
     paddingLeft: 10,
     paddingRight: 12,
     borderRadius: 16,
     backgroundColor: 'rgba(29, 22, 20, 0.62)',
-    marginBottom: 8,
   },
-  nightNoteText: { fontSize: 13, fontWeight: '600', color: '#FFFAF7' },
+  nightNoteText: { fontSize: 13, fontFamily: font.semiBold, color: '#FFFAF7' },
   container: {
     flex: 1,
     backgroundColor: '#F4F0ED',
@@ -480,8 +484,9 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   // Hero
+  // 시안: 아이폰 240, 갤럭시 184
   hero: {
-    height: 184,
+    height: Platform.OS === 'ios' ? 240 : 184,
     marginTop: 8,
     borderRadius: 34,
     backgroundColor: '#342724',
@@ -531,7 +536,7 @@ const styles = StyleSheet.create({
   },
   undoText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 16,
     color: '#2D2220',
   },
@@ -549,7 +554,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 16,
     color: '#FFFAF7',
   },
@@ -596,7 +601,7 @@ const styles = StyleSheet.create({
   editText: {
     flex: 1,
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#2D2220',
   },
@@ -671,15 +676,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   presetLabelOn: {
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
   },
   presetLabelOff: {
-    fontWeight: '500',
+    fontFamily: font.medium,
     color: '#513E39',
   },
   presetLabelDisabled: {
-    fontWeight: '500',
+    fontFamily: font.medium,
     color: '#B3A6A1',
   },
   dock: {
@@ -710,7 +715,7 @@ const styles = StyleSheet.create({
   },
   stopText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#FFFFFF',
   },

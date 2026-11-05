@@ -41,9 +41,11 @@ type Flow = {
   doc: DocKey | null
   // 침대 초기화로 지운 횟수. 바뀌면 탭을 처음 상태로 다시 그린다
   wipe: number
+  // 바깥(개발 도구)에서 고르라고 한 탭. 탭 화면이 읽고 비운다
+  tabAsk: { key: 'pose' | 'alarm' | 'resv'; n: number } | null
 }
 
-let flow: Flow = { ob: 'splash', settings: false, doc: null, wipe: 0 }
+let flow: Flow = { ob: 'splash', settings: false, doc: null, wipe: 0, tabAsk: null }
 const listeners = new Set<() => void>()
 
 export const getFlow = () => flow

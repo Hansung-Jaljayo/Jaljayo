@@ -11,6 +11,7 @@ import { sampleResv, setResvState, useResvState } from '@/features/resv/resv'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
 import { DevSwitch } from './DevSwitch'
+import { useDevScene } from './useDevScene'
 
 // 침대 대신 답할 때 고르는 상황(켜 두면 다음 "침대 답 보내기"부터 계속 쓴다)
 type Fake = { taken: boolean; wardBed: boolean; noWifi: boolean; wrongPw: boolean; adminBad: boolean; apart: boolean; nameTaken: boolean }
@@ -27,6 +28,7 @@ export function DevTools() {
   const [open, setOpen] = useState(false)
   const [fake, setFake] = useState<Fake>({ taken: false, wardBed: false, noWifi: false, wrongPw: false, adminBad: false, apart: false, nameTaken: false })
   const [, rerender] = useState(0)
+  useDevScene()
   if (!__DEV__) return null
   const blocked = !!bed.ward && !bed.ward.alarmAllowed
   const f = (k: keyof Fake) => (on: boolean) => setFake({ ...fake, [k]: on })
@@ -119,7 +121,7 @@ export function DevTools() {
               rerender((n) => n + 1)
             }}
           />
-          {/* 예약 탭: 끄면 처음 예약(오후 11:10 잠 자세)이 돌아온다 */}
+          {/* 예약 탭: 끄면 표본 예약(오후 11:10 잠 자세)이 생긴다 */}
           <DevSwitch
             label="예약 없음"
             value={resv.item == null}

@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { keepAll } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
+
 interface Props {
   visible?: boolean;
   isRegistered?: boolean;
@@ -146,9 +149,9 @@ export default function SettingsScreen({
 
               {/* hint */}
               <Text style={styles.hint}>
-                {isConnected
+                {keepAll(isConnected
                   ? `등록 해제는 이 폰의 연결만 끊어요.\n침대에 저장된 알람과 예약은 지워지지 않아요.\n침대 초기화는 침대에서 알람, 예약, 자세 기록을 모두 지워요.`
-                  : `침대와 연결이 끊겨 있어요. 침대 초기화는 다시 연결된 뒤에 할 수 있어요.`}
+                  : `침대와 연결이 끊겨 있어요. 침대 초기화는 다시 연결된 뒤에 할 수 있어요.`)}
               </Text>
             </>
           )}
@@ -331,7 +334,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 25,
     color: '#2D2220',
   },
@@ -349,7 +352,7 @@ const styles = StyleSheet.create({
   // 섹션 레이블
   sectionLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 18,
     color: '#705A54',
     marginBottom: 12,
@@ -384,13 +387,13 @@ const styles = StyleSheet.create({
   },
   bedName: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 24,
     color: '#2D2220',
   },
   bedSubStatus: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: font.medium,
     lineHeight: 18,
     color: '#705A54',
   },
@@ -419,13 +422,13 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#2D2220',
   },
   actionTextWarn: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#AD332C',
   },
@@ -442,7 +445,7 @@ const styles = StyleSheet.create({
   // hint
   hint: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 22,
     color: '#705A54',
     marginBottom: 0,
@@ -474,13 +477,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0EAE6',
   },
+  // 시안 .irow: 이름은 왼쪽, 값은 같은 줄 오른쪽
   irowInfo: {
     flex: 1,
-    gap: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   irowLabel: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#2D2220',
   },
@@ -489,7 +496,7 @@ const styles = StyleSheet.create({
   },
   irowValue: {
     fontSize: 15,
-    fontWeight: '500',
+    fontFamily: font.medium,
     lineHeight: 18,
     color: '#705A54',
   },
@@ -526,13 +533,13 @@ const styles = StyleSheet.create({
   },
   dlgTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     lineHeight: 24,
     color: '#2D2220',
   },
   dlgBody: {
     fontSize: 15,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 22,
     color: '#705A54',
   },
@@ -551,7 +558,7 @@ const styles = StyleSheet.create({
   },
   dactCancelText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     color: '#2D2220',
   },
   dactConfirm: {
@@ -567,7 +574,7 @@ const styles = StyleSheet.create({
   },
   dactConfirmText: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     color: '#FFFAF7',
   },
 });

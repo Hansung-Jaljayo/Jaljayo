@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { ExpandRow } from '@/components/ExpandRow'
-import { ObScreen, obStyles } from '@/components/ObScreen'
+import { Ko, ObScreen, obStyles, LinkText } from '@/components/ObScreen'
 import { Switch } from '@/components/Switch'
 import { TimeWheels } from '@/components/TimeWheels'
 import { clockLabel } from '@/features/alarm/alarm'
@@ -40,7 +40,6 @@ export function AdminPassword({ onIn, onOut }: { onIn: () => void; onOut: () => 
       lead="병원 직원인지 확인할게요. 납품 때 받은 관리 비밀번호를 넣어 주세요."
       primary={{ label: r.waiting && !r.timedOut ? '확인 중…' : r.timedOut ? '다시 시도' : '확인', onPress: go, disabled: pw.length !== 6 || (r.waiting && !r.timedOut) }}
       secondary={{ label: '취소', onPress: () => { r.cancel(); onOut() } }}
-      links={[{ label: '비밀번호를 잊었어요', onPress: () => setHelp((h) => !h) }]}
     >
       <Text style={obStyles.label}>관리 비밀번호 (숫자 6자리)</Text>
       <TextInput
@@ -53,12 +52,15 @@ export function AdminPassword({ onIn, onOut }: { onIn: () => void; onOut: () => 
         accessibilityLabel="관리 비밀번호"
         onSubmitEditing={go}
       />
-      {bad && <Text style={obStyles.err} role="alert">비밀번호가 맞지 않아요. 다시 넣어 주세요.</Text>}
-      {r.timedOut && <Text style={obStyles.noteBad}>침대와 연결이 잠시 끊겼어요. 다시 시도해 주세요.</Text>}
+      {bad && <Ko style={obStyles.err} role="alert">비밀번호가 맞지 않아요. 다시 넣어 주세요.</Ko>}
+      {r.timedOut && <Ko style={obStyles.noteBad}>침대와 연결이 잠시 끊겼어요. 다시 시도해 주세요.</Ko>}
+      <Pressable style={styles.linkBtn} onPress={() => setHelp((h) => !h)} aria-expanded={help}>
+        <LinkText style={styles.linkText}>비밀번호를 잊었어요</LinkText>
+      </Pressable>
       {help && (
-        <Text style={obStyles.note}>
+        <Ko style={obStyles.note}>
           {`잘자요 설치 담당자에게 연락해 주세요. 병원 담당자인지 확인한 뒤 새 비밀번호를 정해 드려요.\n문의: ${CONTACT}`}
-        </Text>
+        </Ko>
       )}
     </ObScreen>
   )
@@ -111,11 +113,6 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
     <ObScreen
       title="병원 관리"
       lead={`잘자요 병원 · 등록된 침대 ${total}대. 저장하면 모든 침대에 보내요.`}
-      primary={{
-        label: sending ? '보내는 중…' : r.timedOut ? '다시 시도' : retryOnly ? `확인 안 된 ${hosp.unconfirmed.length}대에 다시 보내기` : '모든 침대에 저장',
-        onPress: save,
-        disabled: sending || (same && !hosp.unconfirmed.length && !r.timedOut),
-      }}
       secondary={{ label: '나가기', onPress: onOut, disabled: sending }}
     >
       <Text style={obStyles.sec}>밤 시간</Text>
@@ -123,7 +120,7 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
         <View style={obStyles.switchRow}>
           <View style={styles.flex}>
             <Text style={obStyles.rowTitleBold}>밤에 이름 부르기 끄기</Text>
-            <Text style={obStyles.rowSub}>꺼진 동안에도 침대 버튼을 누르면 말할 수 있어요</Text>
+            <Ko style={obStyles.rowSub}>꺼진 동안에도 침대 버튼을 누르면 말할 수 있어요</Ko>
           </View>
           <Switch
             value={night.on}
@@ -145,14 +142,14 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
           </View>
         ))}
       </View>
-      <Text style={obStyles.sum}>{nightSummary(night)}</Text>
+      <Ko style={obStyles.sum}>{nightSummary(night)}</Ko>
 
       <Text style={obStyles.sec}>알람</Text>
       <View style={[obStyles.card, obStyles.cardSmall]}>
         <View style={obStyles.switchRow}>
           <View style={styles.flex}>
             <Text style={obStyles.rowTitleBold}>알람 쓰기</Text>
-            <Text style={obStyles.rowSub}>끄면 환자 앱과 침대 모두 알람을 만들거나 울리지 않아요. 예약은 소리 없이 자세만 바꿔 그대로 써요</Text>
+            <Ko style={obStyles.rowSub}>끄면 환자 앱과 침대 모두 알람을 만들거나 울리지 않아요. 예약은 소리 없이 자세만 바꿔 그대로 써요</Ko>
           </View>
           <Switch value={alarm} onValueChange={setAlarm} accessibilityLabel="알람 쓰기" disabled={sending} />
         </View>
@@ -161,7 +158,11 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
       {!!hosp.message && !sending && (
         <Text style={hosp.unconfirmed.length ? obStyles.noteBad : obStyles.note} role="status">{hosp.message}</Text>
       )}
-      {r.timedOut && <Text style={obStyles.noteBad}>보낸 결과를 확인하지 못했어요. 다시 시도해 주세요.</Text>}
+      {r.timedOut && <Ko style={obStyles.noteBad}>보낸 결과를 확인하지 못했어요. 다시 시도해 주세요.</Ko>}
+      {/* 시안: 저장 버튼은 침대 목록 위 */}
+      <Pressable style={[styles.btn, (sending || (same && !hosp.unconfirmed.length && !r.timedOut)) && styles.btnOff]} onPress={save} disabled={sending || (same && !hosp.unconfirmed.length && !r.timedOut)}>
+        <Text style={styles.btnText}>{sending ? '보내는 중…' : r.timedOut ? '다시 시도' : retryOnly ? `확인 안 된 ${hosp.unconfirmed.length}대에 다시 보내기` : '모든 침대에 저장'}</Text>
+      </Pressable>
 
       <View style={obStyles.card}>
         <Pressable style={obStyles.row} onPress={onBeds} disabled={sending}>
@@ -200,10 +201,10 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
             >
               <View style={styles.flex}>
                 <Text style={obStyles.rowTitleBold}>{room}</Text>
-                <Text style={obStyles.rowSub}>
+                <Ko style={obStyles.rowSub}>
                   {`침대 ${bs.length}대 · 환자 ${bs.filter((b) => b.phone).length}명`}
                   {bad ? <Text style={styles.red}>{` · ${bad}대 확인 안 됨`}</Text> : null}
-                </Text>
+                </Ko>
               </View>
               <Text style={[obStyles.chevron, isOpen && styles.down]}>›</Text>
             </Pressable>
@@ -212,9 +213,9 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
                 <Pressable key={b.id} style={[obStyles.row, obStyles.rowLine]} onPress={() => onBed(b.id)}>
                   <View style={styles.flex}>
                     <Text style={obStyles.rowTitleBold}>{`${b.name} 침대`}</Text>
-                    <Text style={[obStyles.rowSub, !b.ok && styles.red]}>
+                    <Ko style={[obStyles.rowSub, !b.ok && styles.red]}>
                       {`${b.phone ? '환자 폰 연결됨' : '환자 없음'} · ${b.ok ? '설정 적용됨' : '설정 확인 안 됨'}`}
-                    </Text>
+                    </Ko>
                   </View>
                   <Text style={obStyles.chevron}>›</Text>
                 </Pressable>
@@ -314,12 +315,12 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
       </View>
       {clash && (
         <>
-          <Text style={obStyles.note}>{`${room}에 이미 '${b.name} 침대'가 있어요. 옮길 병실에서 쓸 이름을 골라 주세요.`}</Text>
+          <Ko style={obStyles.note}>{`${room}에 이미 '${b.name} 침대'가 있어요. 옮길 병실에서 쓸 이름을 골라 주세요.`}</Ko>
           <FruitGrid label="새 부르는 이름" value={name} used={used} disabled={busy} onPick={setName} />
         </>
       )}
       <Pressable
-        style={[styles.btn, (busy || room === b.room || needName) && !mv.timedOut && styles.dim]}
+        style={[styles.btn, (busy || room === b.room || needName) && !mv.timedOut && styles.btnOff]}
         onPress={move}
         disabled={(busy || room === b.room || needName) && !mv.timedOut}
       >
@@ -337,9 +338,9 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
       </Pressable>
 
       <Text style={obStyles.sec}>환자 사용</Text>
-      <Text style={obStyles.note}>
+      <Ko style={obStyles.note}>
         사용을 끝내면 이 침대의 알람, 예약, 자세 기록을 지우고 환자 폰 연결을 끊어요. 이름, 병실, 병원 설정은 그대로예요. 다음 환자는 침대 QR을 찍어 바로 등록할 수 있어요.
-      </Text>
+      </Ko>
       {!asking ? (
         <Pressable style={[styles.btnLight, (busy || !b.phone) && styles.dim]} onPress={() => setAsking(true)} disabled={busy || !b.phone}>
           <Text style={styles.btnLightWarn}>{b.phone ? '환자 사용 종료' : '연결된 환자 폰이 없어요'}</Text>
@@ -387,8 +388,8 @@ export function AdminPasswordChange({ onDone, onCancel }: { onDone: () => void; 
       <TextInput style={obStyles.input} value={p1} onChangeText={(t) => { setP1(digits6(t)); setDiff(false) }} secureTextEntry keyboardType="number-pad" maxLength={6} accessibilityLabel="새 비밀번호" />
       <Text style={obStyles.label}>한 번 더</Text>
       <TextInput style={[obStyles.input, diff && obStyles.inputBad]} value={p2} onChangeText={(t) => { setP2(digits6(t)); setDiff(false) }} secureTextEntry keyboardType="number-pad" maxLength={6} accessibilityLabel="새 비밀번호 한 번 더" />
-      {diff && <Text style={obStyles.err} role="alert">두 비밀번호가 달라요. 다시 넣어 주세요.</Text>}
-      {r.timedOut && <Text style={obStyles.noteBad}>바꾼 결과를 확인하지 못했어요. 다시 시도해 주세요.</Text>}
+      {diff && <Ko style={obStyles.err} role="alert">두 비밀번호가 달라요. 다시 넣어 주세요.</Ko>}
+      {r.timedOut && <Ko style={obStyles.noteBad}>바꾼 결과를 확인하지 못했어요. 다시 시도해 주세요.</Ko>}
     </ObScreen>
   )
 }
@@ -406,9 +407,9 @@ export function NightInfo({ onOk }: { onOk: () => void }) {
   return (
     <ObScreen title="밤 시간" lead={lead} primary={{ label: '확인', onPress: onOk }}>
       {!bed.clockOk && (
-        <Text style={obStyles.note}>지금은 침대가 시각을 몰라 밤 시간을 적용하지 않고 있어요. 침대와 연결되면 다시 적용해요.</Text>
+        <Ko style={obStyles.note}>지금은 침대가 시각을 몰라 밤 시간을 적용하지 않고 있어요. 침대와 연결되면 다시 적용해요.</Ko>
       )}
-      <Text style={obStyles.note}>병원에서 정한 설정이에요. 바꾸려면 병원 직원에게 말씀해 주세요.</Text>
+      <Ko style={obStyles.note}>병원에서 정한 설정이에요. 바꾸려면 병원 직원에게 말씀해 주세요.</Ko>
     </ObScreen>
   )
 }
@@ -438,8 +439,12 @@ const styles = StyleSheet.create({
   roomText: { fontFamily: font.semiBold, fontSize: 16, color: color.fg },
   roomTextOn: { fontFamily: font.bold, color: color['on-ink'] },
   pair: { flexDirection: 'row', gap: 8 },
+  linkBtn: { alignSelf: 'center', minHeight: 48, justifyContent: 'center', paddingHorizontal: 6 },
+  linkText: { fontFamily: font.bold, fontSize: 17, color: color['fg-2'], textDecorationLine: 'underline' },
   btn: { minHeight: 60, borderRadius: 22, backgroundColor: color.ink, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   btnWarn: { backgroundColor: color.red },
+  // 시안: 막힌 큰 버튼은 연한 바탕·흰 글자
+  btnOff: { backgroundColor: color.switchOff },
   btnText: { fontFamily: font.bold, fontSize: 20, color: color['on-ink'] },
   btnLight: {
     minHeight: 56,

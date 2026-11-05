@@ -1,8 +1,54 @@
 import { type ReactNode } from 'react'
-import { ActivityIndicator, Image, type ImageSourcePropType, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Dimensions, Image, type ImageSourcePropType, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { color, font } from '@/theme/tokens'
+
+// 시안처럼 한글이 낱말 중간에서 줄바꿈되지 않게(안드로이드는 글자 단위로 자른다) 낱말 안 글자 사이에 줄 안 바꿈 표시를 넣는다
+export const keepAll = (t: string) => t.replace(/([^\s])(?=[^\s])/g, '$1\u2060')
+// 시안의 안내 글처럼 문장마다 줄을 나눈다
+export const bySentence = (t: string) => t.replace(/([.?!])\s+/g, '$1\n')
+
+// 한글 낱말을 자르지 않는 글자(문자열 자식만 바꾼다)
+export function Ko({ children, ...rest }: React.ComponentProps<typeof Text>) {
+  const fix = (c: React.ReactNode): React.ReactNode => (typeof c === 'string' ? keepAll(c) : c)
+  return <Text {...rest}>{Array.isArray(children) ? children.map(fix) : fix(children)}</Text>
+}
+
+// 시안의 제목처럼(text-wrap: balance) 두 줄이 되는 제목은 가운데 가까운 띄어쓰기에서 나눠 두 줄 길이를 고르게 한다.
+// 폭은 어림: 한글 한 글자 0.92배(굵은 제목), 띄어쓰기 0.28배, 그 밖 0.6배(글자 크기 기준)
+export const TITLE_SIZE = Platform.OS === 'ios' ? 30 : 24
+const textWidth = (t: string, size: number) =>
+  [...t].reduce((w, ch) => w + size * (ch === ' ' ? 0.28 : /[가-힣]/.test(ch) ? 0.92 : 0.6), 0)
+export function balance(t: string, fontSize = TITLE_SIZE, width = Dimensions.get('window').width - 36) {
+  if (t.includes('\n') || textWidth(t, fontSize) <= width) return t
+  let best = -1
+  let bestDiff = Infinity
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] !== ' ') continue
+    const a = textWidth(t.slice(0, i), fontSize)
+    const b = textWidth(t.slice(i + 1), fontSize)
+    if (a > width || b > width) continue
+    if (Math.abs(a - b) < bestDiff) {
+      bestDiff = Math.abs(a - b)
+      best = i
+    }
+  }
+  return best < 0 ? t : `${t.slice(0, best)}\n${t.slice(best + 1)}`
+}
+
+// 밑줄 링크 글자. 안드로이드는 글자 밑줄이 그려지지 않아 글자 아래에 얇은 선을 직접 긋는다
+export function LinkText({ style, children, ...rest }: React.ComponentProps<typeof Text>) {
+  if (Platform.OS !== 'android') return <Text style={style} {...rest}>{children}</Text>
+  const flat = StyleSheet.flatten(style) || {}
+  return (
+    <View style={{ borderBottomWidth: 1.5, borderBottomColor: (flat.color as string) || color['fg-2'], paddingBottom: 1 }}>
+      <Text style={[style, { textDecorationLine: 'none' }]} {...rest}>
+        {children}
+      </Text>
+    </View>
+  )
+}
 
 export type ObButton = { label: string; onPress?: () => void; disabled?: boolean; warn?: boolean }
 
@@ -37,9 +83,9 @@ export function ObScreen({ title, lead, icon, spinner, bad, children, primary, s
           )}
           {spinner && <ActivityIndicator size="large" color={color['accent-strong']} style={styles.spinner} />}
           <Text style={[styles.title, centered && styles.textCenter]} role="heading">
-            {title}
+            {keepAll(balance(title))}
           </Text>
-          {!!lead && <Text style={[styles.lead, centered && styles.textCenter]}>{lead}</Text>}
+          {!!lead && <Text style={[styles.lead, centered && styles.textCenter]}>{keepAll(bySentence(lead))}</Text>}
           {children}
         </View>
 
@@ -47,7 +93,7 @@ export function ObScreen({ title, lead, icon, spinner, bad, children, primary, s
           <View style={styles.actions}>
             {primary && (
               <TouchableOpacity
-                style={[styles.primary, primary.warn && styles.primaryWarn, primary.disabled && styles.disabled]}
+                style={[styles.primary, primary.warn && styles.primaryWarn, primary.disabled && styles.primaryOff]}
                 onPress={primary.onPress}
                 disabled={primary.disabled}
               >
@@ -56,18 +102,20 @@ export function ObScreen({ title, lead, icon, spinner, bad, children, primary, s
             )}
             {secondary && (
               <TouchableOpacity
-                style={[styles.secondary, secondary.disabled && styles.disabled]}
+                style={styles.secondary}
                 onPress={secondary.onPress}
                 disabled={secondary.disabled}
               >
-                <Text style={[styles.secondaryText, secondary.warn && styles.warnText]}>{secondary.label}</Text>
+                <Text style={[styles.secondaryText, secondary.warn && styles.warnText, secondary.disabled && styles.secondaryOffText]}>
+                  {secondary.label}
+                </Text>
               </TouchableOpacity>
             )}
             {!!links?.length && (
               <View style={styles.links}>
                 {links.map((l) => (
                   <TouchableOpacity key={l.label} style={styles.link} onPress={l.onPress} disabled={l.disabled}>
-                    <Text style={styles.linkText}>{l.label}</Text>
+                    <LinkText style={styles.linkText}>{l.label}</LinkText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -198,7 +246,9 @@ const styles = StyleSheet.create({
   },
   secondaryText: { fontFamily: font.bold, fontSize: 17, color: color.fg },
   warnText: { color: color.red },
-  disabled: { opacity: 0.45 },
+  // 시안: 막힌 큰 버튼은 연한 바탕·흰 글자, 막힌 흰 버튼은 글자만 흐리게
+  primaryOff: { backgroundColor: color.switchOff },
+  secondaryOffText: { color: '#b3a6a1' },
   links: { flexDirection: 'row', justifyContent: 'center', height: 48, alignItems: 'center', gap: 8 },
   link: { paddingHorizontal: 6, paddingVertical: 1 },
   linkText: { fontFamily: font.bold, fontSize: 17, textDecorationLine: 'underline', color: color['fg-2'] },

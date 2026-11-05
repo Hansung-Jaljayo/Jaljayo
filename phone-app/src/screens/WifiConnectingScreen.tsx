@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, SafeAreaView, StyleSheet, Text, View, Platform } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, keepAll } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   ssid: string;
@@ -28,8 +31,8 @@ export default function WifiConnectingScreen({ ssid }: Props) {
     <SafeAreaView style={styles.container}>
       <View style={styles.center}>
         <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
-        <Text style={styles.title}>침대에 연결하고 있어요</Text>
-        <Text style={styles.subtitle}>침대 와이파이({ssid})에 연결해요.</Text>
+        <Text style={styles.title}>{keepAll(balance('침대에 연결하고 있어요'))}</Text>
+        <Text style={styles.subtitle}>{keepAll(`침대 와이파이(${ssid})에 연결해요.`)}</Text>
       </View>
     </SafeAreaView>
   );
@@ -56,7 +59,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
@@ -64,7 +67,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
     textAlign: 'center',

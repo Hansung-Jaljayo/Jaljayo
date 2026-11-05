@@ -3,13 +3,15 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   ssid: string;
@@ -33,8 +35,8 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
       >
         <View style={styles.body}>
           <View style={styles.top}>
-            <Text style={styles.title}>비밀번호를 입력해 주세요</Text>
-            <Text style={styles.lead}>{ssid}</Text>
+            <Text style={styles.title}>{keepAll(balance('비밀번호를 입력해 주세요'))}</Text>
+            <Text style={styles.lead}>{keepAll(bySentence(ssid))}</Text>
 
             <Text style={styles.label}>와이파이 비밀번호</Text>
             <View style={[styles.inputRow, bad && styles.inputRowError]}>
@@ -46,7 +48,6 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
                 secureTextEntry={!visible}
                 value={password}
                 onChangeText={(t) => { setPassword(t); setBad(false); }}
-                autoFocus
               />
               <TouchableOpacity
                 style={styles.eyeButton}
@@ -69,16 +70,18 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
             )}
           </View>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, !password && styles.primaryButtonDisabled]}
-            onPress={() => password && onConnect?.(password)}
-            disabled={!password}
-          >
-            <Text style={styles.primaryText}>연결</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryButton} onPress={onBack}>
-            <Text style={styles.secondaryText}>다른 와이파이 고르기</Text>
-          </TouchableOpacity>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[styles.primaryButton, !password && styles.primaryButtonDisabled]}
+              onPress={() => password && onConnect?.(password)}
+              disabled={!password}
+            >
+              <Text style={styles.primaryText}>연결</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.secondaryButton} onPress={onBack}>
+              <Text style={styles.secondaryText}>다른 와이파이 고르기</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -105,14 +108,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     lineHeight: 30,
   },
   lead: {
     fontSize: 17,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 20,
     color: '#2D2220',
   },
@@ -121,13 +124,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFCFA',
     borderRadius: 16,
+    // 시안 .field input: 테두리 2 #e2d8d3, 그림자 없음
     borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
+    borderColor: '#E2D8D3',
   },
   inputRowError: {
     borderColor: '#AD332C',
@@ -137,7 +136,7 @@ const styles = StyleSheet.create({
     height: 56,
     paddingHorizontal: 18,
     fontSize: 17,
-    fontWeight: '500',
+    fontFamily: font.medium,
     color: '#2D2220',
   },
   eyeButton: {
@@ -151,7 +150,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     color: '#AD332C',
     lineHeight: 18,
   },
@@ -166,7 +165,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,
@@ -180,14 +179,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     color: '#513E39',
     marginTop: 8,
+  },
+  actions: {
+    gap: 8,
   },
   secondaryButton: {
     width: '100%',
     height: 56,
-    marginTop: 8,
     backgroundColor: '#FFFCFA',
     borderRadius: 20,
     alignItems: 'center',
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },

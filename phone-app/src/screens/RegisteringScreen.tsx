@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, SafeAreaView, StyleSheet, Text, View, Platform } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 export default function RegisteringScreen() {
   const [rotation] = useState(() => new Animated.Value(0));
@@ -24,8 +27,8 @@ export default function RegisteringScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.center}>
         <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
-        <Text style={styles.title}>등록 결과를 확인하고 있어요</Text>
-        <Text style={styles.subtitle}>잠시만 기다려 주세요.</Text>
+        <Text style={styles.title}>{keepAll(balance('등록 결과를 확인하고 있어요'))}</Text>
+        <Text style={styles.subtitle}>{keepAll(bySentence('잠시만 기다려 주세요.'))}</Text>
       </View>
     </SafeAreaView>
   );
@@ -52,7 +55,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
@@ -60,7 +63,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 17,
-    fontWeight: '400',
+    fontFamily: font.regular,
     lineHeight: 26,
     color: '#513E39',
     textAlign: 'center',
