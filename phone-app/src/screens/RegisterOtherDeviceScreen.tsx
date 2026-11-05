@@ -28,11 +28,11 @@ export default function RegisterOtherDeviceScreen({ description, onRetry, onHome
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+            <Text style={styles.primaryText}>연결하기</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
-            <Text style={styles.secondaryText}>처음으로</Text>
+            <Text style={styles.secondaryText}>취소</Text>
           </TouchableOpacity>
         </View>
       </View>

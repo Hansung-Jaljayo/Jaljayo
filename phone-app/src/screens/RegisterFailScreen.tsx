@@ -22,7 +22,7 @@ export default function RegisterFailScreen({ onRetry, onHome }: Props) {
           <Text style={styles.title}>등록됐는지 확인하지 못했어요</Text>
 
           <Text style={styles.description}>
-            {'침대와 연결이 잠시 끊겼어요. 침대 전원과\n인터넷 연결을 확인하고 다시 시도해 주세요.'}
+            {'침대와 연결이 잠시 끊겼어요. 침대 전원과\n와이파이를 확인한 뒤 다시 확인해 주세요.'}
           </Text>
         </View>
 

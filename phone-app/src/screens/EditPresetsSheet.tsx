@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -131,7 +131,7 @@ export default function EditPresetsSheet({
   const isAnyPressing = !!pressingButton;
   const isBlocked = isAnyPressing || isSaving || isError;
 
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (isSaving) {
       Animated.loop(
@@ -146,7 +146,7 @@ export default function EditPresetsSheet({
       rotation.stopAnimation();
       rotation.setValue(0);
     }
-  }, [isSaving]);
+  }, [isSaving, rotation]);
 
   const spin = rotation.interpolate({
     inputRange: [0, 1],
@@ -154,7 +154,7 @@ export default function EditPresetsSheet({
   });
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => { if (!isSaving) onClose?.(); }}>
       <View style={styles.root}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.overlay} />

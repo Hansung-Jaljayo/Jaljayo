@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 interface Props {
@@ -6,7 +6,7 @@ interface Props {
 }
 
 export default function BedWifiConnectingScreen({ ssid }: Props) {
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.loop(
@@ -17,7 +17,7 @@ export default function BedWifiConnectingScreen({ ssid }: Props) {
         useNativeDriver: true,
       })
     ).start();
-  }, []);
+  }, [rotation]);
 
   const rotate = rotation.interpolate({
     inputRange: [0, 1],

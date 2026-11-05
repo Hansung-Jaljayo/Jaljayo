@@ -1,40 +1,46 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
+  // 잘자요 침대 QR을 읽었을 때(한 번만 부른다)
   onScanned?: (data: string) => void;
+  // 카메라 권한을 다시 물을 수 없게 거부된 상태
+  onDenied?: () => void;
+  onSettings?: () => void;
 }
 
-export default function QRScanScreen({ onScanned }: Props) {
+// 개발 빌드에서 카메라 칸을 길게 누르면 찍은 것처럼 넘어간다(시뮬레이터에는 카메라가 없다)
+const DEV_QR = 'jaljayo://bed/1';
+
+export default function QRScanScreen({ onScanned, onDenied, onSettings }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
   const [showWhere, setShowWhere] = useState(false);
   const [wrongQR, setWrongQR] = useState(false);
+  // 카메라는 같은 QR을 1초에 여러 번 알려 준다. 처음 한 번만 넘긴다
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (!permission || permission.granted) return;
+    if (permission.canAskAgain) requestPermission();
+    else onDenied?.();
+  }, [permission, requestPermission, onDenied]);
 
   const handleScanned = (data: string) => {
+    if (done.current) return;
     if (data.startsWith('jaljayo://')) {
+      done.current = true;
       setWrongQR(false);
       onScanned?.(data);
     } else {
       setWrongQR(true);
+      setShowWhere(false);
     }
   };
 
-  if (!permission) {
+  if (!permission || !permission.granted) {
     return <View style={styles.container} />;
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.title}>침대 등록</Text>
-        <Text style={styles.description}>카메라 권한이 필요합니다</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>권한 허용</Text>
-        </TouchableOpacity>
-      </View>
-    );
   }
 
   return (
@@ -45,7 +51,11 @@ export default function QRScanScreen({ onScanned }: Props) {
       </Text>
 
       <View style={styles.fill}>
-        <View style={styles.cameraBox}>
+        <Pressable
+          style={styles.cameraBox}
+          onLongPress={__DEV__ ? () => handleScanned(DEV_QR) : undefined}
+          accessibilityLabel="QR 코드 찍기"
+        >
           <CameraView
             style={StyleSheet.absoluteFill}
             barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
@@ -56,13 +66,13 @@ export default function QRScanScreen({ onScanned }: Props) {
           <View style={[styles.corner, styles.cornerTR]} />
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
-        </View>
+        </Pressable>
       </View>
 
       {wrongQR && (
         <View style={styles.noteCard}>
           <Text style={styles.noteText}>
-            {'잘자요 침대 QR이 아니에요. 침대 모듈 윗면에 붙은 QR 코드를 사용해 주세요.'}
+            {'잘자요 침대 QR이 아니에요. 침대 모듈 윗면의 QR을 찍어 주세요.'}
           </Text>
         </View>
       )}
@@ -99,10 +109,10 @@ export default function QRScanScreen({ onScanned }: Props) {
       )}
 
       <View style={styles.links}>
-        <TouchableOpacity style={styles.link} onPress={() => setShowWhere(!showWhere)}>
+        <TouchableOpacity style={styles.link} onPress={() => { setShowWhere(!showWhere); setWrongQR(false); }}>
           <Text style={styles.linkText}>{showWhere ? '접기' : 'QR 코드가 안 보여요'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.link}>
+        <TouchableOpacity style={styles.link} onPress={onSettings}>
           <Text style={styles.linkText}>설정</Text>
         </TouchableOpacity>
       </View>

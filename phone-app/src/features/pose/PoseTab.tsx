@@ -2,13 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { type TabKey } from '@/components/TabBar';
-import { useBedInfo } from '@/features/bed/bed';
+import { openSettings } from '@/features/app/flow';
+import { isNightNow, useBedInfo } from '@/features/bed/bed';
 import EditPresetsSheet from '@/screens/EditPresetsSheet';
-import OpenSourceScreen from '@/screens/OpenSourceScreen';
 import PostureScreen from '@/screens/PostureScreen';
-import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen';
-import SettingsScreen from '@/screens/SettingsScreen';
-import TermsScreen from '@/screens/TermsScreen';
 
 type PressButton = 'headPlus' | 'headMinus' | 'footPlus' | 'footMinus';
 
@@ -18,8 +15,8 @@ const ANGLE_INTERVAL_MS = 100;
 const HEAD_MIN = 0;
 const HEAD_MAX = 60;
 const FOOT_MIN = 0;
-const FOOT_MAX = 60;
-const SHEET_FOOT_MAX = 40;
+const FOOT_MAX = 40;
+const SHEET_FOOT_MAX = FOOT_MAX;
 
 const INITIAL_PRESETS: { head: number; foot: number }[] = [
   { head: 45, foot: 15 }, // 독서
@@ -29,10 +26,16 @@ const INITIAL_PRESETS: { head: number; foot: number }[] = [
 ];
 
 export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
-  const { connected } = useBedInfo();
-  const isDisconnected = !connected;
+  const bed = useBedInfo();
+  const isDisconnected = !bed.connected;
+  // 침대 상태를 읽는 중(앱을 열 때·다시 연결됐을 때). 읽기 전에는 조작을 막는다
+  const isLoading = bed.loading && bed.connected;
+  // 병원용 홈의 밤 안내 줄: 병원용 + 밤에 이름 부르기 끄기 + 지금 밤 시간 + 침대가 시각을 알 때만
+  const nightNote =
+    bed.ward && bed.ward.night.on && bed.clockOk && isNightNow(bed.ward.night)
+      ? `밤 시간 · ${bed.hasButton ? '버튼을 누르고 말해요' : '이름 불러도 대답 안 해요'}`
+      : undefined;
   const [pressingButton, setPressingButton] = useState<PressButton | undefined>();
-  const [isLoading, setIsLoading] = useState(true);
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [showUndo, setShowUndo] = useState(false);
@@ -41,12 +44,6 @@ export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const [headAngle, setHeadAngle] = useState(INITIAL_PRESETS[0].head);
   const [footAngle, setFootAngle] = useState(INITIAL_PRESETS[0].foot);
   const [presets, setPresets] = useState(INITIAL_PRESETS);
-
-  // 설정 화면 상태
-  const [showSettings, setShowSettings] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
-  const [showOpenSource, setShowOpenSource] = useState(false);
 
   // 시트 상태
   const [showEditPresetsSheet, setShowEditPresetsSheet] = useState(false);
@@ -60,7 +57,6 @@ export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const [savedPresetAngles, setSavedPresetAngles] = useState<({ head: number; foot: number } | null)[]>([null, null, null, null]);
   const [prevSavedPresetAngles, setPrevSavedPresetAngles] = useState<({ head: number; foot: number } | null)[]>([null, null, null, null]);
 
-  const loadingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const movingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const angleInterval = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -69,13 +65,15 @@ export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const savedConfirmTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const savedAngles = useRef<{ head: number; foot: number; preset: number } | null>(null);
 
+  // 연결이 끊기면 누르고 있던 움직임을 멈춘다
   useEffect(() => {
-    loadingTimer.current = setTimeout(() => setIsLoading(false), 2000);
-    return () => clearTimeout(loadingTimer.current);
-  }, []);
+    if (!isDisconnected) return;
+    clearInterval(angleInterval.current);
+    clearInterval(sheetAngleInterval.current);
+  }, [isDisconnected]);
 
   const handlePressIn = (button: PressButton) => {
-    if (isDisconnected) return;
+    if (isDisconnected || isLoading) return;
     setPressingButton(button);
     clearTimeout(debounceTimer.current);
     clearTimeout(movingTimer.current);
@@ -261,7 +259,7 @@ export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         isDisconnected={isDisconnected}
         showDisconnectDialog={showDisconnectDialog}
         isMoving={isMoving}
-        pressingButton={pressingButton}
+        pressingButton={isDisconnected ? undefined : pressingButton}
         showUndo={showUndo}
         activePreset={activePreset}
         onPreset={handlePreset}
@@ -280,27 +278,9 @@ export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         onUndo={handleUndo}
         onDismissDisconnectDialog={() => setShowDisconnectDialog(false)}
         onEditPresets={handleOpenEditPresets}
-        onGear={() => setShowSettings(true)}
+        onGear={openSettings}
         onTabChange={onTab}
-      />
-      <SettingsScreen
-        visible={showSettings}
-        isRegistered={true}
-        isConnected={!isDisconnected}
-        bedName="잘자요 침대"
-        bedStatus={isDisconnected ? '연결 끊김 · 다시 연결 중' : '연결됨 · 이 폰으로 조작 중'}
-        firmwareVersion="0.2"
-        onClose={() => setShowSettings(false)}
-        onRenameBed={() => {}}
-        onNightTime={() => {}}
-        onUnregister={() => setShowSettings(false)}
-        onReregister={() => {}}
-        onResetBed={() => {}}
-        onContact={() => {}}
-        onPrivacyPolicy={() => setShowPrivacyPolicy(true)}
-        onTerms={() => setShowTerms(true)}
-        onOpenSource={() => setShowOpenSource(true)}
-        onHospitalAdmin={() => {}}
+        nightNote={nightNote}
       />
       <EditPresetsSheet
         visible={showEditPresetsSheet}
@@ -336,18 +316,6 @@ export function PoseTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         onSaveOnly={handleSheetSaveOnly}
         onDeleteSaved={handleSheetDeleteSaved}
         onRetry={doMoveAndSave}
-      />
-      <PrivacyPolicyScreen
-        visible={showPrivacyPolicy}
-        onClose={() => setShowPrivacyPolicy(false)}
-      />
-      <TermsScreen
-        visible={showTerms}
-        onClose={() => setShowTerms(false)}
-      />
-      <OpenSourceScreen
-        visible={showOpenSource}
-        onClose={() => setShowOpenSource(false)}
       />
     </View>
   );

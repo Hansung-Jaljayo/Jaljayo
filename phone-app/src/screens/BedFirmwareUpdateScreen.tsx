@@ -27,7 +27,7 @@ export default function BedFirmwareUpdateScreen({ onRetry, onSettings }: Props) 
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+            <Text style={styles.primaryText}>문의하기</Text>
           </TouchableOpacity>
 
           <View style={styles.links}>

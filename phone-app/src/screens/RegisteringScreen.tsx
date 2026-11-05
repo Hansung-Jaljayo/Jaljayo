@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Animated, Easing, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 export default function RegisteringScreen() {
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.loop(
@@ -13,7 +13,7 @@ export default function RegisteringScreen() {
         useNativeDriver: true,
       })
     ).start();
-  }, []);
+  }, [rotation]);
 
   const rotate = rotation.interpolate({
     inputRange: [0, 1],

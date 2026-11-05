@@ -29,7 +29,7 @@ export default function CameraPermissionScreen({ onRetry, onSettings }: Props) {
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+            <Text style={styles.primaryText}>설정 열기</Text>
           </TouchableOpacity>
 
           <View style={styles.links}>

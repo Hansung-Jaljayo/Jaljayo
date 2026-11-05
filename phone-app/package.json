@@ -5,9 +5,8 @@
   "dependencies": {
     "expo": "~58.0.20",
     "expo-asset": "~58.0.3",
-    "expo-camera": "~16.1.6",
+    "expo-camera": "~58.0.14",
     "expo-constants": "~58.0.13",
-    "expo-file-system": "~18.1.4",
     "expo-font": "~58.0.10",
     "expo-image": "~58.0.17",
     "expo-linear-gradient": "~58.0.3",

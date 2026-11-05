@@ -20,6 +20,8 @@ interface Props {
 
 export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: Props) {
   const [password, setPassword] = useState('');
+  // 틀렸다는 안내는 다시 입력하기 시작하면 지운다(다시 들어올 때마다 화면을 새로 그려 error를 읽는다)
+  const [bad, setBad] = useState(!!error);
 
   const [visible, setVisible] = useState(false);
 
@@ -34,14 +36,14 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
             <Text style={styles.title}>비밀번호를 입력해 주세요</Text>
             <Text style={styles.lead}>{ssid}</Text>
 
-            <View style={[styles.inputRow, error && styles.inputRowError]}>
+            <View style={[styles.inputRow, bad && styles.inputRowError]}>
               <TextInput
                 style={styles.input}
                 placeholder="와이파이 비밀번호"
                 placeholderTextColor="#CBBDB7"
                 secureTextEntry={!visible}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(t) => { setPassword(t); setBad(false); }}
                 autoFocus
               />
               <TouchableOpacity style={styles.eyeButton} onPress={() => setVisible(v => !v)}>
@@ -55,7 +57,7 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
                 />
               </TouchableOpacity>
             </View>
-            {error && (
+            {bad && (
               <Text style={styles.errorText}>비밀번호가 맞지 않아요. 다시 입력해 주세요</Text>
             )}
 
@@ -67,9 +69,9 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryButton, (!password || error) && styles.primaryButtonDisabled]}
-            onPress={() => password && !error && onConnect?.(password)}
-            disabled={!password || !!error}
+            style={[styles.primaryButton, !password && styles.primaryButtonDisabled]}
+            onPress={() => password && onConnect?.(password)}
+            disabled={!password}
           >
             <Text style={styles.primaryText}>연결</Text>
           </TouchableOpacity>

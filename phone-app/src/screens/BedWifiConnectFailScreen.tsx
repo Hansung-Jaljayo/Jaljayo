@@ -26,11 +26,11 @@ export default function BedWifiConnectFailScreen({ onRetry, onHome, onSettings }
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+            <Text style={styles.primaryText}>다시 시도</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
-            <Text style={styles.secondaryText}>처음으로</Text>
+            <Text style={styles.secondaryText}>다른 와이파이 고르기</Text>
           </TouchableOpacity>
 
           <View style={styles.links}>

@@ -44,7 +44,7 @@ export default function WifiSelectScreen({ networks, onSelect, onRescan, onHome 
         </View>
 
         <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
-          <Text style={styles.secondaryText}>처음으로</Text>
+          <Text style={styles.secondaryText}>취소</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -9,6 +9,10 @@ import {
 
 import { TabBar, TAB_BAR_SPACE, type TabKey } from '@/components/TabBar';
 import { TabTop } from '@/components/TabTop';
+import { SvgXml } from 'react-native-svg';
+
+// 밤 안내 줄의 달 그림
+const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="#FFFAF7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg>';
 
 const PRESETS = [
   { label: '독서', icon: require('../../assets/images/preset-reading.png') },
@@ -43,6 +47,8 @@ interface Props {
   onUndo?: () => void;
   onDismissDisconnectDialog?: () => void;
   onTabChange?: (tab: TabKey) => void;
+  // 병원용 밤 시간 안내 한 줄
+  nightNote?: string;
 }
 
 function AngleRow({
@@ -131,6 +137,7 @@ export default function PostureScreen({
   onUndo,
   onDismissDisconnectDialog,
   onTabChange,
+  nightNote,
 }: Props) {
   const isAnyPressing = !!pressingButton;
   const showMovingChip = isMoving || isAnyPressing;
@@ -165,6 +172,13 @@ export default function PostureScreen({
           )}
         </View>
 
+        {!!nightNote && (
+          <View style={styles.nightNote} role="status">
+            <SvgXml xml={MOON} width={16} height={16} />
+            <Text style={styles.nightNoteText}>{nightNote}</Text>
+          </View>
+        )}
+
         {/* Angle Card */}
         <View style={[styles.card, isLoading && styles.sectionDisabled]}>
           <AngleRow
@@ -180,7 +194,7 @@ export default function PostureScreen({
           />
           <AngleRow
             label="다리"
-            range="0 - 60도"
+            range="0 - 40도"
             angle={footAngle}
             disabled={isMoving || (isAnyPressing && pressingButton !== 'footPlus' && pressingButton !== 'footMinus')}
             activeSide={pressingButton === 'footPlus' ? 'plus' : pressingButton === 'footMinus' ? 'minus' : undefined}
@@ -436,6 +450,18 @@ const rowStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  nightNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: '#342724',
+    marginBottom: 8,
+  },
+  nightNoteText: { fontSize: 15, fontWeight: '600', color: '#FFFAF7' },
   container: {
     flex: 1,
     backgroundColor: '#F4F0ED',
