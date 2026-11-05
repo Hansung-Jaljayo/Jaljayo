@@ -15,6 +15,7 @@ const TABS: { key: TabKey; name: string; icon: number; iconOn?: number }[] = [
     key: 'pose',
     name: '자세',
     icon: require('../../assets/icons/tab-pose.svg'),
+    iconOn: require('../../assets/icons/tab-pose-on.svg'),
   },
   {
     key: 'alarm',
