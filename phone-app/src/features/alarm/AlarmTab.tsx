@@ -9,6 +9,7 @@ import { RippleButton } from '@/components/RippleButton'
 import { Switch } from '@/components/Switch'
 import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
 import { TabTop } from '@/components/TabTop'
+import { getFlow } from '@/features/app/flow'
 import { useBedInfo } from '@/features/bed/bed'
 import { type BedRequest, startBedRequest } from '@/features/bed/requests'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
@@ -17,6 +18,7 @@ import {
   type Alarm,
   type AlarmDraft,
   type AlarmScope,
+  type Clash,
   alarmMetaLabel,
   applyOverwrite,
   clashLabel,
@@ -39,12 +41,41 @@ import { AlarmSheet } from './AlarmSheet'
 // 병원에서 알람을 막았으면 머리 아래를 안내로 채우고 알람을 쓸 수 없게 한다(둘 다면 버튼 안내를 보인다)
 export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const insets = useSafeAreaInsets()
-  const [alarms, setAlarms] = useState<Alarm[]>(sampleAlarms)
+  // 침대를 초기화한 뒤에는 빈 목록에서 시작한다
+  const [alarms, setAlarms] = useState<Alarm[]>(() => (getFlow().wipe ? [] : sampleAlarms()))
   const [sheetOpen, setSheetOpen] = useState(false)
   // 고칠 알람. 닫는 동안 제목이 바뀌지 않게 닫을 때는 두고, 열 때 정한다
   const [editing, setEditing] = useState<Alarm | null>(null)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
+  // 같은 날 같은 시각에 울리는 다른 켜진 알람이 있으면 저장 전에 확인 창으로 덮어쓸지 묻는다
+  const [clash, setClash] = useState<{ message: string; ok: () => void } | null>(null)
+  const closeClash = useCallback(() => setClash(null), [])
+
+  // 알림 확인 창(울리는 중·저장 중·연결 문제)
+  const [note, setNote] = useState<{ title: string; message: string } | null>(null)
+  const closeNote = useCallback(() => setNote(null), [])
+  const bedNow = useBedInfo()
+  const offline = !bedNow.connected || bedNow.loading
+  const ringing = (id: number | undefined) => id != null && bedNow.ringingId === id
+
+  // 목록에서 켜고 끄기도 침대에 보내고, 답이 오면 바꾼다. 답을 기다리는 동안 그 줄의 스위치는 흐리게 두고 바꾸지 않는다.
+  // 기다리는 동안 그 알람(덮어쓰는 알람 포함)은 "저장 중인 알람"이라 다른 저장이 건드리지 못하게 막는다
+  const [waitOn, setWaitOn] = useState<Record<number, number[]>>({})
+  const busyIds = Object.values(waitOn).flat()
+  const isBusy = (id: number) => busyIds.includes(id)
+  const toggleReqs = useRef(new Map<number, BedRequest>())
+  useEffect(() => {
+    const reqs = toggleReqs.current
+    return () => reqs.forEach((r) => r.cancel())
+  }, [])
+
   const openSheet = (alarm: Alarm | null) => {
+    if (alarm && isBusy(alarm.id)) {
+      return setNote({
+        title: '저장 중인 알람이에요',
+        message: '다른 알람을 저장하면서 이 알람도 바뀌는 중이에요. 저장이 끝난 뒤에 다시 열어 주세요.',
+      })
+    }
     setEditing(alarm)
     setSheetOpen(true)
   }
@@ -55,6 +86,8 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const request = useRef<BedRequest | null>(null)
   useEffect(() => () => request.current?.cancel(), [])
   const send = (message: Parameters<typeof startBedRequest>[0], apply: () => void) => {
+    // 연결이 끊겼거나 침대 상태를 읽는 중에는 옛 값으로 저장하지 않는다(창의 버튼도 막혀 있다)
+    if (offline) return
     request.current = startBedRequest(message, {
       onAck: () => {
         request.current = null
@@ -67,6 +100,7 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
     setWait('saving')
   }
   const retry = () => {
+    if (offline) return
     request.current?.retry()
     setWait('saving')
   }
@@ -77,16 +111,31 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
     setSheetOpen(false)
   }
 
-  // 같은 날 같은 시각에 울리는 다른 켜진 알람이 있으면 저장 전에 확인 창으로 덮어쓸지 묻는다
-  const [clash, setClash] = useState<{ message: string; ok: () => void } | null>(null)
-  const closeClash = useCallback(() => setClash(null), [])
+
+  // 덮어쓰면 바뀌는 알람 중 울리는 중이거나 저장을 기다리는 것이 있으면 전체를 막는다
+  const overwriteBlocked = (clashes: Clash[]) => {
+    const ring = clashes.find((c) => ringing(c.alarm.id))
+    if (ring) {
+      setNote({ title: '지금 울리고 있는 알람과 겹쳐요', message: `${alarmName(ring.alarm)} 알람이 끝난 뒤에 다시 저장해 주세요.` })
+      return true
+    }
+    const busy = clashes.find((c) => isBusy(c.alarm.id))
+    if (busy) {
+      setNote({ title: '저장 중인 알람과 겹쳐요', message: `${alarmName(busy.alarm)} 알람의 저장이 끝난 뒤에 다시 시도해 주세요.` })
+      return true
+    }
+    return false
+  }
 
   const save = (draft: AlarmDraft, scope?: AlarmScope, onceOff?: number) => {
     const target = editing
+    if (ringing(target?.id)) return
     // 이번만은 그 날짜 회차 하나만 새 시각으로 울리므로 그 회차만 견준다
     const rings = scope === 'once' && onceOff != null ? { ...draft, days: [], dateOff: onceOff } : draft
     const clashes = findClashes(rings, alarms, target?.id)
-    const go = () =>
+    if (overwriteBlocked(clashes)) return
+    const go = () => {
+      if (overwriteBlocked(clashes)) return
       send({ type: 'alarm-save', body: { id: target?.id ?? null, draft, scope, onceOff, overwrite: clashes.map((c) => c.alarm.id) } }, () =>
         setAlarms((list) => {
           const rest = clashes.length ? applyOverwrite(list, rings, clashes) : list
@@ -97,20 +146,59 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
             : [...rest, { ...draft, id: Math.max(0, ...rest.map((a) => a.id)) + 1, on: true }]
         }),
       )
+    }
     if (clashes.length) setClash({ message: clashLabel(clashes[0]), ok: go })
     else go()
   }
   const remove = () => {
     const target = editing
-    if (!target) return
+    if (!target || ringing(target.id)) return
     send({ type: 'alarm-delete', body: { id: target.id } }, () =>
       setAlarms((list) => list.filter((a) => a.id !== target.id)),
     )
   }
 
-  // 켤 때는 지난 한 번 알람의 날짜도 다음에 울릴 날로 맞춘다
-  const toggle = (id: number, on: boolean) =>
-    setAlarms((list) => list.map((a) => (a.id === id ? { ...a, ...fixDraft(a), on } : a)))
+  // 켤 때는 지난 한 번 알람의 날짜도 다음에 울릴 날로 맞추고, 새로 저장할 때처럼 겹치는 알람이 있으면 덮어쓸지 묻는다
+  const toggle = (id: number, on: boolean) => {
+    const a = alarms.find((x) => x.id === id)
+    if (!a || offline || ringing(id) || id in waitOn) return
+    if (isBusy(id)) return setNote({ title: '저장 중인 알람이에요', message: '저장이 끝난 뒤에 다시 시도해 주세요.' })
+    const turned = { ...a, ...fixDraft(a), on }
+    const clashes = on ? findClashes(turned, alarms, id) : []
+    if (overwriteBlocked(clashes)) return
+    const go = () => {
+      if (overwriteBlocked(clashes)) return
+      const done = () => {
+        toggleReqs.current.delete(id)
+        setWaitOn((w) => {
+          const next = { ...w }
+          delete next[id]
+          return next
+        })
+      }
+      const r = startBedRequest(
+        { type: 'alarm-save', body: { id, on, overwrite: clashes.map((c) => c.alarm.id) } },
+        {
+          onAck: () => {
+            done()
+            setAlarms((list) => {
+              const rest = clashes.length ? applyOverwrite(list, turned, clashes) : list
+              return rest.map((x) => (x.id === id ? turned : x))
+            })
+          },
+          onTimeout: () => {
+            toggleReqs.current.get(id)?.cancel()
+            done()
+            setNote({ title: '연결이 원활하지 않아요', message: '바뀐 내용이 침대에 저장되지 않았을 수 있어요. 다시 시도해 주세요.' })
+          },
+        },
+      )
+      toggleReqs.current.set(id, r)
+      setWaitOn((w) => ({ ...w, [id]: [id, ...clashes.map((c) => c.alarm.id)] }))
+    }
+    if (clashes.length) setClash({ message: clashLabel(clashes[0]), ok: go })
+    else go()
+  }
 
   const sorted = [...alarms].sort((x, y) => x.time - y.time)
 
@@ -164,7 +252,14 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
             <NextCard alarms={alarms} />
             <View style={styles.group}>
               {sorted.map((a) => (
-                <AlarmRow key={a.id} alarm={a} onPress={() => openSheet(a)} onToggle={(on) => toggle(a.id, on)} />
+                <AlarmRow
+                  key={a.id}
+                  alarm={a}
+                  waiting={a.id in waitOn}
+                  locked={offline}
+                  onPress={() => openSheet(a)}
+                  onToggle={(on) => toggle(a.id, on)}
+                />
               ))}
             </View>
             <View style={styles.addShadow}>
@@ -186,6 +281,14 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         wait={wait}
         onRetry={retry}
         onCancelWait={cancelWait}
+        ringing={ringing(editing?.id)}
+        onPast={(off, time) =>
+          setNote({
+            title: '이미 지난 시각이에요',
+            message: `${whenLabel(off)} ${clockLabel(time)}는 이미 지났어요. 다른 시각을 고르거나 '앞으로 계속'으로 바꿔 주세요.`,
+          })
+        }
+        offline={offline}
       />
       {/* dlg · 겹치는 알람 확인 창: 덮어쓰기를 누르면 저장을 이어 가고, 취소는 확인 창만 닫는다 */}
       <ConfirmDialog
@@ -201,9 +304,13 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         }}
         onClose={closeClash}
       />
+      <ConfirmDialog open={note != null} title={note?.title ?? ''} message={note?.message ?? ''} onOk={closeNote} onClose={closeNote} />
     </View>
   )
 }
+
+// 확인 창에서 알람을 가리키는 말: "평일 오전 7시", "11월 6일 오전 7시"
+const alarmName = (a: Alarm) => `${alarmMetaLabel(a).split(' · ')[0]} ${clockLabel(a.time)}`
 
 // tcard · 요약 카드: 실제로 다음에 울릴 알람. 켜진 알람이 없으면 안내
 function NextCard({ alarms }: { alarms: Alarm[] }) {
@@ -239,11 +346,23 @@ function NextCard({ alarms }: { alarms: Alarm[] }) {
 }
 
 // arow · 알람 줄: 시각과 반복 요일(또는 날짜), 오른쪽 켜기 스위치. 꺼진 알람은 글이 흐리다. 누르면 고치기
-function AlarmRow({ alarm, onPress, onToggle }: { alarm: Alarm; onPress: () => void; onToggle: (on: boolean) => void }) {
+function AlarmRow({
+  alarm,
+  waiting,
+  locked,
+  onPress,
+  onToggle,
+}: {
+  alarm: Alarm
+  waiting: boolean
+  locked: boolean
+  onPress: () => void
+  onToggle: (on: boolean) => void
+}) {
   const { ampm, hm } = clockParts(alarm.time)
   const dim = !alarm.on && styles.off
   return (
-    <View style={styles.rowShadow}>
+    <View style={[styles.rowShadow, waiting && styles.off]}>
       <RippleButton style={styles.row} onPress={onPress} accessibilityLabel={`${clockLabel(alarm.time)} 알람 고치기`}>
         <View style={styles.main}>
           <View style={[styles.at, dim]}>
@@ -252,7 +371,12 @@ function AlarmRow({ alarm, onPress, onToggle }: { alarm: Alarm; onPress: () => v
           </View>
           <Text style={[styles.meta, dim]}>{alarmMetaLabel(alarm)}</Text>
         </View>
-        <Switch value={alarm.on} onValueChange={onToggle} accessibilityLabel={`${clockLabel(alarm.time)} 알람 켜기`} />
+        <Switch
+          value={alarm.on}
+          onValueChange={onToggle}
+          disabled={waiting || locked}
+          accessibilityLabel={`${clockLabel(alarm.time)} 알람 켜기`}
+        />
       </RippleButton>
     </View>
   )

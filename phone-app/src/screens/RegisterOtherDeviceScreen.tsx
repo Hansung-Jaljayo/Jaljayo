@@ -1,4 +1,4 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 
 interface Props {
   description: string;
@@ -28,11 +28,11 @@ export default function RegisterOtherDeviceScreen({ description, onRetry, onHome
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+            <Text style={styles.primaryText}>연결하기</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
-            <Text style={styles.secondaryText}>처음으로</Text>
+            <Text style={styles.secondaryText}>취소</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -49,10 +49,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     gap: 16,
-    justifyContent: 'center',
   },
   center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 14,
   },
@@ -69,12 +71,12 @@ const styles = StyleSheet.create({
     height: 56,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 36 : 30,
   },
   description: {
     fontSize: 17,

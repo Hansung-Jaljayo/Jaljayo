@@ -1,4 +1,4 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 
 interface Props {
   onRetry?: () => void;
@@ -27,7 +27,7 @@ export default function BedFirmwareUpdateScreen({ onRetry, onSettings }: Props) 
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+            <Text style={styles.primaryText}>문의하기</Text>
           </TouchableOpacity>
 
           <View style={styles.links}>
@@ -50,10 +50,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     gap: 16,
-    justifyContent: 'center',
   },
   center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 14,
   },
@@ -75,12 +77,12 @@ const styles = StyleSheet.create({
     height: 44,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 36 : 30,
   },
   description: {
     fontSize: 17,

@@ -1,4 +1,4 @@
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 
 interface Props {
   networks: string[];
@@ -44,7 +44,7 @@ export default function WifiSelectScreen({ networks, onSelect, onRescan, onHome 
         </View>
 
         <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
-          <Text style={styles.secondaryText}>처음으로</Text>
+          <Text style={styles.secondaryText}>취소</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -60,16 +60,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     justifyContent: 'space-between',
   },
   top: {
     gap: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     lineHeight: 30,
   },

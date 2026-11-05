@@ -20,6 +20,8 @@ interface Props {
 
 export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: Props) {
   const [password, setPassword] = useState('');
+  // 틀렸다는 안내는 다시 입력하기 시작하면 지운다(다시 들어올 때마다 화면을 새로 그려 error를 읽는다)
+  const [bad, setBad] = useState(!!error);
 
   const [visible, setVisible] = useState(false);
 
@@ -34,17 +36,24 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
             <Text style={styles.title}>비밀번호를 입력해 주세요</Text>
             <Text style={styles.lead}>{ssid}</Text>
 
-            <View style={[styles.inputRow, error && styles.inputRowError]}>
+            <Text style={styles.label}>와이파이 비밀번호</Text>
+            <View style={[styles.inputRow, bad && styles.inputRowError]}>
               <TextInput
                 style={styles.input}
-                placeholder="와이파이 비밀번호"
-                placeholderTextColor="#CBBDB7"
+                accessibilityLabel="와이파이 비밀번호"
+                autoCapitalize="none"
+                autoCorrect={false}
                 secureTextEntry={!visible}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(t) => { setPassword(t); setBad(false); }}
                 autoFocus
               />
-              <TouchableOpacity style={styles.eyeButton} onPress={() => setVisible(v => !v)}>
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setVisible(v => !v)}
+                accessibilityLabel={visible ? '비밀번호 숨기기' : '비밀번호 보기'}
+                accessibilityState={{ selected: visible }}
+              >
                 <Image
                   source={visible
                     ? require('../../assets/images/eye-open.png')
@@ -55,23 +64,20 @@ export default function WifiPasswordScreen({ ssid, error, onConnect, onBack }: P
                 />
               </TouchableOpacity>
             </View>
-            {error && (
-              <Text style={styles.errorText}>비밀번호가 맞지 않아요. 다시 입력해 주세요</Text>
+            {bad && (
+              <Text style={styles.errorText}>비밀번호가 맞지 않아요. 다시 입력해 주세요.</Text>
             )}
-
-            <View style={styles.links}>
-              <TouchableOpacity style={styles.link} onPress={onBack}>
-                <Text style={styles.linkText}>다른 와이파이 고르기</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           <TouchableOpacity
-            style={[styles.primaryButton, (!password || error) && styles.primaryButtonDisabled]}
-            onPress={() => password && !error && onConnect?.(password)}
-            disabled={!password || !!error}
+            style={[styles.primaryButton, !password && styles.primaryButtonDisabled]}
+            onPress={() => password && onConnect?.(password)}
+            disabled={!password}
           >
             <Text style={styles.primaryText}>연결</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryButton} onPress={onBack}>
+            <Text style={styles.secondaryText}>다른 와이파이 고르기</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -91,16 +97,16 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     justifyContent: 'space-between',
   },
   top: {
     gap: 16,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     lineHeight: 30,
   },
@@ -171,6 +177,32 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  label: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#513E39',
+    marginTop: 8,
+  },
+  secondaryButton: {
+    width: '100%',
+    height: 56,
+    marginTop: 8,
+    backgroundColor: '#FFFCFA',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#342724',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 32,
+    elevation: 4,
+  },
+  secondaryText: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#2D2220',
+    lineHeight: 20,
   },
   primaryButtonDisabled: {
     backgroundColor: '#D8CCC6',

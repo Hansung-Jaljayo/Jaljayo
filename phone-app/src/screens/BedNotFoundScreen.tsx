@@ -1,12 +1,14 @@
-  import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+  import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 
 interface Props {
   onRetry?: () => void;
   onHome?: () => void;
   onWifiSetup?: () => void;
   onSettings?: () => void;
+  // 다시 찾는 중이면 버튼을 막고 "찾는 중…"
+  finding?: boolean;
 }
-export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSettings }: Props) {
+export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSettings, finding = false }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.fill}>
@@ -28,12 +30,12 @@ export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSett
 
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
-            <Text style={styles.primaryText}>다시 확인</Text>
+          <TouchableOpacity style={[styles.primaryButton, finding && { opacity: 0.45 }]} onPress={onRetry} disabled={finding}>
+            <Text style={styles.primaryText}>{finding ? '찾는 중…' : '다시 찾기'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
-            <Text style={styles.secondaryText}>처음으로</Text>
+            <Text style={styles.secondaryText}>QR 다시 찍기</Text>
           </TouchableOpacity>
 
           <View style={styles.links}>
@@ -59,10 +61,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     gap: 16,
-    justifyContent: 'center',
   },
   center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 14,
   },
@@ -79,12 +83,12 @@ const styles = StyleSheet.create({
     height: 56,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 36 : 30,
   },
   description: {
     fontSize: 17,

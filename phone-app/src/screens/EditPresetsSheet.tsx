@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -25,6 +25,14 @@ interface Props {
   isSaved?: boolean;
   hasDefaultAngle?: boolean;
   isError?: boolean;
+  // 저장 중인지 삭제 중인지("저장 중…"·"삭제 중…")
+  waitKind?: 'save' | 'delete';
+  // 기본 각도가 없고 지난번 각도를 쓰는 중이면 지난번을 진하게
+  lastInUse?: boolean;
+  // 침대와 연결이 끊겼거나 상태를 읽는 중이면 움직이기·저장·삭제를 막는다
+  isOffline?: boolean;
+  // 침대가 저장을 거절한 이유(없으면 안 보인다)
+  note?: string;
   onClose?: () => void;
   onSelectPreset?: (index: number) => void;
   onHeadMinusPressIn?: () => void;
@@ -113,6 +121,10 @@ export default function EditPresetsSheet({
   isSaved = false,
   hasDefaultAngle = false,
   isError = false,
+  waitKind = 'save',
+  lastInUse = false,
+  isOffline = false,
+  note = '',
   onClose,
   onSelectPreset,
   onHeadMinusPressIn,
@@ -129,9 +141,9 @@ export default function EditPresetsSheet({
   onRetry,
 }: Props) {
   const isAnyPressing = !!pressingButton;
-  const isBlocked = isAnyPressing || isSaving || isError;
+  const isBlocked = isAnyPressing || isSaving || isError || isOffline;
 
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
   useEffect(() => {
     if (isSaving) {
       Animated.loop(
@@ -146,7 +158,7 @@ export default function EditPresetsSheet({
       rotation.stopAnimation();
       rotation.setValue(0);
     }
-  }, [isSaving]);
+  }, [isSaving, rotation]);
 
   const spin = rotation.interpolate({
     inputRange: [0, 1],
@@ -154,7 +166,7 @@ export default function EditPresetsSheet({
   });
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={() => { if (!isSaving) onClose?.(); }}>
       <View style={styles.root}>
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={styles.overlay} />
@@ -192,8 +204,8 @@ export default function EditPresetsSheet({
 
           {/* 상태 라벨 */}
           <View style={styles.pair}>
-            <Text style={[styles.pairText, (isSaved || hasDefaultAngle) && styles.pairTextSaved]}>{defaultAngleLabel}</Text>
-            <Text style={styles.pairText}>{lastUsedLabel}</Text>
+            <Text style={[styles.pairText, hasDefaultAngle && styles.pairTextSaved]}>{defaultAngleLabel}</Text>
+            <Text style={[styles.pairText, lastInUse && styles.pairTextSaved]}>{lastUsedLabel}</Text>
           </View>
 
           {/* 미리보기 */}
@@ -245,7 +257,7 @@ export default function EditPresetsSheet({
                 isAnyPressing && !isSaved && !isError && styles.actionDisabled,
               ]}
               onPress={isError ? onRetry : onSaveOnly}
-              disabled={isAnyPressing || isSaving || isSaved}
+              disabled={isAnyPressing || isSaving || isSaved || isOffline}
             >
               {isSaving ? (
                 <Animated.View style={[styles.spinner, { transform: [{ rotate: spin }] }]} />
@@ -263,16 +275,19 @@ export default function EditPresetsSheet({
                 />
               ) : null}
               <Text style={[styles.actionSecondaryText, isSaved && styles.actionSecondaryTextSaved]}>
-                {isSaving ? '저장 중…' : isSaved ? '저장되었어요' : isError ? '다시 시도' : '각도만 저장 (침대는 그대로)'}
+                {isSaving ? (waitKind === 'delete' ? '삭제 중…' : '저장 중…') : isSaved ? '저장되었어요' : isError ? '다시 시도' : '각도만 저장 (침대는 그대로)'}
               </Text>
             </TouchableOpacity>
+            {(isError || !!note) && (
+              <Text style={styles.saveNote}>{isError ? '연결이 원활하지 않아요. 다시 시도해 주세요' : note}</Text>
+            )}
             {isError && (
               <TouchableOpacity style={styles.actionCancel} onPress={onClose}>
                 <Text style={styles.actionCancelText}>취소</Text>
               </TouchableOpacity>
             )}
-            {(isSaved || hasDefaultAngle) && (
-              <TouchableOpacity style={styles.deleteBtn} onPress={onDeleteSaved}>
+            {hasDefaultAngle && !isError && (
+              <TouchableOpacity style={[styles.deleteBtn, (isSaving || isOffline) && styles.actionDisabled]} onPress={onDeleteSaved} disabled={isSaving || isOffline}>
                 <Text style={styles.deleteBtnText}>저장한 각도 삭제</Text>
               </TouchableOpacity>
             )}
@@ -483,6 +498,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 18,
     color: '#705A54',
+  },
+  saveNote: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#AD332C',
+    textAlign: 'center',
   },
   pairTextSaved: {
     fontWeight: '700',

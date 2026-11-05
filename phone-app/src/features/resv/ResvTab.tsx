@@ -9,6 +9,7 @@ import { RippleButton } from '@/components/RippleButton'
 import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
 import { TabTop } from '@/components/TabTop'
 import { clockLabel, clockParts, inLabel, nowMinutes } from '@/features/alarm/alarm'
+import { useBedInfo } from '@/features/bed/bed'
 import { type BedMessage, type BedRequest, startBedRequest } from '@/features/bed/requests'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
@@ -41,10 +42,16 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   // 5초 넘게 답이 없으면 기다리기를 그만두고 확인 창으로 알린다
   const [waiting, setWaiting] = useState(false)
   const [noReply, setNoReply] = useState(false)
+  // 연결이 끊겼거나 침대 상태를 읽는 중에는 옛 값으로 저장하지 않는다
+  const bed = useBedInfo()
+  const offline = !bed.connected || bed.loading
+  const [offNote, setOffNote] = useState(false)
+  const closeOffNote = useCallback(() => setOffNote(false), [])
   const request = useRef<BedRequest | null>(null)
   useEffect(() => () => request.current?.cancel(), [])
   const send = (message: BedMessage, apply: () => void) => {
     if (request.current) return
+    if (offline) return setOffNote(true)
     request.current = startBedRequest(message, {
       onAck: () => {
         request.current = null
@@ -80,6 +87,7 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const [badTime, setBadTime] = useState(false)
   const closeBadTime = useCallback(() => setBadTime(false), [])
   const saveSheet = (draft: ResvDraft) => {
+    if (offline) return setOffNote(true)
     const next = resvFromDraft(draft, item, nowMinutes())
     if (!next) {
       setBadTime(true)
@@ -100,6 +108,7 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
     setSheetWait('saving')
   }
   const retrySheet = () => {
+    if (offline) return setOffNote(true)
     sheetRequest.current?.retry()
     setSheetWait('saving')
   }
@@ -181,6 +190,7 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         onRetry={retrySheet}
         onCancelWait={cancelSheetWait}
       />
+      <ConfirmDialog open={offNote} title="지금은 저장할 수 없어요" message={'침대와 연결되어 정보를 확인한 뒤 저장할 수 있어요.'} onOk={closeOffNote} onClose={closeOffNote} />
       <ConfirmDialog
         open={badTime}
         title="예약할 수 없는 시각이에요"

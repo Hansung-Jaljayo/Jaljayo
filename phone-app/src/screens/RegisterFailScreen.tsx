@@ -1,4 +1,4 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 
 interface Props {
   onRetry?: () => void;
@@ -22,7 +22,7 @@ export default function RegisterFailScreen({ onRetry, onHome }: Props) {
           <Text style={styles.title}>등록됐는지 확인하지 못했어요</Text>
 
           <Text style={styles.description}>
-            {'침대와 연결이 잠시 끊겼어요. 침대 전원과\n인터넷 연결을 확인하고 다시 시도해 주세요.'}
+            {'침대와 연결이 잠시 끊겼어요. 침대 전원과\n와이파이를 확인한 뒤 다시 확인해 주세요.'}
           </Text>
         </View>
 
@@ -56,10 +56,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     gap: 16,
-    justifyContent: 'center',
   },
   center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 14,
   },
@@ -81,12 +83,12 @@ const styles = StyleSheet.create({
     height: 56,
   },
   title: {
-    fontSize: 24,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
     fontWeight: '700',
-    letterSpacing: -0.72,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 36 : 30,
   },
   description: {
     fontSize: 17,

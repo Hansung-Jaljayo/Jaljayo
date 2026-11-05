@@ -14,6 +14,11 @@ interface Props {
   visible?: boolean;
   isRegistered?: boolean;
   isConnected?: boolean;
+  // 침대 상태를 읽는 중(초기화·이름·밤 시간을 막는다)
+  isLoading?: boolean;
+  // 병원용 침대면 이름 바꾸기·밤 시간 줄을 보인다
+  isWard?: boolean;
+  contact?: string;
   bedName?: string;
   bedStatus?: string;
   appVersion?: string;
@@ -24,7 +29,6 @@ interface Props {
   onUnregister?: () => void;
   onReregister?: () => void;
   onResetBed?: () => void;
-  onContact?: () => void;
   onPrivacyPolicy?: () => void;
   onTerms?: () => void;
   onOpenSource?: () => void;
@@ -35,6 +39,9 @@ export default function SettingsScreen({
   visible = false,
   isRegistered = true,
   isConnected = true,
+  isLoading = false,
+  isWard = false,
+  contact = '문의 이메일 준비 중',
   bedName = '잘자요 침대',
   bedStatus = '연결됨 · 이 폰으로 조작 중',
   appVersion = '1.0.0 (시안)',
@@ -45,7 +52,6 @@ export default function SettingsScreen({
   onUnregister,
   onReregister,
   onResetBed,
-  onContact,
   onPrivacyPolicy,
   onTerms,
   onOpenSource,
@@ -54,6 +60,8 @@ export default function SettingsScreen({
   const insets = useSafeAreaInsets();
   const [showReregisterDialog, setShowReregisterDialog] = useState(false);
   const [showUnregisterDialog, setShowUnregisterDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const busy = !isConnected || isLoading;
 
   if (!visible) return null;
 
@@ -78,7 +86,7 @@ export default function SettingsScreen({
           {/* 침대 섹션 — 등록된 경우에만 표시 */}
           {isRegistered && (
             <>
-              <Text style={styles.sectionLabel}>침대</Text>
+              <Text style={[styles.sectionLabel, styles.sectionLabelTop]}>침대</Text>
 
               {/* bedrow · 침대 줄 */}
               <View style={styles.bedrow}>
@@ -95,19 +103,21 @@ export default function SettingsScreen({
 
               {/* actions · 버튼 묶음 */}
               <View style={styles.actionsCard}>
-                {isConnected && onRenameBed && (
+                {isWard && (
                   <TouchableOpacity
-                    style={[styles.actionRow, styles.actionRowBorder]}
+                    style={[styles.actionRow, styles.actionRowBorder, busy && styles.actionRowDisabled]}
                     onPress={onRenameBed}
+                    disabled={busy}
                   >
                     <Text style={styles.actionText}>부르는 이름 바꾸기</Text>
                     <Text style={styles.actionChevron}>›</Text>
                   </TouchableOpacity>
                 )}
-                {isConnected && onNightTime && (
+                {isWard && (
                   <TouchableOpacity
-                    style={[styles.actionRow, styles.actionRowBorder]}
+                    style={[styles.actionRow, styles.actionRowBorder, busy && styles.actionRowDisabled]}
                     onPress={onNightTime}
+                    disabled={busy}
                   >
                     <Text style={styles.actionText}>밤 시간</Text>
                     <Text style={styles.actionChevron}>›</Text>
@@ -115,22 +125,20 @@ export default function SettingsScreen({
                 )}
                 <TouchableOpacity
                   style={[styles.actionRow, styles.actionRowBorder]}
+                  onPress={() => setShowReregisterDialog(true)}
+                >
+                  <Text style={styles.actionText}>다시 등록</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionRow, styles.actionRowBorder]}
                   onPress={() => setShowUnregisterDialog(true)}
                 >
                   <Text style={styles.actionText}>등록 해제</Text>
                 </TouchableOpacity>
-                {!isConnected && (
-                  <TouchableOpacity
-                    style={[styles.actionRow, styles.actionRowBorder]}
-                    onPress={() => setShowReregisterDialog(true)}
-                  >
-                    <Text style={styles.actionText}>다시 등록</Text>
-                  </TouchableOpacity>
-                )}
                 <TouchableOpacity
-                  style={[styles.actionRow, !isConnected && styles.actionRowDisabled]}
-                  onPress={isConnected ? onResetBed : undefined}
-                  disabled={!isConnected}
+                  style={[styles.actionRow, busy && styles.actionRowDisabled]}
+                  onPress={() => setShowResetDialog(true)}
+                  disabled={busy}
                 >
                   <Text style={styles.actionTextWarn}>침대 초기화</Text>
                 </TouchableOpacity>
@@ -140,7 +148,7 @@ export default function SettingsScreen({
               <Text style={styles.hint}>
                 {isConnected
                   ? `등록 해제는 이 폰의 연결만 끊어요.\n침대에 저장된 알람과 예약은 지워지지 않아요.\n침대 초기화는 침대에서 알람, 예약, 자세 기록을 모두 지워요.`
-                  : `침대와 연결이 끊겨 있어요. 침대 초기화는 연결될 때 할 수 있어요.`}
+                  : `침대와 연결이 끊겨 있어요. 침대 초기화는 다시 연결된 뒤에 할 수 있어요.`}
               </Text>
             </>
           )}
@@ -166,16 +174,16 @@ export default function SettingsScreen({
                 </View>
               </View>
             )}
-            <TouchableOpacity style={styles.irow} onPress={onContact}>
+            {/* 문의 주소는 글자로 보여 준다(누르는 줄 아님) */}
+            <View style={styles.irow}>
               <View style={styles.irowInfo}>
                 <Text style={styles.irowLabel}>문의하기</Text>
-                <Text style={styles.irowValue}>문의 이메일 준비 중</Text>
+                <Text style={styles.irowValue} selectable>{contact}</Text>
               </View>
-              <Text style={styles.irowChevron}>›</Text>
-            </TouchableOpacity>
+            </View>
           </View>
 
-          {/* 법적 섹션 — 등록 전에만 표시 */}
+          {/* 약관 글 */}
           {(onPrivacyPolicy || onTerms || onOpenSource) && (
             <View style={[styles.ilist, styles.ilistGap]}>
               {onPrivacyPolicy && (
@@ -220,11 +228,11 @@ export default function SettingsScreen({
         </ScrollView>
 
       </View>
-      <Modal transparent visible={showReregisterDialog} animationType="fade">
+      <Modal transparent visible={showReregisterDialog} animationType="fade" onRequestClose={() => setShowReregisterDialog(false)}>
         <View style={styles.dlg}>
           <View style={styles.dbox}>
             <Text style={styles.dlgTitle}>침대를 다시 등록할까요?</Text>
-            <Text style={styles.dlgBody}>침대 QR을 다시 찍어 이 폰에 연결해요.</Text>
+            <Text style={styles.dlgBody}>침대 QR을 다시 찍어 이 폰에 연결해요. 알람과 예약은 그대로예요.</Text>
             <View style={styles.dacts}>
               <TouchableOpacity
                 style={styles.dactCancel}
@@ -242,12 +250,14 @@ export default function SettingsScreen({
           </View>
         </View>
       </Modal>
-      <Modal transparent visible={showUnregisterDialog} animationType="fade">
+      <Modal transparent visible={showUnregisterDialog} animationType="fade" onRequestClose={() => setShowUnregisterDialog(false)}>
         <View style={styles.dlg}>
           <View style={styles.dbox}>
             <Text style={[styles.dlgTitle, styles.dlgCenter]}>등록을 해제할까요?</Text>
             <Text style={[styles.dlgBody, styles.dlgCenter]}>
-              {'이 폰으로는 더 이상 침대를 조작할 수 없어요.\n침대에 저장된 알람과 예약은 지워지지 않아요.'}
+              {isConnected
+                ? '이 폰으로는 더 이상 침대를 조작할 수 없어요.\n침대에 저장된 알람과 예약은 지워지지 않아요.'
+                : '침대와 연결이 끊겨 있어 이 폰에 남은 연결 정보만 지워요.\n침대에 저장된 알람과 예약은 지워지지 않아요.'}
             </Text>
             <View style={styles.dacts}>
               <TouchableOpacity
@@ -261,6 +271,25 @@ export default function SettingsScreen({
                 onPress={() => { setShowUnregisterDialog(false); onUnregister?.(); }}
               >
                 <Text style={styles.dactConfirmText}>등록 해제</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Modal transparent visible={showResetDialog} animationType="fade" onRequestClose={() => setShowResetDialog(false)}>
+        <View style={styles.dlg}>
+          <View style={styles.dbox}>
+            <Text style={[styles.dlgTitle, styles.dlgCenter]}>침대를 초기화할까요?</Text>
+            <Text style={[styles.dlgBody, styles.dlgCenter]}>침대에서 알람, 예약, 자세 기록을 모두 지워요.</Text>
+            <View style={styles.dacts}>
+              <TouchableOpacity style={styles.dactCancel} onPress={() => setShowResetDialog(false)}>
+                <Text style={styles.dactCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dactConfirm, styles.dactDanger]}
+                onPress={() => { setShowResetDialog(false); if (!busy) onResetBed?.(); }}
+              >
+                <Text style={styles.dactConfirmText}>초기화</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -325,8 +354,9 @@ const styles = StyleSheet.create({
     color: '#705A54',
     marginBottom: 12,
   },
+  // 시안: 묶음 사이 12 + 소제목 위 8
   sectionLabelApp: {
-    marginTop: 28,
+    marginTop: 20,
   },
   sectionLabelTop: {
     marginTop: 8,
@@ -347,7 +377,7 @@ const styles = StyleSheet.create({
   bedImg: {
     width: 48,
     height: 48,
-    borderRadius: 8,
+    borderRadius: 14,
   },
   bedInfo: {
     gap: 0,
@@ -531,6 +561,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  dactDanger: {
+    backgroundColor: '#AD332C',
   },
   dactConfirmText: {
     fontSize: 17,
