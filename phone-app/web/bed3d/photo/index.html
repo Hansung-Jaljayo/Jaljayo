@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>잘자요 침대 사진</title>
+<style>
+  /* 앱 홈 사진 칸의 침대. 시안(App-Screen-Initial-Version)의 drawRoom을 그대로 옮겼다 */
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas aria-hidden="true"></canvas>
+<script>
+// 시안과 같은 방 사진(1.25도 간격 1617장, WebP). 사이 각도는 가까운 네 장을 섞는다(시안 drawRoom과 같은 규칙).
+// 시안과 다른 점 두 가지:
+// 1) 사진 1617장을 한꺼번에 그림으로 풀어 두면 폰 메모리가 넘쳐, 그릴 때마다 다시 푸느라 움직이다 멈춘다.
+//    그래서 받은 사진은 압축된 채로 두고, 지금 각도와 곧 지나갈 각도의 사진만 미리 풀어 둔다(최대 MAX장)
+// 2) 갤럭시처럼 납작한 칸에서는 꽉 채우면 침대 위아래가 잘린다. 침대 전체(BED)가 칸 가운데 오게 맞추고,
+//    좌우가 조금 모자라면 사진 끝 한 줄을 늘려 채운다
+const cv = document.querySelector('canvas')
+const q = new URLSearchParams(location.search)
+const clampA = (h, l) => [Math.min(60, Math.max(0, Number(h) || 0)), Math.min(40, Math.max(0, Number(l) || 0))]
+const current = (() => { const [h, l] = clampA(q.get('head'), q.get('leg')); return { head: h, leg: l } })()
+
+const RSTEP = 1.25, CSTEP = 5, IW = 1002, IH = 720
+// 사진 속 침대가 차지하는 곳(머리 60도 베개 끝부터 받침 아래까지, 사진 픽셀)
+const BED = { x0: 70, x1: 915, y0: 85, y1: 645 }
+const MAX = 90
+const raw = {}            // 키 → base64(압축된 채)
+const bmp = new Map()     // 키 → 풀어 둔 그림
+const busyKeys = new Set()
+let gen = 0               // 칸 크기가 바뀌면 풀어 둔 그림을 버린다
+const rkey = (h, l) => `h${String(Math.round(h * 10)).padStart(3, '0')}_l${String(Math.round(l * 10)).padStart(3, '0')}`
+let dirty = true, exact = false
+
+fetch('room_coarse.txt').then((r) => { if (!r.ok) throw new Error(r.status); return r.text() }).then((t) => {
+  for (const line of t.split('\n')) if (line) raw[line.slice(0, 9)] = raw[line.slice(0, 9)] || line.slice(10)
+  dirty = true
+  return true
+}).catch((e) => { console.warn('미리보기 사진 묶음을 받지 못했어요', e); return false }).then(loadRest)
+// 나머지: 5도 → 2.5도 → 1.25도 단계로, 같은 단계에서는 지금 머리 각도에 가까운 묶음부터 6개씩 나눠 받는다
+// (처음 받은 117장은 다리도 5도 간격이라, 머리 5도 묶음도 받아야 다리 1.25도 사진이 생긴다)
+function loadRest() {
+  const left = new Set(); for (let h = 0; h <= 60; h += RSTEP) left.add(h)
+  const level = (h) => (h % 5 === 0 ? 0 : h % 2.5 === 0 ? 1 : 2)
+  const nextPack = () => {
+    if (!left.size) return
+    const h = [...left].sort((a, b) => level(a) - level(b) || Math.abs(a - current.head) - Math.abs(b - current.head))[0]
+    left.delete(h)
+    const hk = String(Math.round(h * 10)).padStart(3, '0')
+    fetch(`room_webp_pack/h${hk}.txt`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text() }).then((t) => {
+      for (const line of t.split('\n')) if (line) raw[`h${hk}_${line.slice(0, 4)}`] = line.slice(5)
+      dirty = true
+    }).catch((e) => console.warn('사진 묶음을 받지 못했어요', hk, e)).then(nextPack)
+  }
+  for (let n = 0; n < 6; n++) nextPack()
+}
+
+// 칸에 사진을 놓는 자리(캔버스 픽셀)
+let place = null
+function layout() {
+  const W = Math.round(cv.clientWidth * 2), H = Math.round(cv.clientHeight * 2)
+  if (!W || !H) return false
+  if (cv.width === W && cv.height === H && place) return true
+  cv.width = W; cv.height = H
+  const cover = Math.max(W / IW, H / IH)
+  // 침대 전체가 위아래로 들어가는 크기(꽉 채우는 크기보다 크게는 키우지 않고, 좌우 빈 곳은 칸의 8%까지만)
+  const fitBed = H / (BED.y1 - BED.y0)
+  const sc = Math.max(Math.min(cover, fitBed), (W * 0.92) / IW)
+  const dw = IW * sc, dh = IH * sc
+  // 침대 가운데를 칸 가운데에. 사진이 칸보다 크면 사진 밖이 보이지 않게 막는다
+  let x = W / 2 - ((BED.x0 + BED.x1) / 2) * sc, y = H / 2 - ((BED.y0 + BED.y1) / 2) * sc
+  x = dw >= W ? Math.min(0, Math.max(W - dw, x)) : x
+  y = dh >= H ? Math.min(0, Math.max(H - dh, y)) : y
+  place = { x: Math.round(x), y: Math.round(y), w: Math.round(dw), h: Math.round(dh) }
+  for (const b of bmp.values()) b.close?.()
+  bmp.clear(); busyKeys.clear(); gen++
+  return true
+}
+
+function toBlob(b64) {
+  const s = atob(b64), a = new Uint8Array(s.length)
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i)
+  return new Blob([a], { type: 'image/webp' })
+}
+async function decode(k) {
+  const g = gen, blob = toBlob(raw[k])
+  let im
+  try { im = await createImageBitmap(blob, { resizeWidth: place.w, resizeHeight: place.h, resizeQuality: 'low' }) }
+  catch { im = await createImageBitmap(blob) }
+  return g === gen ? im : (im.close?.(), null)
+}
+// 원하는 순서대로 풀기 시작한다(동시에 2장까지. 갤럭시에서 'medium'·4장이면 푸는 동안 화면이 0.7초까지 멈췄다)
+function want(keys) {
+  for (const k of keys) {
+    if (busyKeys.size >= 2) break
+    if (bmp.has(k) || busyKeys.has(k) || !raw[k]) continue
+    busyKeys.add(k)
+    const g = gen
+    decode(k).then((im) => { if (im) { bmp.set(k, im); dirty = true } }).catch((e) => console.warn('사진을 풀지 못했어요', k, e)).finally(() => { if (g === gen) busyKeys.delete(k) })
+  }
+  // 넘치면 지금 필요 없는 것부터 버린다
+  if (bmp.size > MAX) {
+    const keep = new Set(keys)
+    for (const k of bmp.keys()) { if (bmp.size <= MAX) break; if (!keep.has(k)) { bmp.get(k).close?.(); bmp.delete(k) } }
+  }
+}
+
+// 머리는 gh도, 다리는 gl도 간격 사진 네 장과 섞는 비율
+const gridAt = (head, leg, gh, gl = gh) => {
+  const h0 = Math.min(60 - gh, Math.floor(head / gh) * gh), th = (head - h0) / gh
+  const l0 = Math.min(40 - gl, Math.floor(leg / gl) * gl), tl = (leg - l0) / gl
+  return [[h0, l0, (1 - th) * (1 - tl)], [h0 + gh, l0, th * (1 - tl)], [h0, l0 + gl, (1 - th) * tl], [h0 + gh, l0 + gl, th * tl]].filter((p) => p[2] >= 0.002)
+}
+// 촘촘한 사진이 아직 없을 때 대신 쓸 간격. 움직이는 부분만 거칠게 하고 다른 부분은 1.25도 그대로 둔다
+// (머리를 움직이는데 다리까지 2.5도·5도 사진으로 바뀌면 다리가 까딱거린다)
+let axis = 'head'
+const coarseSteps = () => (axis === 'head'
+  ? [[RSTEP * 2, RSTEP], [CSTEP, RSTEP], [RSTEP * 2, RSTEP * 2]]
+  : [[RSTEP, RSTEP * 2], [RSTEP, CSTEP], [RSTEP * 2, RSTEP * 2]])
+function drawRoom(head, leg) {
+  const ok = (parts) => parts.every(([h, l]) => bmp.has(rkey(h, l))) ? parts : null
+  let parts = ok(gridAt(head, leg, RSTEP)), fine = !!parts
+  for (const [gh, gl] of coarseSteps()) parts = parts || ok(gridAt(head, leg, gh, gl))
+  if (!parts) {
+    // 섞을 사진이 아직 안 풀렸으면 가장 가까운 5도 사진, 그것도 아직이면 풀어 둔 것 중 가장 가까운 한 장
+    const near = rkey(Math.round(head / CSTEP) * CSTEP, Math.round(leg / CSTEP) * CSTEP)
+    let best = bmp.has(near) ? near : null, bd = best ? -1 : 1e9
+    for (const k of bmp.keys()) { const d = Math.abs(+k.slice(1, 4) / 10 - head) + Math.abs(+k.slice(6) / 10 - leg) * 10; if (d < bd) { bd = d; best = k } }
+    if (!best) return false
+    parts = [[+best.slice(1, 4) / 10, +best.slice(6) / 10, 1]]
+  }
+  const ctx = cv.getContext('2d'), w = cv.width, hgt = cv.height, p = place
+  ctx.clearRect(0, 0, w, hgt)
+  ctx.globalCompositeOperation = 'lighter'
+  for (const [h, l, wgt] of parts) {
+    const im = bmp.get(rkey(h, l))
+    const sx = im.width / IW  // 줄여서 푼 그림이면 1, 원본 크기면 원본 비율
+    ctx.globalAlpha = wgt
+    ctx.drawImage(im, p.x, p.y, p.w, p.h)
+    // 좌우가 모자라면 사진 끝 한 줄을 늘려 채운다(겹치면 섞는 방식 때문에 밝은 줄이 생기니 딱 붙인다)
+    if (p.x > 0) ctx.drawImage(im, 0, 0, Math.max(1, sx), im.height, 0, p.y, p.x, p.h)
+    if (p.x + p.w < w) ctx.drawImage(im, im.width - Math.max(1, sx), 0, Math.max(1, sx), im.height, p.x + p.w, p.y, w - p.x - p.w, p.h)
+  }
+  ctx.globalAlpha = 1
+  ctx.globalCompositeOperation = 'source-over'
+  exact = fine
+  return true
+}
+
+// 앱이 부른다(3D 페이지와 같은 이름). 움직임은 여기서 직접 그린다
+let move = null, hold = null
+window.setBed = (head, leg) => { const [h, l] = clampA(head, leg); move = hold = null; current.head = h; current.leg = l; dirty = true }
+// 그 각도까지 ms 동안 앱과 같은 곡선(이차 ease-in-out)으로
+window.moveBed = (head, leg, ms) => {
+  const [h, l] = clampA(head, leg); hold = null
+  move = { from: { ...current }, to: { head: h, leg: l }, t0: performance.now(), dur: Math.max(1, Number(ms) || 1) }
+}
+// ±를 누르는 동안: 그 부분을 1초에 15도씩
+window.holdBed = (part, dir) => { move = null; hold = { part: part === 'head' ? 'head' : 'leg', dir: dir < 0 ? -1 : 1, last: performance.now() } }
+addEventListener('resize', () => { place = null; dirty = true })
+
+const ease = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2)
+const at = (t) => {
+  const k = Math.min(1, (t - move.t0) / move.dur), e = ease(k)
+  return [move.from.head + (move.to.head - move.from.head) * e, move.from.leg + (move.to.leg - move.from.leg) * e, k]
+}
+function tick(t) {
+  if (move) {
+    const [h, l, k] = at(t)
+    current.head = h; current.leg = l
+    if (k >= 1) move = null
+    dirty = true
+  } else if (hold) {
+    const lim = hold.part === 'head' ? 60 : 40
+    // t는 이번 장면이 시작된 시각이라 누름을 받은 시각보다 앞설 수 있다(뒤로 가지 않게 0으로 막는다)
+    current[hold.part] = Math.min(lim, Math.max(0, current[hold.part] + hold.dir * 15 * Math.max(0, t - hold.last) / 1000)); hold.last = Math.max(hold.last, t)
+    // 움직이는 쪽의 끝에 닿았을 때만 멈춘다. 0도에서 올리기·끝 각도에서 내리기를 바로 멈추면 사진이 그대로 선다
+    if ((hold.dir < 0 && current[hold.part] <= 0) || (hold.dir > 0 && current[hold.part] >= lim)) hold = null
+    dirty = true
+  }
+  if (layout()) {
+    // 지금 각도와 그다음 0.8초 동안 지나갈 각도
+    const path = [[current.head, current.leg, 0]]
+    for (let dt = 40; dt <= 800; dt += 40) {
+      if (move) { const [h, l] = at(t + dt); path.push([h, l, dt]) }
+      else if (hold) { const nh = { ...current }; nh[hold.part] = Math.min(hold.part === 'head' ? 60 : 40, Math.max(0, nh[hold.part] + hold.dir * 15 * dt / 1000)); path.push([nh.head, nh.leg, dt]) }
+    }
+    // 움직이는 부분(대신 쓸 사진은 이 부분만 거칠게)
+    if (hold) axis = hold.part
+    else if (move) axis = Math.abs(move.to.head - move.from.head) >= Math.abs(move.to.leg - move.from.leg) ? 'head' : 'leg'
+    // 푸는 순서: 지금 각도의 5도 사진 한 장 → 대신 쓸 사진(5도 → 2.5도, 움직이지 않는 부분은 1.25도) → 1.25도.
+    // 움직이는 중에는 지금 각도의 1.25도 사진은 풀리기 전에 지나가 버리니 0.15초 앞부터 먼저 풀어 둔다(지금 각도 것은 맨 뒤)
+    const moving = !!(move || hold)
+    const near5 = rkey(Math.round(current.head / CSTEP) * CSTEP, Math.round(current.leg / CSTEP) * CSTEP)
+    const grid = (gh, gl) => ([h, l]) => gridAt(h, l, gh, gl).map(([a, b]) => rkey(a, b))
+    const [c25, c5] = coarseSteps()
+    const ahead = moving ? path.filter((p) => p[2] >= 150) : path
+    const now = moving ? path.filter((p) => p[2] < 150) : []
+    want([...new Set([
+      near5,
+      ...path.flatMap(grid(...c5)),
+      ...path.flatMap(grid(...c25)),
+      ...ahead.flatMap(grid(RSTEP, RSTEP)),
+      ...now.flatMap(grid(RSTEP, RSTEP)),
+    ])])
+    if ((dirty || !exact) && drawRoom(current.head, current.leg)) dirty = false
+  }
+  requestAnimationFrame(tick)
+}
+requestAnimationFrame(tick)
+window.bed3d = { current, cache: () => bmp.size }
+window.ReactNativeWebView?.postMessage('ready')
+</script>
+</body>
+</html>

@@ -1,7 +1,8 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { balance, bySentence, keepAll, LinkText, OB_EDGES } from '@/components/ObScreen';
 import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
   onRetry?: () => void;
@@ -10,7 +11,7 @@ interface Props {
 
 export default function BedFirmwareUpdateScreen({ onRetry, onSettings }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           <View style={styles.iconBox}>
@@ -27,14 +28,14 @@ export default function BedFirmwareUpdateScreen({ onRetry, onSettings }: Props) 
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
+          <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onRetry}>
             <Text style={styles.primaryText}>문의하기</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
           <View style={styles.links}>
-            <TouchableOpacity style={styles.link} onPress={onSettings}>
+            <RippleButton style={styles.link} rippleColor="#513E39" onPress={onSettings}>
               <LinkText style={styles.linkText}>설정</LinkText>
-            </TouchableOpacity>
+            </RippleButton>
           </View>
         </View>
       </View>
@@ -83,12 +84,12 @@ const styles = StyleSheet.create({
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
     fontFamily: font.regular,
-    lineHeight: 26,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },

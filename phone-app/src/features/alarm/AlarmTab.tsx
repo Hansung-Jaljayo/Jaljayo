@@ -1,16 +1,18 @@
 import { Image } from 'expo-image'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ClockBand } from '@/components/ClockBand'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Fade } from '@/components/Fade'
 import { RippleButton } from '@/components/RippleButton'
 import { Switch } from '@/components/Switch'
-import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
+import { TAB_BAR_SPACE } from '@/components/TabBar'
 import { TabTop } from '@/components/TabTop'
 import { getFlow } from '@/features/app/flow'
 import { useBedInfo } from '@/features/bed/bed'
+import { onBoardAlarms } from '@/features/bed/boardLink'
 import { type BedRequest, startBedRequest } from '@/features/bed/requests'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
@@ -25,6 +27,7 @@ import {
   clockLabel,
   clockParts,
   findClashes,
+  dropsOnly,
   fixDraft,
   inLabel,
   nextAlarm,
@@ -34,21 +37,27 @@ import {
 } from './alarm'
 import { AlarmOff } from './AlarmOff'
 import { AlarmSheet } from './AlarmSheet'
+import { PullScroll } from '@/components/PullScroll'
 
 // 피그마 "알람 탭 / 목록". 맨 위 요약 카드, 알람 줄들, "알람 추가" 버튼.
 // "알람 추가"를 누르면 새 알람 창이, 알람 줄을 누르면 그 알람을 고치는 창이 열린다
 // 피그마 "알람 탭 / 버튼 없는 침대 안내"·"알람 탭 / 병원에서 알람을 막음": 침대에 알람을 끄는 버튼이 없거나
 // 병원에서 알람을 막았으면 머리 아래를 안내로 채우고 알람을 쓸 수 없게 한다(둘 다면 버튼 안내를 보인다)
-export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
+export function AlarmTab() {
   const insets = useSafeAreaInsets()
   // 침대를 초기화한 뒤에는 빈 목록에서 시작한다
   const [alarms, setAlarms] = useState<Alarm[]>(() => (getFlow().wipe ? [] : sampleAlarms()))
+  // 보드에 연결되면 보드가 알려 주는 목록을 쓴다
+  useEffect(() => onBoardAlarms(setAlarms), [])
   const [sheetOpen, setSheetOpen] = useState(false)
   // 고칠 알람. 닫는 동안 제목이 바뀌지 않게 닫을 때는 두고, 열 때 정한다
   const [editing, setEditing] = useState<Alarm | null>(null)
   const closeSheet = useCallback(() => setSheetOpen(false), [])
   // 같은 날 같은 시각에 울리는 다른 켜진 알람이 있으면 저장 전에 확인 창으로 덮어쓸지 묻는다
-  const [clash, setClash] = useState<{ message: string; ok: () => void } | null>(null)
+  const [clash, setClash] = useState<{
+    message: string
+    ok: () => void
+  } | null>(null)
   const closeClash = useCallback(() => setClash(null), [])
 
   // 알림 확인 창(울리는 중·저장 중·연결 문제)
@@ -59,15 +68,33 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const ringing = (id: number | undefined) => id != null && bedNow.ringingId === id
 
   // 목록에서 켜고 끄기도 침대에 보내고, 답이 오면 바꾼다. 답을 기다리는 동안 그 줄의 스위치는 흐리게 두고 바꾸지 않는다.
-  // 기다리는 동안 그 알람(덮어쓰는 알람 포함)은 "저장 중인 알람"이라 다른 저장이 건드리지 못하게 막는다
+  // 기다리는 동안 그 알람(덮어쓰는 알람 포함)은 "저장 중인 알람"이라 다른 저장이 건드리지 못하게 막는다.
+  // 창의 저장도 답을 기다리는 동안 SHEET 자리에 바뀌는 알람들을 적어 둔다
   const [waitOn, setWaitOn] = useState<Record<number, number[]>>({})
-  const busyIds = Object.values(waitOn).flat()
-  const isBusy = (id: number) => busyIds.includes(id)
+  const busyOf = (w: Record<number, number[]>) => (id: number) => Object.values(w).some((ids) => ids.includes(id))
+  const isBusy = busyOf(waitOn)
   const toggleReqs = useRef(new Map<number, BedRequest>())
   useEffect(() => {
     const reqs = toggleReqs.current
     return () => reqs.forEach((r) => r.cancel())
   }, [])
+  const setWaiting = (key: number, ids: number[] | null) =>
+    setWaitOn((w) => {
+      const next = { ...w }
+      if (ids) next[key] = ids
+      else delete next[key]
+      return next
+    })
+
+  // 확인 창을 누른 순간의 최신 상태(확인 창이 떠 있는 사이에 울리기 시작하거나 다른 저장이 시작될 수 있다)
+  const latest = useRef({
+    alarms,
+    waitOn,
+    ringingId: bedNow.ringingId as number | null | undefined,
+  })
+  useEffect(() => {
+    latest.current = { alarms, waitOn, ringingId: bedNow.ringingId }
+  }, [alarms, waitOn, bedNow.ringingId])
 
   const openSheet = (alarm: Alarm | null) => {
     if (alarm && isBusy(alarm.id)) {
@@ -85,18 +112,20 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   const [wait, setWait] = useState<'saving' | 'failed' | null>(null)
   const request = useRef<BedRequest | null>(null)
   useEffect(() => () => request.current?.cancel(), [])
-  const send = (message: Parameters<typeof startBedRequest>[0], apply: () => void) => {
+  const send = (message: Parameters<typeof startBedRequest>[0], apply: () => void, ids: number[]) => {
     // 연결이 끊겼거나 침대 상태를 읽는 중에는 옛 값으로 저장하지 않는다(창의 버튼도 막혀 있다)
     if (offline) return
     request.current = startBedRequest(message, {
       onAck: () => {
         request.current = null
         setWait(null)
+        setWaiting(SHEET, null)
         apply()
         setSheetOpen(false)
       },
       onTimeout: () => setWait('failed'),
     })
+    setWaiting(SHEET, ids)
     setWait('saving')
   }
   const retry = () => {
@@ -108,76 +137,126 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
     request.current?.cancel()
     request.current = null
     setWait(null)
+    setWaiting(SHEET, null)
     setSheetOpen(false)
   }
 
-
   // 덮어쓰면 바뀌는 알람 중 울리는 중이거나 저장을 기다리는 것이 있으면 전체를 막는다
-  const overwriteBlocked = (clashes: Clash[]) => {
-    const ring = clashes.find((c) => ringing(c.alarm.id))
+  const overwriteBlocked = (clashes: Clash[], ringingId: number | null | undefined, busy: (id: number) => boolean) => {
+    const ring = clashes.find((c) => c.alarm.id === ringingId)
     if (ring) {
-      setNote({ title: '지금 울리고 있는 알람과 겹쳐요', message: `${alarmName(ring.alarm)} 알람이 끝난 뒤에 다시 저장해 주세요.` })
+      setNote({
+        title: '지금 울리고 있는 알람과 겹쳐요',
+        message: `${alarmName(ring.alarm)} 알람이 끝난 뒤에 다시 저장해 주세요.`,
+      })
       return true
     }
-    const busy = clashes.find((c) => isBusy(c.alarm.id))
-    if (busy) {
-      setNote({ title: '저장 중인 알람과 겹쳐요', message: `${alarmName(busy.alarm)} 알람의 저장이 끝난 뒤에 다시 시도해 주세요.` })
+    const busyOne = clashes.find((c) => busy(c.alarm.id))
+    if (busyOne) {
+      setNote({
+        title: '저장 중인 알람과 겹쳐요',
+        message: `${alarmName(busyOne.alarm)} 알람의 저장이 끝난 뒤에 다시 시도해 주세요.`,
+      })
       return true
     }
     return false
   }
 
+  // 겹치는 알람이 있으면 덮어쓸지 묻는다. 덮어쓰기를 누른 순간 최신 상태로 대상과 겹치는 알람을 다시 계산한다
+  const withClashes = (d: AlarmDraft, selfId: number | undefined, run: (clashes: Clash[]) => void) => {
+    const clashes = findClashes(d, alarms, selfId, isBusy)
+    if (overwriteBlocked(clashes, bedNow.ringingId, isBusy)) return
+    if (!clashes.length) return run([])
+    setClash({
+      message: clashLabel(clashes[0]),
+      ok: () => {
+        const L = latest.current
+        if (selfId != null && L.ringingId === selfId) {
+          setNote({
+            title: '지금 울리는 중인 알람이에요',
+            message: '알람이 끝난 뒤에 바꿀 수 있어요.',
+          })
+          return
+        }
+        const busy = busyOf(L.waitOn)
+        const now = findClashes(d, L.alarms, selfId, busy)
+        if (overwriteBlocked(now, L.ringingId, busy)) return
+        run(now)
+      },
+    })
+  }
+
+  // 저장(시안 commit). 이번만: 그 회차 하나만 바꾼 시각·끄는 방법을 날짜별 예외로 넣고, 반복의 시각·끄는 방법은 그대로 둔다.
+  // 앞으로 계속 시각을 바꾸면 날짜별 예외를 모두 없애고, 끄는 방법만 바꾸면 이번만은 없애고 덮어써 안 울리는 날은 남긴다
   const save = (draft: AlarmDraft, scope?: AlarmScope, onceOff?: number) => {
     const target = editing
     if (ringing(target?.id)) return
-    // 이번만은 그 날짜 회차 하나만 새 시각으로 울리므로 그 회차만 견준다
-    const rings = scope === 'once' && onceOff != null ? { ...draft, days: [], dateOff: onceOff } : draft
-    const clashes = findClashes(rings, alarms, target?.id)
-    if (overwriteBlocked(clashes)) return
-    const go = () => {
-      if (overwriteBlocked(clashes)) return
-      send({ type: 'alarm-save', body: { id: target?.id ?? null, draft, scope, onceOff, overwrite: clashes.map((c) => c.alarm.id) } }, () =>
-        setAlarms((list) => {
-          const rest = clashes.length ? applyOverwrite(list, rings, clashes) : list
-          // 이번만은 그 날짜 회차 하나만 바꾸는데, 날짜별로 바꾼 회차를 담는 칸이 아직 없어 그 알람은 그대로 둔다
-          if (scope === 'once') return rest
-          return target
-            ? rest.map((a) => (a.id === target.id ? { ...a, ...draft, on: true } : a))
-            : [...rest, { ...draft, id: Math.max(0, ...rest.map((a) => a.id)) + 1, on: true }]
-        }),
+    let d: AlarmDraft = { ...draft, exc: { ...(draft.exc ?? {}) } }
+    if (!d.days.length) d.exc = {}
+    if (scope === 'once' && target) {
+      if (onceOff == null) return
+      d.exc = { ...d.exc, [onceOff]: { time: draft.time, way: draft.way } }
+      d.time = target.time
+      d.way = target.way
+    } else if (target && d.time !== target.time) d.exc = {}
+    else if (target && d.way !== target.way) d.exc = dropsOnly(d.exc)
+    d = fixDraft(d)
+    withClashes(d, target?.id, (clashes) => {
+      send(
+        {
+          type: 'alarm-save',
+          body: {
+            id: target?.id ?? null,
+            draft: d,
+            scope,
+            onceOff,
+            overwrite: clashes.map((c) => c.alarm.id),
+          },
+        },
+        () =>
+          setAlarms((list) => {
+            const rest = clashes.length ? applyOverwrite(list, d, clashes) : list
+            return target
+              ? rest.map((a) => (a.id === target.id ? { ...a, ...d, on: true } : a))
+              : [
+                  ...rest,
+                  {
+                    ...d,
+                    id: Math.max(0, ...rest.map((a) => a.id)) + 1,
+                    on: true,
+                  },
+                ]
+          }),
+        [...(target ? [target.id] : []), ...clashes.map((c) => c.alarm.id)],
       )
-    }
-    if (clashes.length) setClash({ message: clashLabel(clashes[0]), ok: go })
-    else go()
+    })
   }
   const remove = () => {
     const target = editing
     if (!target || ringing(target.id)) return
-    send({ type: 'alarm-delete', body: { id: target.id } }, () =>
-      setAlarms((list) => list.filter((a) => a.id !== target.id)),
-    )
+    send({ type: 'alarm-delete', body: { id: target.id } }, () => setAlarms((list) => list.filter((a) => a.id !== target.id)), [target.id])
   }
 
   // 켤 때는 지난 한 번 알람의 날짜도 다음에 울릴 날로 맞추고, 새로 저장할 때처럼 겹치는 알람이 있으면 덮어쓸지 묻는다
   const toggle = (id: number, on: boolean) => {
     const a = alarms.find((x) => x.id === id)
     if (!a || offline || ringing(id) || id in waitOn) return
-    if (isBusy(id)) return setNote({ title: '저장 중인 알람이에요', message: '저장이 끝난 뒤에 다시 시도해 주세요.' })
+    if (isBusy(id))
+      return setNote({
+        title: '저장 중인 알람이에요',
+        message: '저장이 끝난 뒤에 다시 시도해 주세요.',
+      })
     const turned = { ...a, ...fixDraft(a), on }
-    const clashes = on ? findClashes(turned, alarms, id) : []
-    if (overwriteBlocked(clashes)) return
-    const go = () => {
-      if (overwriteBlocked(clashes)) return
+    const go = (clashes: Clash[]) => {
       const done = () => {
         toggleReqs.current.delete(id)
-        setWaitOn((w) => {
-          const next = { ...w }
-          delete next[id]
-          return next
-        })
+        setWaiting(id, null)
       }
       const r = startBedRequest(
-        { type: 'alarm-save', body: { id, on, overwrite: clashes.map((c) => c.alarm.id) } },
+        {
+          type: 'alarm-save',
+          body: { id, on, overwrite: clashes.map((c) => c.alarm.id) },
+        },
         {
           onAck: () => {
             done()
@@ -189,15 +268,18 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
           onTimeout: () => {
             toggleReqs.current.get(id)?.cancel()
             done()
-            setNote({ title: '연결이 원활하지 않아요', message: '바뀐 내용이 침대에 저장되지 않았을 수 있어요. 다시 시도해 주세요.' })
+            setNote({
+              title: '연결이 원활하지 않아요',
+              message: '바뀐 내용이 침대에 저장되지 않았을 수 있어요. 다시 시도해 주세요.',
+            })
           },
         },
       )
       toggleReqs.current.set(id, r)
-      setWaitOn((w) => ({ ...w, [id]: [id, ...clashes.map((c) => c.alarm.id)] }))
+      setWaiting(id, [id, ...clashes.map((c) => c.alarm.id)])
     }
-    if (clashes.length) setClash({ message: clashLabel(clashes[0]), ok: go })
-    else go()
+    if (on) withClashes(turned, id, go)
+    else go([])
   }
 
   const sorted = [...alarms].sort((x, y) => x.time - y.time)
@@ -224,15 +306,20 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView
+      <PullScroll
         contentContainerStyle={[
           styles.body,
           alarmOff && styles.bodyFill,
-          { paddingTop: insets.top + space[6], paddingBottom: TAB_BAR_SPACE + insets.bottom },
+          {
+            paddingTop: insets.top + space[6],
+            paddingBottom: TAB_BAR_SPACE + insets.bottom,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <TabTop />
+        {/* 불러오는 중에는 위 줄을 뺀 내용이 0.2초 동안 흐려지고 막힌다(시안 .loading) */}
+        <Fade on={bedNow.loading} style={[styles.inner, alarmOff && styles.bodyFill]}>
         {/* aoff · 꺼짐 안내 */}
         {noButton ? (
           <AlarmOff
@@ -256,13 +343,14 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
                   key={a.id}
                   alarm={a}
                   waiting={a.id in waitOn}
-                  locked={offline}
+                  locked={!bedNow.connected}
                   onPress={() => openSheet(a)}
                   onToggle={(on) => toggle(a.id, on)}
                 />
               ))}
             </View>
-            <View style={styles.addShadow}>
+            {/* 연결이 끊기면 알람 추가·알람 줄·스위치를 흐리게 막는다(시안 .off-line) */}
+            <View style={[styles.addShadow, !bedNow.connected && styles.lockDim]} pointerEvents={bedNow.connected ? 'auto' : 'none'}>
               <RippleButton style={styles.add} onPress={() => openSheet(null)}>
                 <Image source={require('../../../assets/icons/plus.svg')} style={styles.icon20} />
                 <Text style={styles.addText}>알람 추가</Text>
@@ -270,8 +358,8 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
             </View>
           </>
         )}
-      </ScrollView>
-      <TabBar current="alarm" onPick={onTab} dimmed={alarmOff ? ['alarm'] : []} />
+        </Fade>
+      </PullScroll>
       <AlarmSheet
         open={sheetOpen}
         alarm={editing}
@@ -309,6 +397,9 @@ export function AlarmTab({ onTab }: { onTab?: (key: TabKey) => void }) {
   )
 }
 
+// 창의 저장이 답을 기다리는 동안 바뀌는 알람을 적어 두는 자리(알람 번호와 겹치지 않는 값)
+const SHEET = -1
+
 // 확인 창에서 알람을 가리키는 말: "평일 오전 7시", "11월 6일 오전 7시"
 const alarmName = (a: Alarm) => `${alarmMetaLabel(a).split(' · ')[0]} ${clockLabel(a.time)}`
 
@@ -324,10 +415,11 @@ function NextCard({ alarms }: { alarms: Alarm[] }) {
       </View>
     )
   }
-  const { alarm, off, mins } = next
-  const { ampm, hm } = clockParts(alarm.time)
+  // 이번만 바꾼 회차면 그 회차의 시각·끄는 방법으로
+  const { alarm, off, mins, tm, way } = next
+  const { ampm, hm } = clockParts(tm)
   return (
-    <View style={styles.card} accessible accessibilityLabel={`다음 알람 ${whenLabel(off)} ${clockLabel(alarm.time)}`}>
+    <View style={styles.card} accessible accessibilityLabel={`다음 알람 ${whenLabel(off)} ${clockLabel(tm)}`}>
       {/* 하루 안이면 남은 시간도 */}
       <Text style={styles.eyebrow}>
         다음 알람 · {whenLabel(off)}
@@ -338,7 +430,7 @@ function NextCard({ alarms }: { alarms: Alarm[] }) {
         <Text style={styles.bigTime}>{hm}</Text>
       </View>
       <Text style={styles.sub}>
-        {WAY_FULL_NAMES[alarm.way]}
+        {WAY_FULL_NAMES[way]}
         {alarm.lift ? ' · 머리 올림' : ''}
       </Text>
     </View>
@@ -360,23 +452,27 @@ function AlarmRow({
   onToggle: (on: boolean) => void
 }) {
   const { ampm, hm } = clockParts(alarm.time)
-  const dim = !alarm.on && styles.off
+  // 꺼진 알람과 잠시 끈 알람은 글이 흐리다(시안 .arow.off, .arow.paused)
+  const dim = (!alarm.on || alarm.pauseTo != null) && styles.off
   return (
-    <View style={[styles.rowShadow, waiting && styles.off]}>
-      <RippleButton style={styles.row} onPress={onPress} accessibilityLabel={`${clockLabel(alarm.time)} 알람 고치기`}>
-        <View style={styles.main}>
+    <View style={styles.rowShadow}>
+      <RippleButton style={styles.row} onPress={onPress} disabled={locked} accessibilityLabel={`${clockLabel(alarm.time)} 알람 고치기`}>
+        <View style={[styles.main, locked && styles.lockDim]}>
           <View style={[styles.at, dim]}>
             <Text style={styles.atAmpm}>{ampm}</Text>
             <Text style={styles.atTime}>{hm}</Text>
           </View>
           <Text style={[styles.meta, dim]}>{alarmMetaLabel(alarm)}</Text>
         </View>
-        <Switch
-          value={alarm.on}
-          onValueChange={onToggle}
-          disabled={waiting || locked}
-          accessibilityLabel={`${clockLabel(alarm.time)} 알람 켜기`}
-        />
+        {/* 답을 기다리는 동안 스위치만 흐리게(시안 .sw.wait) */}
+        <View style={locked ? styles.lockDim : waiting && styles.off}>
+          <Switch
+            value={alarm.on}
+            onValueChange={onToggle}
+            disabled={waiting || locked}
+            accessibilityLabel={`${clockLabel(alarm.time)} 알람 켜기`}
+          />
+        </View>
       </RippleButton>
     </View>
   )
@@ -385,6 +481,9 @@ function AlarmRow({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   body: { paddingHorizontal: 18, gap: space[8] },
+  inner: { gap: space[8] },
+  // 연결 끊김으로 막힌 칸(시안 .off-line ... opacity: .45)
+  lockDim: { opacity: 0.45 },
   // 안내가 머리 아래 남은 자리를 채운다
   bodyFill: { flexGrow: 1 },
 
@@ -396,9 +495,20 @@ const styles = StyleSheet.create({
     backgroundColor: color.ink,
     boxShadow: shadow.sheetTop,
   },
-  eyebrow: { fontFamily: font.medium, fontSize: 15, color: color['on-ink-muted'] },
+  eyebrow: {
+    fontFamily: font.medium,
+    fontSize: 15,
+    color: color['on-ink-muted'],
+  },
   big: { height: 48.3, flexDirection: 'row', alignItems: 'flex-start' },
-  bigAmpm: { marginTop: 23, marginRight: 6, fontFamily: font.medium, fontSize: 20, lineHeight: 21, color: color['on-ink'] },
+  bigAmpm: {
+    marginTop: 23,
+    marginRight: 6,
+    fontFamily: font.medium,
+    fontSize: 20,
+    lineHeight: 21,
+    color: color['on-ink'],
+  },
   bigTime: {
     marginTop: -0.65,
     fontFamily: font.extraLight,
@@ -407,7 +517,12 @@ const styles = StyleSheet.create({
     letterSpacing: -1.38,
     color: color['on-ink'],
   },
-  sub: { fontFamily: font.regular, fontSize: 17, lineHeight: 20.4, color: color['on-ink-muted'] },
+  sub: {
+    fontFamily: font.regular,
+    fontSize: 17,
+    lineHeight: 20.4,
+    color: color['on-ink-muted'],
+  },
   // 켜진 알람이 없을 때
   none: {
     marginTop: space[2],
@@ -417,7 +532,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     color: color['on-ink'],
   },
-  noneSub: { fontFamily: font.regular, fontSize: 15, lineHeight: 22.5, color: color['on-ink-muted'] },
+  noneSub: {
+    fontFamily: font.regular,
+    fontSize: 15,
+    lineHeight: 22.5,
+    color: color['on-ink-muted'],
+  },
 
   group: { gap: space[8] },
   // 그림자가 잘리지 않게 바깥 칸에 그림자, 안쪽 버튼에 물결
@@ -431,9 +551,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space[8],
   },
-  main: { flex: 1, paddingHorizontal: space[12], paddingVertical: space[8], gap: space[2] },
+  main: {
+    flex: 1,
+    paddingHorizontal: space[12],
+    paddingVertical: space[8],
+    gap: space[2],
+  },
   at: { height: 30.8, flexDirection: 'row', alignItems: 'flex-start' },
-  atAmpm: { marginTop: 11, marginRight: 6, fontFamily: font.semiBold, fontSize: 15, lineHeight: 16.5, color: color.fg },
+  atAmpm: {
+    marginTop: 11,
+    marginRight: 6,
+    fontFamily: font.semiBold,
+    fontSize: 15,
+    lineHeight: 16.5,
+    color: color.fg,
+  },
   atTime: {
     marginTop: -0.4,
     fontFamily: font.light,
@@ -442,7 +574,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.56,
     color: color.fg,
   },
-  meta: { fontFamily: font.medium, fontSize: 15, lineHeight: 18.75, color: color.muted },
+  meta: {
+    fontFamily: font.medium,
+    fontSize: 15,
+    lineHeight: 18.75,
+    color: color.muted,
+  },
   off: { opacity: 0.5 },
 
   // 그림자가 잘리지 않게 바깥 칸에 그림자, 안쪽 버튼에 물결

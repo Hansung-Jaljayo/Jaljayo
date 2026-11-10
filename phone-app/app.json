@@ -7,21 +7,28 @@
     "icon": "./assets/images/bed.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/bed.png",
+      "image": "./assets/images/bed-logo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F4F0ED"
+      "backgroundColor": "#FCF7ED"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.jaljayo.app",
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "같은 와이파이에 있는 침대를 찾고 연결하려면 로컬 네트워크 권한이 필요해요.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F4F0ED",
+        "backgroundColor": "#FCF7ED",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.jaljayo.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,7 +39,15 @@
       "expo-font",
       "expo-image",
       "expo-router",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ],
     "scheme": "jaljayo",
     "experiments": {

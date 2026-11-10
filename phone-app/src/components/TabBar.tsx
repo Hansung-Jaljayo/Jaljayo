@@ -1,5 +1,6 @@
 import { Image } from 'expo-image'
-import { StyleSheet, Text, View, Platform } from 'react-native'
+import { useState } from 'react'
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { color, font, radius, shadow, space } from '@/theme/tokens'
@@ -36,35 +37,58 @@ export const TAB_BAR_SPACE = 92
 
 type Props = {
   current: TabKey
-  // 탭을 누르면. 아직 화면이 없는 탭(자세)은 눌러도 그대로다
+  // 넘김 판의 위치(0 자세, 1 알람, 2 예약). 알약이 손가락을 그대로 따라간다
+  position: Animated.AnimatedInterpolation<number> | Animated.Value
   onPick?: (key: TabKey) => void
   // 쓸 수 없는 탭(예: 버튼 없는 침대의 알람). 고른 표시는 그대로 두고 그림과 글만 흐리게(40%)
   dimmed?: TabKey[]
 }
 
-// 피그마 "tabs · 아래 탭 막대". 화면 아래에 떠 있는 둥근 막대
-export function TabBar({ current, onPick, dimmed = [] }: Props) {
+// 피그마 "tabs · 아래 탭 막대". 화면 아래에 떠 있는 둥근 막대.
+// 시안: 짙은 알약이 넘긴 정도를 그대로 따라가고, 알약 위 글자는 밝은 글자 한 벌을 알약 모양대로 잘라 겹친다
+// (알약이 반만 덮어도 덮인 쪽만 밝게 보인다)
+export function TabBar({ current, position, onPick, dimmed = [] }: Props) {
   const insets = useSafeAreaInsets()
+  const [w, setW] = useState(0)
+  // 탭 한 칸 폭: 막대 안 여백 8씩, 칸 사이 4
+  const tw = w ? (w - 16 - 8) / 3 : 0
+  const pillX = Animated.add(8, Animated.multiply(position, tw + 4))
+  const back = Animated.multiply(pillX, -1)
+  const row = (lit: boolean) =>
+    TABS.map((t) => {
+      const dim = dimmed.includes(t.key) && styles.dim
+      return (
+        <View key={t.key} style={[styles.tabIn, { width: tw }]}>
+          <Image source={(lit && t.iconOn) || t.icon} style={[styles.icon22, dim]} />
+          <Text style={[styles.name, lit && styles.nameOn, dim]}>{t.name}</Text>
+        </View>
+      )
+    })
   // 시안: 아이폰은 화면 아래에서 30(홈 막대 위), 갤럭시는 아래 버튼 막대 위 12
   return (
-    <View style={[styles.bar, { bottom: Platform.OS === 'ios' ? Math.max(insets.bottom - 4, 12) : insets.bottom + 12 }]} role="tablist">
-      {TABS.map((t) => {
-        const on = t.key === current
-        const dim = dimmed.includes(t.key) && styles.dim
-        return (
-          <RippleButton
-            key={t.key}
-            role="tab"
-            accessibilityState={{ selected: on }}
-            style={[styles.tab, on && styles.tabOn]}
-            rippleColor={on ? color['on-ink'] : color.muted}
-            onPress={() => onPick?.(t.key)}
-          >
-            <Image source={(on && t.iconOn) || t.icon} style={[styles.icon22, dim]} />
-            <Text style={[styles.name, on && styles.nameOn, dim]}>{t.name}</Text>
-          </RippleButton>
-        )
-      })}
+    <View
+      style={[styles.bar, { bottom: Platform.OS === 'ios' ? Math.max(insets.bottom - 4, 12) : insets.bottom + 12 }]}
+      role="tablist"
+      onLayout={(e) => setW(e.nativeEvent.layout.width)}
+    >
+      {TABS.map((t) => (
+        <RippleButton
+          key={t.key}
+          role="tab"
+          accessibilityLabel={t.name}
+          accessibilityState={{ selected: t.key === current }}
+          style={styles.tab}
+          rippleColor={color.muted}
+          onPress={() => onPick?.(t.key)}
+        >
+          {row(false).find((x) => x.key === t.key)}
+        </RippleButton>
+      ))}
+      {tw > 0 && (
+        <Animated.View pointerEvents="none" style={[styles.pill, { width: tw, transform: [{ translateX: pillX }] }]}>
+          <Animated.View style={[styles.inkRow, { transform: [{ translateX: back }] }]}>{row(true)}</Animated.View>
+        </Animated.View>
+      )}
     </View>
   )
 }
@@ -91,7 +115,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 1.5,
   },
-  tabOn: { backgroundColor: color.ink },
+  tabIn: { height: 52, alignItems: 'center', justifyContent: 'center', gap: 1.5 },
+  // 짙은 알약(높이 52, 위아래 8). 안에 밝은 글자 한 벌을 거꾸로 밀어 넣어 탭 자리에 맞춘다
+  pill: { position: 'absolute', left: 0, top: 8, height: 52, borderRadius: radius[26], backgroundColor: color.ink, overflow: 'hidden' },
+  inkRow: { position: 'absolute', left: 8, top: 0, flexDirection: 'row', gap: space[4] },
   icon22: { width: 22, height: 22 },
   dim: { opacity: 0.4 },
   name: { fontFamily: font.semiBold, fontSize: 13, lineHeight: 16, color: color.muted },

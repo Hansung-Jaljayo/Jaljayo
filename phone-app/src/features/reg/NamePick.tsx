@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SvgXml } from 'react-native-svg'
 
 import { Ko, ObScreen, obStyles } from '@/components/ObScreen'
+import { useRipple } from '@/components/RippleButton'
 import { useInnerBack } from '@/features/app/flow'
 import { setBedInfo, useBedInfo } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
@@ -65,6 +66,7 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
     <ObScreen
       title="이 침대를 뭐라고 부를까요?"
       lead="고른 이름에 '침대'를 붙여 부를 때만 이 침대가 대답해요."
+      flow
       primary={{
         label,
         onPress: save,
@@ -115,13 +117,11 @@ export function FruitGrid({
         const isUsed = used.includes(f.name)
         const on = f.name === value
         return (
-          <Pressable
+          <FruitButton
             key={f.name}
-            style={styles.fruit}
+            on={on}
             onPress={() => !disabled && onPick(f.name)}
-            disabled={isUsed || disabled}
-            role="radio"
-            aria-checked={on}
+            disabled={isUsed || !!disabled}
             accessibilityLabel={isUsed ? `${f.name}, 사용 중` : f.name}
           >
             <View style={[styles.ic, on && styles.icOn, isUsed && styles.dim]}>
@@ -129,19 +129,55 @@ export function FruitGrid({
             </View>
             <Text style={[styles.name, on && styles.nameOn, isUsed && styles.dim]}>{f.name}</Text>
             <Text style={styles.used}>{isUsed ? '사용 중' : ''}</Text>
-          </Pressable>
+          </FruitButton>
         )
       })}
     </View>
   )
 }
 
+// 과일 버튼 한 칸: 누르면 칸 전체(모서리 16)에 물결이 퍼진다(시안 .ob .fruits button)
+function FruitButton({
+  on,
+  onPress,
+  disabled,
+  accessibilityLabel,
+  children,
+}: {
+  on: boolean
+  onPress: () => void
+  disabled: boolean
+  accessibilityLabel: string
+  children: React.ReactNode
+}) {
+  const { host, onLayout, start, end, layer } = useRipple(on ? color.fg : color['fg-2'], FRUIT_RADIUS)
+  return (
+    <Pressable
+      ref={host}
+      onLayout={onLayout}
+      style={styles.fruit}
+      onPress={onPress}
+      onPressIn={start}
+      onPressOut={end}
+      disabled={disabled}
+      role="radio"
+      aria-checked={on}
+      accessibilityLabel={accessibilityLabel}
+    >
+      {children}
+      {layer}
+    </Pressable>
+  )
+}
+
+const FRUIT_RADIUS = { borderRadius: 16 }
 const IC = Platform.OS === 'ios' ? 52 : 46
 const IC_SVG = Platform.OS === 'ios' ? 28 : 25
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Platform.OS === 'ios' ? 10 : 6 },
-  fruit: { width: '33.33%', paddingVertical: 4, alignItems: 'center', gap: 4 },
+  // 세 칸 사이 8(시안 gap: 10px 8px, 갤럭시 6px 8px)
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Platform.OS === 'ios' ? 10 : 6, columnGap: 8 },
+  fruit: { flexBasis: '30%', flexGrow: 1, paddingVertical: 4, alignItems: 'center', gap: 4, borderRadius: 16 },
   ic: {
     width: IC,
     height: IC,

@@ -1,7 +1,8 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { balance, bySentence, keepAll } from '@/components/ObScreen';
+import { balance, bySentence, keepAll, OB_EDGES } from '@/components/ObScreen';
 import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
   description?: string;
@@ -13,7 +14,7 @@ export default function RegisterSuccessScreen({
   onStart,
 }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           {/* 아이콘 */}
@@ -30,9 +31,9 @@ export default function RegisterSuccessScreen({
           <Text style={styles.description}>{keepAll(bySentence(description))}</Text>
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onStart}>
+        <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onStart}>
           <Text style={styles.primaryText}>시작하기</Text>
-        </TouchableOpacity>
+        </RippleButton>
       </View>
     </SafeAreaView>
   );
@@ -65,8 +66,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconImage: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
@@ -74,12 +75,12 @@ const styles = StyleSheet.create({
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
     fontFamily: font.regular,
-    lineHeight: 26,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },

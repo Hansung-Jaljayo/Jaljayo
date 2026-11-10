@@ -6,9 +6,11 @@ import { BottomSheet } from '@/components/BottomSheet'
 import { ExpandRow } from '@/components/ExpandRow'
 import { OptionRows } from '@/components/OptionRows'
 import { RippleButton } from '@/components/RippleButton'
+import { SlideRow } from '@/components/SlideRow'
 import { Spinner } from '@/components/Spinner'
 import { Switch } from '@/components/Switch'
 import { TimeWheels } from '@/components/TimeWheels'
+import { LinkText } from '@/components/ObScreen'
 import { color, font, radius, space } from '@/theme/tokens'
 
 import {
@@ -30,6 +32,7 @@ import {
   PAUSE_OPTIONS,
   pauseEnd,
   pauseLabel,
+  rings,
   scopeLabel,
   VOLUME_NAMES,
   VOLUME_OPTIONS,
@@ -103,8 +106,24 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
     })
   }
   const repeat = draft.days.length > 0
-  // 건너뛰기가 켜져 있으면 고른 그 날, 꺼져 있으면 켰을 때 건너뛸 다음 회차
-  const skipOff = draft.skipOff ?? nextRings(draft)[0]
+  const everyday = DAY_ORDER.every((d) => draft.days.includes(d))
+  // 건너뛰기가 켜져 있으면 고른 그 날(이번만 바꾼 날이면 그 시각), 꺼져 있으면 켰을 때 건너뛸 다음 회차
+  const exAt = (off: number) => {
+    const e = draft.exc?.[off]
+    return e && !e.drop ? e.time : draft.time
+  }
+  const skipRing = draft.skipOff != null ? { off: draft.skipOff, tm: exAt(draft.skipOff) } : rings(draft, 1)[0]
+  // 날짜별로 바꾼 회차(이번만)와 덮어써 울리지 않는 날: 맨 위에 날짜마다 한 줄, 따로 풀 수 있다
+  const onceList = repeat
+    ? Object.entries(draft.exc ?? {})
+        .map(([k, e]) => [Number(k), e] as const)
+        .sort((x, y) => x[0] - y[0])
+    : []
+  const release = (off: number) => {
+    const exc = { ...(draft.exc ?? {}) }
+    delete exc[off]
+    update({ exc })
+  }
 
   const save = () => {
     if (needsScope(alarm, draft)) setAsking(true)
@@ -131,7 +150,7 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
 
   return (
     // 저장 중에는 바탕 누르기·끌어내리기·뒤로 가기로도 닫히지 않는다
-    <BottomSheet open={open} onClose={locked ? noop : onClose} tall>
+    <BottomSheet open={open} onClose={locked ? noop : onClose} tall toEnd={failed}>
       {/* shead · 시트 머리 */}
       <View style={styles.head}>
         <Text style={styles.title} role="heading">
@@ -150,6 +169,23 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
       {/* hint · 울리지 못한 이유 */}
       {alarm?.missed ? <Text style={styles.hint}>{alarm.missed}</Text> : null}
 
+      {/* oncelist · 날짜별 예외 줄: "10월 17일 토요일만 오전 8시 · 기본" + 해제 */}
+      {onceList.length > 0 && (
+        <View style={[styles.onceList, locked && styles.locked]} pointerEvents={locked ? 'none' : 'auto'}>
+          {onceList.map(([off, e]) => (
+            <View key={off} style={styles.onceBar}>
+              <Text style={styles.onceText}>
+                {monthDayLabel(off)} {DAY_NAMES[(new Date().getDay() + off) % 7]}요일
+                {e.drop ? '은 울리지 않아요' : `만 ${clockLabel(e.time)} · ${WAY_NAMES[e.way]}`}
+              </Text>
+              <RippleButton style={styles.onceOff} rippleColor={color['fg-2']} onPress={() => release(off)} accessibilityLabel={`${monthDayLabel(off)} 예외 해제`}>
+                <LinkText style={styles.onceOffText}>해제</LinkText>
+              </RippleButton>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* 저장 중에는 바퀴·요일·목록을 흐리게 하고 손대지 못하게 한다 */}
       <View style={locked && styles.locked}>
         <TimeWheels value={draft.time} onChange={(time) => update({ time })} disabled={locked} />
@@ -157,7 +193,20 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
 
       {/* apart · 반복 요일과 알람 설정 */}
       <View style={styles.apart}>
-        <Text style={styles.label}>반복</Text>
+        {/* 반복 글자 오른쪽 "매일": 일곱 요일을 한 번에 켠다. 모두 켜져 있으면 모두 끈다 */}
+        <View style={styles.labelRow}>
+          <Text style={styles.label}>반복</Text>
+          <RippleButton
+            style={[styles.everyday, everyday && styles.dayOn, locked && styles.locked]}
+            rippleColor={color.fg}
+            hitSlop={8}
+            disabled={locked}
+            accessibilityState={{ selected: everyday, disabled: locked }}
+            onPress={() => update({ days: everyday ? [] : [...DAY_ORDER] })}
+          >
+            <Text style={styles.everydayText}>매일</Text>
+          </RippleButton>
+        </View>
         <View
           style={[styles.days, locked && styles.locked]}
           pointerEvents={locked ? 'none' : 'auto'}
@@ -182,7 +231,7 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
 
         <View style={locked && styles.locked} pointerEvents={locked ? 'none' : 'auto'}>
           {/* 날짜는 한 번 알람에만 */}
-          {!repeat && (
+          <SlideRow show={!repeat} overlap>
             <ExpandRow
               name="날짜"
               value={dateLabel(draft.dateOff)}
@@ -199,7 +248,7 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
                 }}
               />
             </ExpandRow>
-          )}
+          </SlideRow>
           <ExpandRow
             name="끄는 방법"
             value={WAY_NAMES[draft.way]}
@@ -246,13 +295,13 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
             />
           </View>
           {/* 건너뛰기·잠시 끄기는 반복 알람에만 */}
-          {repeat && (
+          <SlideRow show={repeat} overlap>
             <View style={[styles.row, styles.switchRow]}>
               <View>
                 <Text style={styles.rowName}>다음 한 번 건너뛰기</Text>
-                {skipOff != null && (
+                {skipRing != null && (
                   <Text style={styles.rowSub}>
-                    {whenLabel(skipOff)} {clockLabel(draft.time)}만 울리지 않아요
+                    {whenLabel(skipRing.off)} {clockLabel(skipRing.tm)}만 울리지 않아요
                   </Text>
                 )}
               </View>
@@ -263,8 +312,8 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
                 accessibilityLabel="다음 한 번 건너뛰기"
               />
             </View>
-          )}
-          {repeat && (
+          </SlideRow>
+          <SlideRow show={repeat} overlap>
             <ExpandRow
               name="잠시 끄기"
               value={pauseLabel(draft.pauseTo)}
@@ -286,7 +335,7 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
                 }}
               />
             </ExpandRow>
-          )}
+          </SlideRow>
         </View>
       </View>
 
@@ -355,6 +404,22 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
 }
 
 const styles = StyleSheet.create({
+  // 시안 .oncebar
+  onceList: { gap: space[8] },
+  onceBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[12],
+    backgroundColor: color.inset,
+    borderRadius: radius[16],
+    paddingVertical: space[8],
+    paddingRight: space[8],
+    paddingLeft: 14,
+  },
+  onceText: { flex: 1, fontFamily: font.semiBold, fontSize: 15, lineHeight: 22.5, color: color['fg-2'] },
+  onceOff: { minHeight: 44, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' },
+  onceOffText: { fontFamily: font.bold, fontSize: 15, color: color['fg-2'], textDecorationLine: 'underline' },
   busyNote: { fontFamily: font.semiBold, fontSize: 15, color: color.red },
   head: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: font.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.48, color: color.fg },
@@ -373,6 +438,16 @@ const styles = StyleSheet.create({
 
   apart: { gap: space[8] },
   label: { fontFamily: font.bold, fontSize: 15, color: color['fg-2'] },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 22 },
+  everyday: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: color.inset,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  everydayText: { fontFamily: font.bold, fontSize: 15, color: color.fg },
   days: { flexDirection: 'row', gap: space[5] },
   day: {
     flex: 1,

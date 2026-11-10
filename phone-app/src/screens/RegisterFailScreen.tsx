@@ -1,16 +1,19 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { balance, bySentence, keepAll, LinkText } from '@/components/ObScreen';
+import { balance, bySentence, keepAll, LinkText, OB_EDGES } from '@/components/ObScreen';
 import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
+  // 시안: 실패 화면에도 아래에 '설정'(앱 정보) 링크
+  onSettings?: () => void;
   onRetry?: () => void;
   onHome?: () => void;
 }
 
-export default function RegisterFailScreen({ onRetry, onHome }: Props) {
+export default function RegisterFailScreen({ onRetry, onHome, onSettings }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           {/* 아이콘 */}
@@ -29,18 +32,18 @@ export default function RegisterFailScreen({ onRetry, onHome }: Props) {
 
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
+          <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onRetry}>
             <Text style={styles.primaryText}>다시 확인</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
+          <RippleButton style={styles.secondaryButton} onPress={onHome}>
             <Text style={styles.secondaryText}>처음으로</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
           <View style={styles.links}>
-            <TouchableOpacity style={styles.link}>
+            <RippleButton style={styles.link} rippleColor="#513E39" onPress={onSettings}>
               <LinkText style={styles.linkText}>설정</LinkText>
-            </TouchableOpacity>
+            </RippleButton>
           </View>
         </View>
       </View>
@@ -80,8 +83,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   iconImage: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
@@ -89,12 +92,12 @@ const styles = StyleSheet.create({
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
     fontFamily: font.regular,
-    lineHeight: 26,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },

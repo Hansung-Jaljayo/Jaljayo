@@ -2,16 +2,18 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import {
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
+  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { keepAll } from '@/components/ObScreen';
+import { boardUrl, setBoardUrl, useBoardStatus } from '@/features/bed/boardLink';
 import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
+import { PullScroll } from '@/components/PullScroll';
 
 interface Props {
   visible?: boolean;
@@ -36,6 +38,37 @@ interface Props {
   onTerms?: () => void;
   onOpenSource?: () => void;
   onHospitalAdmin?: () => void;
+}
+
+const BOARD_STATUS = { open: '연결됨', trying: '연결 중', none: '주소 없음' };
+
+function BoardAddress() {
+  const status = useBoardStatus();
+  const [text, setText] = useState(() => boardUrl());
+  return (
+    <View style={styles.actionsCard}>
+      <View style={[styles.actionRow, styles.actionRowBorder]}>
+        <Text style={styles.actionText}>보드 주소</Text>
+        <Text style={styles.boardStatus}>{BOARD_STATUS[status]}</Text>
+      </View>
+      <View style={styles.actionRow}>
+        <TextInput
+          style={styles.boardInput}
+          value={text}
+          onChangeText={setText}
+          onSubmitEditing={() => setBoardUrl(text)}
+          onEndEditing={() => setBoardUrl(text)}
+          placeholder="예: 192.168.0.10"
+          placeholderTextColor="#705A54"
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          returnKeyType="done"
+          accessibilityLabel="보드 주소"
+        />
+      </View>
+    </View>
+  );
 }
 
 export default function SettingsScreen({
@@ -74,14 +107,14 @@ export default function SettingsScreen({
 
         {/* ihead · 설정 머리 */}
         <View style={styles.ihead}>
-          <TouchableOpacity style={styles.backBtn} onPress={onClose}>
+          <RippleButton style={styles.backBtn} onPress={onClose}>
             <View style={styles.chevronLeft} />
-          </TouchableOpacity>
+          </RippleButton>
           <Text style={styles.title}>설정</Text>
         </View>
 
         {/* sbody */}
-        <ScrollView
+        <PullScroll
           style={styles.sbody}
           contentContainerStyle={styles.sbodyContent}
           showsVerticalScrollIndicator={false}
@@ -104,47 +137,51 @@ export default function SettingsScreen({
                 </View>
               </View>
 
+              {/* 보드 주소: 같은 와이파이에 있는 보드에 연결한다 */}
+              <BoardAddress />
+
               {/* actions · 버튼 묶음 */}
               <View style={styles.actionsCard}>
                 {isWard && (
-                  <TouchableOpacity
+                  <RippleButton
                     style={[styles.actionRow, styles.actionRowBorder, busy && styles.actionRowDisabled]}
                     onPress={onRenameBed}
                     disabled={busy}
                   >
                     <Text style={styles.actionText}>부르는 이름 바꾸기</Text>
-                    <Text style={styles.actionChevron}>›</Text>
-                  </TouchableOpacity>
+                    <View style={styles.actionChevron} />
+                  </RippleButton>
                 )}
                 {isWard && (
-                  <TouchableOpacity
+                  <RippleButton
                     style={[styles.actionRow, styles.actionRowBorder, busy && styles.actionRowDisabled]}
                     onPress={onNightTime}
                     disabled={busy}
                   >
                     <Text style={styles.actionText}>밤 시간</Text>
-                    <Text style={styles.actionChevron}>›</Text>
-                  </TouchableOpacity>
+                    <View style={styles.actionChevron} />
+                  </RippleButton>
                 )}
-                <TouchableOpacity
+                <RippleButton
                   style={[styles.actionRow, styles.actionRowBorder]}
                   onPress={() => setShowReregisterDialog(true)}
                 >
                   <Text style={styles.actionText}>다시 등록</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </RippleButton>
+                <RippleButton
                   style={[styles.actionRow, styles.actionRowBorder]}
                   onPress={() => setShowUnregisterDialog(true)}
                 >
                   <Text style={styles.actionText}>등록 해제</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                </RippleButton>
+                <RippleButton
                   style={[styles.actionRow, busy && styles.actionRowDisabled]}
+                  rippleColor="#AD332C"
                   onPress={() => setShowResetDialog(true)}
                   disabled={busy}
                 >
                   <Text style={styles.actionTextWarn}>침대 초기화</Text>
-                </TouchableOpacity>
+                </RippleButton>
               </View>
 
               {/* hint */}
@@ -190,28 +227,28 @@ export default function SettingsScreen({
           {(onPrivacyPolicy || onTerms || onOpenSource) && (
             <View style={[styles.ilist, styles.ilistGap]}>
               {onPrivacyPolicy && (
-                <TouchableOpacity
+                <RippleButton
                   style={[styles.irow, styles.irowBorder]}
                   onPress={onPrivacyPolicy}
                 >
                   <Text style={[styles.irowLabel, styles.irowLabelFlex]}>개인정보처리방침</Text>
-                  <Text style={styles.irowChevron}>›</Text>
-                </TouchableOpacity>
+                  <Image source={require('../../assets/icons/chevron.svg')} style={styles.irowChevron} />
+                </RippleButton>
               )}
               {onTerms && (
-                <TouchableOpacity
+                <RippleButton
                   style={[styles.irow, styles.irowBorder]}
                   onPress={onTerms}
                 >
                   <Text style={[styles.irowLabel, styles.irowLabelFlex]}>이용약관</Text>
-                  <Text style={styles.irowChevron}>›</Text>
-                </TouchableOpacity>
+                  <Image source={require('../../assets/icons/chevron.svg')} style={styles.irowChevron} />
+                </RippleButton>
               )}
               {onOpenSource && (
-                <TouchableOpacity style={styles.irow} onPress={onOpenSource}>
+                <RippleButton style={styles.irow} onPress={onOpenSource}>
                   <Text style={[styles.irowLabel, styles.irowLabelFlex]}>오픈소스 라이선스</Text>
-                  <Text style={styles.irowChevron}>›</Text>
-                </TouchableOpacity>
+                  <Image source={require('../../assets/icons/chevron.svg')} style={styles.irowChevron} />
+                </RippleButton>
               )}
             </View>
           )}
@@ -221,14 +258,14 @@ export default function SettingsScreen({
             <>
               <Text style={[styles.sectionLabel, styles.sectionLabelApp]}>병원</Text>
               <View style={styles.ilist}>
-                <TouchableOpacity style={styles.irow} onPress={onHospitalAdmin}>
+                <RippleButton style={styles.irow} onPress={onHospitalAdmin}>
                   <Text style={[styles.irowLabel, styles.irowLabelFlex]}>병원 관리 (직원용)</Text>
-                  <Text style={styles.irowChevron}>›</Text>
-                </TouchableOpacity>
+                  <Image source={require('../../assets/icons/chevron.svg')} style={styles.irowChevron} />
+                </RippleButton>
               </View>
             </>
           )}
-        </ScrollView>
+        </PullScroll>
 
       </View>
       <Modal transparent visible={showReregisterDialog} animationType="fade" onRequestClose={() => setShowReregisterDialog(false)}>
@@ -237,18 +274,18 @@ export default function SettingsScreen({
             <Text style={styles.dlgTitle}>침대를 다시 등록할까요?</Text>
             <Text style={styles.dlgBody}>침대 QR을 다시 찍어 이 폰에 연결해요. 알람과 예약은 그대로예요.</Text>
             <View style={styles.dacts}>
-              <TouchableOpacity
+              <RippleButton
                 style={styles.dactCancel}
                 onPress={() => setShowReregisterDialog(false)}
               >
                 <Text style={styles.dactCancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </RippleButton>
+              <RippleButton rippleColor="#FFFAF7"
                 style={styles.dactConfirm}
                 onPress={() => { setShowReregisterDialog(false); onReregister?.(); }}
               >
                 <Text style={styles.dactConfirmText}>QR 찍기</Text>
-              </TouchableOpacity>
+              </RippleButton>
             </View>
           </View>
         </View>
@@ -263,18 +300,18 @@ export default function SettingsScreen({
                 : '침대와 연결이 끊겨 있어 이 폰에 남은 연결 정보만 지워요.\n침대에 저장된 알람과 예약은 지워지지 않아요.'}
             </Text>
             <View style={styles.dacts}>
-              <TouchableOpacity
+              <RippleButton
                 style={styles.dactCancel}
                 onPress={() => setShowUnregisterDialog(false)}
               >
                 <Text style={styles.dactCancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </RippleButton>
+              <RippleButton rippleColor="#FFFAF7"
                 style={styles.dactConfirm}
                 onPress={() => { setShowUnregisterDialog(false); onUnregister?.(); }}
               >
                 <Text style={styles.dactConfirmText}>등록 해제</Text>
-              </TouchableOpacity>
+              </RippleButton>
             </View>
           </View>
         </View>
@@ -285,15 +322,15 @@ export default function SettingsScreen({
             <Text style={[styles.dlgTitle, styles.dlgCenter]}>침대를 초기화할까요?</Text>
             <Text style={[styles.dlgBody, styles.dlgCenter]}>침대에서 알람, 예약, 자세 기록을 모두 지워요.</Text>
             <View style={styles.dacts}>
-              <TouchableOpacity style={styles.dactCancel} onPress={() => setShowResetDialog(false)}>
+              <RippleButton style={styles.dactCancel} onPress={() => setShowResetDialog(false)}>
                 <Text style={styles.dactCancelText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </RippleButton>
+              <RippleButton rippleColor="#FFFAF7"
                 style={[styles.dactConfirm, styles.dactDanger]}
                 onPress={() => { setShowResetDialog(false); if (!busy) onResetBed?.(); }}
               >
                 <Text style={styles.dactConfirmText}>초기화</Text>
-              </TouchableOpacity>
+              </RippleButton>
             </View>
           </View>
         </View>
@@ -433,13 +470,22 @@ const styles = StyleSheet.create({
     color: '#AD332C',
   },
 
+  boardStatus: { marginLeft: 'auto', fontSize: 15, fontFamily: font.medium, color: '#705A54' },
+  boardInput: { flex: 1, height: 56, fontSize: 17, fontFamily: font.medium, color: '#2D2220' },
+
   actionRowDisabled: {
     opacity: 0.45,
   },
+  // 시안 [data-cs-name]::after: 선 2px짜리 8칸 네모를 45도 돌린 화살표
   actionChevron: {
-    fontSize: 20,
-    color: '#705A54',
     marginLeft: 'auto',
+    marginRight: 4,
+    width: 8,
+    height: 8,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderColor: '#705A54',
+    transform: [{ rotate: '45deg' }],
   },
 
   // hint
@@ -501,8 +547,8 @@ const styles = StyleSheet.create({
     color: '#705A54',
   },
   irowChevron: {
-    fontSize: 20,
-    color: '#513E39',
+    width: 20,
+    height: 20,
   },
 
   // 확인 팝업 공통

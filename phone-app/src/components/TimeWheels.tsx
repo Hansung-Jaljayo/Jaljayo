@@ -1,16 +1,17 @@
 import { LinearGradient } from 'expo-linear-gradient'
-import { type ComponentRef, memo, useEffect, useRef, useState } from 'react'
+import { type ComponentRef, memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
+  Animated,
+  Easing,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native'
 
-import { color, font, radius, shadow } from '@/theme/tokens'
+import { color, cssEase, font, radius, shadow } from '@/theme/tokens'
 
 const ROW = 48
 const VISIBLE = 240
@@ -91,6 +92,9 @@ const Wheel = memo(function Wheel({ label, items, index, loop, onPick }: WheelPr
 
   useEffect(() => () => { if (settle.current) clearTimeout(settle.current) }, [])
 
+  // 누른 숫자로 굴러간다
+  const goTo = useCallback((i: number) => ref.current?.scrollTo({ y: i * ROW, animated: true }), [])
+
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const i = Math.max(0, Math.min(all.length - 1, Math.round(e.nativeEvent.contentOffset.y / ROW)))
     if (i !== atRef.current) setAt(i)
@@ -123,21 +127,9 @@ const Wheel = memo(function Wheel({ label, items, index, loop, onPick }: WheelPr
         onLayout={() => ref.current?.scrollTo({ y: atRef.current * ROW, animated: false })}
         contentContainerStyle={styles.track}
       >
-        {all.map((v, i) => {
-          const on = i === at
-          return (
-            <Pressable
-              key={i}
-              role="listitem"
-              accessibilityState={{ selected: on }}
-              style={styles.item}
-              // 누른 숫자로 굴러간다
-              onPress={() => ref.current?.scrollTo({ y: i * ROW, animated: true })}
-            >
-              <Text style={on ? styles.itemOn : styles.itemOff}>{v}</Text>
-            </Pressable>
-          )
-        })}
+        {all.map((v, i) => (
+          <WheelItem key={i} i={i} v={v} on={i === at} onPick={goTo} />
+        ))}
       </ScrollView>
       <LinearGradient pointerEvents="none" colors={[color.inset, 'rgba(240, 234, 230, 0)']} style={[styles.fade, styles.fadeTop]} />
       <LinearGradient pointerEvents="none" colors={['rgba(240, 234, 230, 0)', color.inset]} style={[styles.fade, styles.fadeBottom]} />
@@ -173,4 +165,29 @@ const styles = StyleSheet.create({
   fade: { position: 'absolute', left: 0, right: 0, height: 72 },
   fadeTop: { top: 0 },
   fadeBottom: { bottom: 0 },
+})
+
+const EASE = Easing.bezier(...cssEase)
+
+// 바퀴 한 줄. 가운데 줄이 되거나 벗어나면 글자 크기와 색이 0.15초 동안 바뀐다(시안 .witem transition: color .15s, font-size .15s)
+const WheelItem = memo(function WheelItem({ i, v, on, onPick }: { i: number; v: string; on: boolean; onPick: (i: number) => void }) {
+  const [k] = useState(() => new Animated.Value(on ? 1 : 0))
+  useEffect(() => {
+    Animated.timing(k, { toValue: on ? 1 : 0, duration: 150, easing: EASE, useNativeDriver: false }).start()
+  }, [on, k])
+  return (
+    <Pressable role="listitem" accessibilityState={{ selected: on }} style={styles.item} onPress={() => onPick(i)}>
+      <Animated.Text
+        style={[
+          on ? styles.itemOn : styles.itemOff,
+          {
+            fontSize: k.interpolate({ inputRange: [0, 1], outputRange: [24, 30] }),
+            color: k.interpolate({ inputRange: [0, 1], outputRange: [color.muted, color.fg] }),
+          },
+        ]}
+      >
+        {v}
+      </Animated.Text>
+    </Pressable>
+  )
 })

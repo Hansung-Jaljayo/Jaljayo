@@ -1,13 +1,13 @@
 import {
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { keepAll } from '@/components/ObScreen';
 import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
+import { PullScroll } from '@/components/PullScroll';
 
 export type DocSection = {
   heading: string;
@@ -33,14 +33,14 @@ export default function InfoDocScreen({ visible = false, title, sections, onClos
 
         {/* ihead */}
         <View style={styles.ihead}>
-          <TouchableOpacity style={styles.backBtn} onPress={onClose}>
+          <RippleButton style={styles.backBtn} onPress={onClose}>
             <View style={styles.chevronLeft} />
-          </TouchableOpacity>
+          </RippleButton>
           <Text style={styles.title}>{title}</Text>
         </View>
 
         {/* ibody */}
-        <ScrollView
+        <PullScroll
           style={styles.ibody}
           contentContainerStyle={styles.ibodyContent}
           showsVerticalScrollIndicator={false}
@@ -63,7 +63,7 @@ export default function InfoDocScreen({ visible = false, title, sections, onClos
               )}
             </View>
           ))}
-        </ScrollView>
+        </PullScroll>
 
       </View>
     </View>

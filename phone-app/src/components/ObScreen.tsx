@@ -1,11 +1,18 @@
 import { type ReactNode } from 'react'
-import { ActivityIndicator, Dimensions, Image, type ImageSourcePropType, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { ActivityIndicator, Dimensions, Image, type ImageSourcePropType, Platform, StyleSheet, Text, View } from 'react-native'
+import { type Edge, SafeAreaView } from 'react-native-safe-area-context'
 
 import { color, font } from '@/theme/tokens'
+import { RippleButton } from './RippleButton'
+import { PullScroll } from './PullScroll'
+
+// 시안 .ob: 아이폰은 화면 아래 끝에서 40(홈 막대 자리를 따로 비우지 않는다). 갤럭시는 내비게이션 막대 위 16
+export const OB_EDGES: Edge[] | undefined = Platform.OS === 'ios' ? ['top', 'left', 'right'] : undefined
 
 // 시안처럼 한글이 낱말 중간에서 줄바꿈되지 않게(안드로이드는 글자 단위로 자른다) 낱말 안 글자 사이에 줄 안 바꿈 표시를 넣는다
-export const keepAll = (t: string) => t.replace(/([^\s])(?=[^\s])/g, '$1\u2060')
+// 시안 text-wrap: pretty처럼 문단 마지막 낱말이 혼자 한 줄에 남지 않게 마지막 띄어쓰기를 붙는 띄어쓰기로 바꾼다
+const pretty = (t: string) => t.split('\n').map((l) => l.replace(/ (?=\S+\s*$)/, '\u00A0')).join('\n')
+export const keepAll = (t: string) => pretty(t).replace(/([^\s])(?=[^\s])/g, '$1\u2060')
 // 시안의 안내 글처럼 문장마다 줄을 나눈다
 export const bySentence = (t: string) => t.replace(/([.?!])\s+/g, '$1\n')
 
@@ -63,15 +70,17 @@ type Props = {
   primary?: ObButton
   secondary?: ObButton
   links?: ObButton[]
+  // 시안 이름 고르기처럼 버튼을 아래 끝에 붙이지 않고 내용 바로 아래(16)에 둔다
+  flow?: boolean
 }
 
 // 등록·병원 관리 화면의 공통 틀. 기존 등록 화면(BedNotFoundScreen 등)과 같은 글자·버튼 모양을 쓴다
-export function ObScreen({ title, lead, icon, spinner, bad, children, primary, secondary, links }: Props) {
+export function ObScreen({ title, lead, icon, spinner, bad, children, primary, secondary, links, flow }: Props) {
   const centered = !!icon || !!spinner
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[styles.body, centered && styles.bodyCenter]}
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
+      <PullScroll
+        contentContainerStyle={[styles.body, centered && styles.bodyCenter, flow && styles.bodyFlow]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -92,16 +101,16 @@ export function ObScreen({ title, lead, icon, spinner, bad, children, primary, s
         {(primary || secondary || links?.length) && (
           <View style={styles.actions}>
             {primary && (
-              <TouchableOpacity
+              <RippleButton rippleColor="#FFFAF7"
                 style={[styles.primary, primary.warn && styles.primaryWarn, primary.disabled && styles.primaryOff]}
                 onPress={primary.onPress}
                 disabled={primary.disabled}
               >
                 <Text style={styles.primaryText}>{primary.label}</Text>
-              </TouchableOpacity>
+              </RippleButton>
             )}
             {secondary && (
-              <TouchableOpacity
+              <RippleButton
                 style={styles.secondary}
                 onPress={secondary.onPress}
                 disabled={secondary.disabled}
@@ -109,20 +118,20 @@ export function ObScreen({ title, lead, icon, spinner, bad, children, primary, s
                 <Text style={[styles.secondaryText, secondary.warn && styles.warnText, secondary.disabled && styles.secondaryOffText]}>
                   {secondary.label}
                 </Text>
-              </TouchableOpacity>
+              </RippleButton>
             )}
             {!!links?.length && (
               <View style={styles.links}>
                 {links.map((l) => (
-                  <TouchableOpacity key={l.label} style={styles.link} onPress={l.onPress} disabled={l.disabled}>
+                  <RippleButton key={l.label} style={styles.link} rippleColor={color['fg-2']} onPress={l.onPress} disabled={l.disabled}>
                     <LinkText style={styles.linkText}>{l.label}</LinkText>
-                  </TouchableOpacity>
+                  </RippleButton>
                 ))}
               </View>
             )}
           </View>
         )}
-      </ScrollView>
+      </PullScroll>
     </SafeAreaView>
   )
 }
@@ -201,6 +210,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   bodyCenter: { justifyContent: 'center' },
+  bodyFlow: { justifyContent: 'flex-start' },
   top: { gap: 12 },
   topCenter: { alignItems: 'center', gap: 14, flexGrow: 1, justifyContent: 'center' },
   // 시안 .icon: 흰 동그라미. 문제가 생긴 화면(.bad)은 분홍 동그라미
@@ -221,7 +231,7 @@ const styles = StyleSheet.create({
     fontFamily: font.bold,
     fontSize: Platform.OS === 'ios' ? 30 : 24,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
-    lineHeight: Platform.OS === 'ios' ? 36 : 29,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
     color: color.fg,
   },
   lead: { fontFamily: font.regular, fontSize: 17, lineHeight: 25.5, color: color['fg-2'] },

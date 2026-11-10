@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Image } from 'expo-image'
+import { useEffect, useState } from 'react'
+import { Animated, Easing, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { ExpandRow } from '@/components/ExpandRow'
 import { Ko, ObScreen, obStyles, LinkText } from '@/components/ObScreen'
+import { RippleButton } from '@/components/RippleButton'
 import { Switch } from '@/components/Switch'
 import { TimeWheels } from '@/components/TimeWheels'
 import { clockLabel } from '@/features/alarm/alarm'
@@ -10,7 +11,7 @@ import { useInnerBack } from '@/features/app/flow'
 import { type NightTime, setBedInfo, useBedInfo, wardDefault } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
 import { CONTACT, MY_BED, ROOMS, getHospital, setHospital, useHospital, usedNames } from '@/features/hospital/hospital'
-import { color, font } from '@/theme/tokens'
+import { color, cssEase, font } from '@/theme/tokens'
 
 import { FruitGrid } from './NamePick'
 
@@ -54,9 +55,9 @@ export function AdminPassword({ onIn, onOut }: { onIn: () => void; onOut: () => 
       />
       {bad && <Ko style={obStyles.err} role="alert">비밀번호가 맞지 않아요. 다시 넣어 주세요.</Ko>}
       {r.timedOut && <Ko style={obStyles.noteBad}>침대와 연결이 잠시 끊겼어요. 다시 시도해 주세요.</Ko>}
-      <Pressable style={styles.linkBtn} onPress={() => setHelp((h) => !h)} aria-expanded={help}>
+      <RippleButton style={styles.linkBtn} rippleColor={color['fg-2']} onPress={() => setHelp((h) => !h)} aria-expanded={help}>
         <LinkText style={styles.linkText}>비밀번호를 잊었어요</LinkText>
-      </Pressable>
+      </RippleButton>
       {help && (
         <Ko style={obStyles.note}>
           {`잘자요 설치 담당자에게 연락해 주세요. 병원 담당자인지 확인한 뒤 새 비밀번호를 정해 드려요.\n문의: ${CONTACT}`}
@@ -130,15 +131,16 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
           />
         </View>
         {(['from', 'to'] as const).map((k) => (
-          <View key={k} style={[obStyles.rowLine, !night.on && styles.dim]} pointerEvents={night.on && !sending ? 'auto' : 'none'}>
-            <ExpandRow
-              name={k === 'from' ? '시작' : '끝'}
+          <View key={k} style={obStyles.rowLine}>
+            <NRow
+              label={k === 'from' ? '시작' : '끝'}
               value={clockLabel(night[k])}
               open={openT === k}
+              disabled={!night.on || sending}
               onPress={() => setOpenT(openT === k ? null : k)}
             >
               <TimeWheels value={night[k]} onChange={(v) => setNight((n) => ({ ...n, [k]: v }))} disabled={sending} />
-            </ExpandRow>
+            </NRow>
           </View>
         ))}
       </View>
@@ -160,19 +162,19 @@ export function AdminHome({ onBeds, onPassword, onOut }: { onBeds: () => void; o
       )}
       {r.timedOut && <Ko style={obStyles.noteBad}>보낸 결과를 확인하지 못했어요. 다시 시도해 주세요.</Ko>}
       {/* 시안: 저장 버튼은 침대 목록 위 */}
-      <Pressable style={[styles.btn, (sending || (same && !hosp.unconfirmed.length && !r.timedOut)) && styles.btnOff]} onPress={save} disabled={sending || (same && !hosp.unconfirmed.length && !r.timedOut)}>
+      <RippleButton style={[styles.btn, (sending || (same && !hosp.unconfirmed.length && !r.timedOut)) && styles.btnOff]} rippleColor={color['on-ink']} onPress={save} disabled={sending || (same && !hosp.unconfirmed.length && !r.timedOut)}>
         <Text style={styles.btnText}>{sending ? '보내는 중…' : r.timedOut ? '다시 시도' : retryOnly ? `확인 안 된 ${hosp.unconfirmed.length}대에 다시 보내기` : '모든 침대에 저장'}</Text>
-      </Pressable>
+      </RippleButton>
 
       <View style={obStyles.card}>
-        <Pressable style={obStyles.row} onPress={onBeds} disabled={sending}>
-          <Text style={obStyles.rowTitle}>침대 목록</Text>
-          <Text style={obStyles.chevron}>›</Text>
-        </Pressable>
-        <Pressable style={[obStyles.row, obStyles.rowLine]} onPress={onPassword} disabled={sending}>
-          <Text style={obStyles.rowTitle}>관리 비밀번호 바꾸기</Text>
-          <Text style={obStyles.chevron}>›</Text>
-        </Pressable>
+        <RippleButton style={styles.wrow} onPress={onBeds} disabled={sending}>
+          <Text style={[obStyles.rowTitle, sending && styles.offText]}>침대 목록</Text>
+          <Chev />
+        </RippleButton>
+        <RippleButton style={[styles.wrow, obStyles.rowLine]} onPress={onPassword} disabled={sending}>
+          <Text style={[obStyles.rowTitle, sending && styles.offText]}>관리 비밀번호 바꾸기</Text>
+          <Chev />
+        </RippleButton>
       </View>
     </ObScreen>
   )
@@ -194,7 +196,7 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
         const isOpen = open.includes(room)
         return (
           <View key={room} style={[obStyles.card, obStyles.cardSmall]}>
-            <Pressable
+            <RippleButton
               style={styles.rhead}
               onPress={() => setOpen(isOpen ? open.filter((x) => x !== room) : [...open, room])}
               aria-expanded={isOpen}
@@ -206,19 +208,19 @@ export function AdminBeds({ onBed, onBack }: { onBed: (id: number) => void; onBa
                   {bad ? <Text style={styles.red}>{` · ${bad}대 확인 안 됨`}</Text> : null}
                 </Ko>
               </View>
-              <Text style={[obStyles.chevron, isOpen && styles.down]}>›</Text>
-            </Pressable>
+              <Chev open={isOpen} />
+            </RippleButton>
             {isOpen &&
               bs.map((b) => (
-                <Pressable key={b.id} style={[obStyles.row, obStyles.rowLine]} onPress={() => onBed(b.id)}>
+                <RippleButton key={b.id} style={[styles.wrow, obStyles.rowLine]} onPress={() => onBed(b.id)}>
                   <View style={styles.flex}>
                     <Text style={obStyles.rowTitleBold}>{`${b.name} 침대`}</Text>
                     <Ko style={[obStyles.rowSub, !b.ok && styles.red]}>
                       {`${b.phone ? '환자 폰 연결됨' : '환자 없음'} · ${b.ok ? '설정 적용됨' : '설정 확인 안 됨'}`}
                     </Ko>
                   </View>
-                  <Text style={obStyles.chevron}>›</Text>
-                </Pressable>
+                  <Chev />
+                </RippleButton>
               ))}
           </View>
         )
@@ -287,18 +289,21 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
       secondary={{ label: '침대 목록으로', onPress: onBack, disabled: busy }}
     >
       <Text style={obStyles.sec}>병실</Text>
-      <View style={obStyles.card}>
-        <ExpandRow
-          name="병실"
+      <View style={[obStyles.card, obStyles.cardSmall]}>
+        <NRow
+          label="병실"
           value={room === b.room ? room : `${b.room} → ${room}`}
           open={roomOpen}
-          onPress={() => !busy && setRoomOpen(!roomOpen)}
+          disabled={busy}
+          onPress={() => setRoomOpen(!roomOpen)}
         >
           <View style={styles.rooms} role="radiogroup" accessibilityLabel="병실">
             {ROOMS.map((r) => (
-              <Pressable
+              <RippleButton
                 key={r}
                 style={[styles.roomBtn, r === room && styles.roomOn]}
+                rippleColor={r === room ? color['on-ink'] : color.fg}
+                disabled={busy}
                 onPress={() => {
                   setRoom(r)
                   setRoomOpen(false)
@@ -308,10 +313,10 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
                 aria-checked={r === room}
               >
                 <Text style={[styles.roomText, r === room && styles.roomTextOn]}>{r}</Text>
-              </Pressable>
+              </RippleButton>
             ))}
           </View>
-        </ExpandRow>
+        </NRow>
       </View>
       {clash && (
         <>
@@ -319,8 +324,9 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
           <FruitGrid label="새 부르는 이름" value={name} used={used} disabled={busy} onPick={setName} />
         </>
       )}
-      <Pressable
+      <RippleButton
         style={[styles.btn, (busy || room === b.room || needName) && !mv.timedOut && styles.btnOff]}
+        rippleColor={color['on-ink']}
         onPress={move}
         disabled={(busy || room === b.room || needName) && !mv.timedOut}
       >
@@ -335,24 +341,25 @@ export function AdminBed({ onBack }: { onBack: () => void }) {
                   ? '이름을 골라 주세요'
                   : `${room}로 옮기기${name !== b.name ? ` · ${name} 침대로` : ''}`}
         </Text>
-      </Pressable>
+      </RippleButton>
 
       <Text style={obStyles.sec}>환자 사용</Text>
       <Ko style={obStyles.note}>
         사용을 끝내면 이 침대의 알람, 예약, 자세 기록을 지우고 환자 폰 연결을 끊어요. 이름, 병실, 병원 설정은 그대로예요. 다음 환자는 침대 QR을 찍어 바로 등록할 수 있어요.
       </Ko>
       {!asking ? (
-        <Pressable style={[styles.btnLight, (busy || !b.phone) && styles.dim]} onPress={() => setAsking(true)} disabled={busy || !b.phone}>
-          <Text style={styles.btnLightWarn}>{b.phone ? '환자 사용 종료' : '연결된 환자 폰이 없어요'}</Text>
-        </Pressable>
+        <RippleButton style={styles.btnLight} rippleColor={color.red} onPress={() => setAsking(true)} disabled={busy || !b.phone}>
+          {/* 막히면 글자만 흐린 색(시안 .ob .secondary:disabled) */}
+          <Text style={[styles.btnLightWarn, (busy || !b.phone) && styles.offText]}>{b.phone ? '환자 사용 종료' : '연결된 환자 폰이 없어요'}</Text>
+        </RippleButton>
       ) : (
         <View style={styles.pair}>
-          <Pressable style={[styles.btn, styles.btnWarn, styles.flex]} onPress={finish} disabled={busy}>
+          <RippleButton style={[styles.btn, styles.btnWarn, busy && styles.btnOff, styles.flex]} rippleColor={color['on-ink']} onPress={finish} disabled={busy}>
             <Text style={styles.btnText}>{end.waiting && !end.timedOut ? '끝내는 중…' : end.timedOut ? '다시 시도' : '사용 종료'}</Text>
-          </Pressable>
-          <Pressable style={[styles.btnLight, styles.flex]} onPress={() => { end.cancel(); setAsking(false) }} disabled={busy}>
-            <Text style={styles.btnLightText}>취소</Text>
-          </Pressable>
+          </RippleButton>
+          <RippleButton style={[styles.btnLight, styles.flex]} onPress={() => { end.cancel(); setAsking(false) }} disabled={busy}>
+            <Text style={[styles.btnLightText, busy && styles.offText]}>취소</Text>
+          </RippleButton>
         </View>
       )}
     </ObScreen>
@@ -418,13 +425,23 @@ const SHADOW = '0px 1px 2px 0px rgba(52, 39, 36, 0.06), 0px 12px 32px -8px rgba(
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  dim: { opacity: 0.45 },
   red: { color: color.red, fontFamily: font.semiBold },
-  down: { transform: [{ rotate: '90deg' }] },
+  // 막힌 흰 버튼·목록 줄의 글자(시안 #b3a6a1)
+  offText: { color: '#b3a6a1' },
+  icon20: { width: 20, height: 20 },
+  // 흰 목록 줄(시안 .ob .wlist button)
+  wrow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, gap: 12 },
+  // 이름 · 값 · 화살표 줄(시안 .ob .nbtn): 막히면 40%
+  nbtn: { minHeight: 56, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 8 },
+  nbtnOff: { opacity: 0.4 },
+  nbtnLabel: { flex: 1, fontFamily: font.semiBold, fontSize: 17, color: color.fg },
+  nbtnVal: { fontFamily: font.semiBold, fontSize: 17, color: color['fg-2'] },
+  // 펼친 칸(시안 .ob .npanel)
+  npanel: { paddingHorizontal: 12, paddingBottom: 12 },
   // 병실 묶음 머리(시안 .rhead)
   rhead: { minHeight: 60, flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingLeft: 18, paddingRight: 16, gap: 10 },
   // 병실 고르기(시안 .nseg.rooms): 네 칸 격자
-  rooms: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, paddingBottom: 12 },
+  rooms: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   roomBtn: {
     width: '23%',
     flexGrow: 1,
@@ -457,3 +474,52 @@ const styles = StyleSheet.create({
   btnLightText: { fontFamily: font.bold, fontSize: 17, color: color.fg },
   btnLightWarn: { fontFamily: font.bold, fontSize: 17, color: color.red },
 })
+
+const EASE = Easing.bezier(...cssEase)
+
+// 오른쪽 화살표. open이 있으면 펼칠 때 0.2초 동안 아래로 돈다(시안 .nbtn svg, .rhead svg transition: transform .2s)
+function Chev({ open }: { open?: boolean }) {
+  const [turn] = useState(() => new Animated.Value(open ? 1 : 0))
+  useEffect(() => {
+    Animated.timing(turn, { toValue: open ? 1 : 0, duration: 200, easing: EASE, useNativeDriver: true }).start()
+  }, [open, turn])
+  return (
+    <Animated.View style={{ transform: [{ rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] }) }] }}>
+      <Image source={require('../../../assets/icons/chevron.svg')} style={styles.icon20} />
+    </Animated.View>
+  )
+}
+
+// 이름 · 값 · 화살표 줄(시안 .nbtn). 누르면 아래 칸이 바로 펼쳐지고 화살표만 돈다
+function NRow({
+  label,
+  value,
+  open,
+  disabled,
+  onPress,
+  children,
+}: {
+  label: string
+  value: string
+  open: boolean
+  disabled: boolean
+  onPress: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <>
+      <RippleButton
+        style={[styles.nbtn, disabled && styles.nbtnOff]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityLabel={`${label} ${value}`}
+        accessibilityState={{ expanded: open, disabled }}
+      >
+        <Text style={styles.nbtnLabel}>{label}</Text>
+        <Text style={styles.nbtnVal}>{value}</Text>
+        <Chev open={open} />
+      </RippleButton>
+      {open && <View style={styles.npanel}>{children}</View>}
+    </>
+  )
+}
