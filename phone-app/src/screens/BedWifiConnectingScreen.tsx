@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Animated, Easing, SafeAreaView, StyleSheet, Text, View, Platform } from 'react-native';
+import { Animated, Easing, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   ssid: string;
@@ -12,7 +15,7 @@ export default function BedWifiConnectingScreen({ ssid }: Props) {
     Animated.loop(
       Animated.timing(rotation, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         easing: Easing.linear,
         useNativeDriver: true,
       })
@@ -25,12 +28,12 @@ export default function BedWifiConnectingScreen({ ssid }: Props) {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.center}>
         <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
-        <Text style={styles.title}>침대가 공유기 와이파이에{'\n'}연결하고 있어요</Text>
+        <Text style={styles.title}>{keepAll(balance('침대가 공유기 와이파이에 연결하고 있어요'))}</Text>
         <Text style={styles.subtitle}>
-          {`침대가 ${ssid}에 연결하면 폰도 원래\n와이파이로 돌아가요.\n1분쯤 걸릴 수 있어요.`}
+          {keepAll(bySentence(`침대가 ${ssid}에 연결하면 폰도 원래 와이파이로 돌아가요. 1분쯤 걸릴 수 있어요.`))}
         </Text>
       </View>
     </SafeAreaView>
@@ -42,8 +45,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4F0ED',
   },
+  // 시안 .ob 안쪽 여백(위 16, 아래 아이폰 40·갤럭시 16) 안에서 가운데
   center: {
     flex: 1,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
@@ -58,16 +64,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   subtitle: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },

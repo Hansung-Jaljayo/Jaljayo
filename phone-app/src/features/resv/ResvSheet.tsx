@@ -60,7 +60,7 @@ export function ResvSheet({ open, item, onClose, onSave, wait = null, onRetry, o
 
   return (
     // 저장 중에는 바탕 누르기·끌어내리기·뒤로 가기로도 닫히지 않는다
-    <BottomSheet open={open} onClose={locked ? noop : onClose}>
+    <BottomSheet open={open} onClose={locked ? noop : onClose} toEnd={failed}>
       {/* shead · 시트 머리 */}
       <View style={styles.head}>
         <Text style={styles.title} role="heading">

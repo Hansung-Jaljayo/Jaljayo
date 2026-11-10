@@ -57,9 +57,10 @@ export const shadow = {
   wheelPick: '0px 1px 3px 0px rgba(52, 39, 36, 0.12)',
 } as const
 
+// 시안의 굵기 200·300 글씨는 맥 크롬에서 Pretendard Thin으로 그려진다(시안에 보이는 그대로 맞춘다)
 export const font = {
-  extraLight: 'Pretendard-ExtraLight',
-  light: 'Pretendard-Light',
+  extraLight: 'Pretendard-Thin',
+  light: 'Pretendard-Thin',
   regular: 'Pretendard-Regular',
   medium: 'Pretendard-Medium',
   semiBold: 'Pretendard-SemiBold',
@@ -67,6 +68,9 @@ export const font = {
 } as const
 
 // 시안의 움직임 곡선
+// 시안 CSS의 ease(빨리 시작해 천천히 멈춤). RN의 Easing.ease(.42, 0, 1, 1)는 천천히 시작하는 다른 곡선이라 쓰지 않는다
+export const cssEase = [0.25, 0.1, 0.25, 1] as const
+
 export const motion = {
   sheetOpen: { duration: 500, bezier: [0.32, 0.72, 0, 1] },
   sheetClose: { duration: 350, bezier: [0.4, 0, 1, 1] },

@@ -20,7 +20,19 @@ export type AlarmDraft = {
   pauseTo: number | null
   // 반복 알람만: 잠시 끄기로 고른 기간(3·7·14일)
   pauseDays: number | null
+  // 반복 알람만: 날짜별 예외(오늘부터 며칠 뒤 → 그 회차만 바꾼 시각·끄는 방법, 또는 다른 알람으로 덮어써 울리지 않음)
+  exc?: Record<number, AlarmExc>
 }
+
+// 날짜별 예외: "이번만"으로 바꾼 회차, 또는 덮어써서 울리지 않는 회차
+export type AlarmExc = { time: number; way: AlarmWay; drop?: false } | { drop: true }
+
+// 실제로 울리는 회차 하나: 오늘부터 며칠 뒤, 그날 울리는 시각·끄는 방법(이번만 반영)
+export type Ring = { off: number; tm: number; way: AlarmWay }
+
+// 덮어써 울리지 않는 날만 남긴다(이번만은 뺀다)
+export const dropsOnly = (exc: AlarmDraft['exc']): Record<number, AlarmExc> =>
+  Object.fromEntries(Object.entries(exc ?? {}).filter(([, e]) => e.drop)) as Record<number, AlarmExc>
 
 export const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 // 요일 줄은 월요일부터
@@ -52,37 +64,57 @@ export const VOLUME_OPTIONS: { value: AlarmVolume; name: string }[] = [
 
 export const nowMinutes = (now = new Date()) => now.getHours() * 60 + now.getMinutes()
 
-// 반복 알람이 앞으로 울릴 날(오늘부터 며칠 뒤)을 count개. 잠시 꺼 둔 기간과 건너뛸 날은 뺀다
-export function nextRings(d: AlarmDraft, count = 1, now = nowMinutes(), today = new Date()): number[] {
-  const out: number[] = []
+// 알람이 앞으로 실제로 울릴 회차를 count개(시안 nextRings). 날짜별로 바꾼 회차는 바꾼 시각으로,
+// 잠시 꺼 둔 기간·덮어써 안 울리는 날·건너뛸 날은 뺀다. 한 번 알람은 그 날 하나
+export function rings(d: AlarmDraft, count = Infinity, now = nowMinutes(), today = new Date()): Ring[] {
+  const out: Ring[] = []
+  const rep = d.days.length > 0
   for (let off = 0; off < 100 && out.length < count; off++) {
-    if (off === 0 && d.time <= now) continue
+    const ex = rep ? d.exc?.[off] : undefined
+    const tm = ex && !ex.drop ? ex.time : d.time
+    if (off * 1440 + tm - now <= 0) continue
     if (d.pauseTo != null && off <= d.pauseTo) continue
-    if (!d.days.includes((today.getDay() + off) % 7)) continue
-    if (d.skipOff === off) continue
-    out.push(off)
+    if (rep ? !d.days.includes((today.getDay() + off) % 7) : d.dateOff != null && off !== d.dateOff) continue
+    if (ex?.drop) continue
+    if (rep && d.skipOff === off) continue
+    out.push({ off, tm, way: ex && !ex.drop ? ex.way : d.way })
+    if (!rep) break
   }
   return out
 }
 
+// 반복 알람이 앞으로 울릴 날(오늘부터 며칠 뒤)을 count개
+export function nextRings(d: AlarmDraft, count = 1, now = nowMinutes(), today = new Date()): number[] {
+  if (!d.days.length) return []
+  return rings(d, count, now, today).map((r) => r.off)
+}
+
+// 그 날짜의 회차(이번만 반영). 그날 울리지 않으면 없음
+export const ringOn = (d: AlarmDraft, off: number, now = nowMinutes(), today = new Date()) =>
+  rings(d, Infinity, now, today).find((r) => r.off === off)
+
 // 바뀐 설정에 맞게 고친다
 // 한 번 알람: 날짜를 고르지 않았거나 오늘 울릴 시각이 이미 지났으면 다음에 울릴 날로 맞추고, 반복에만 쓰는 설정은 지운다
 // 반복 알람: 건너뛸 날이 일정에서 빠지면(요일·시각을 바꿈) 건너뛰기를 푼다
-export function fixDraft(d: AlarmDraft, now = nowMinutes()): AlarmDraft {
+export function fixDraft(d: AlarmDraft, now = nowMinutes(), today = new Date()): AlarmDraft {
   if (d.days.length) {
-    if (d.skipOff != null && !nextRings({ ...d, skipOff: null, pauseTo: null }, Infinity, now).includes(d.skipOff))
+    // 반복에서 빠진 요일의 날짜별 예외는 없앤다
+    const exc = d.exc ?? {}
+    const keep = Object.entries(exc).filter(([k]) => d.days.includes((today.getDay() + Number(k)) % 7))
+    if (keep.length !== Object.keys(exc).length) d = { ...d, exc: Object.fromEntries(keep) }
+    if (d.skipOff != null && !nextRings({ ...d, skipOff: null, pauseTo: null }, Infinity, now, today).includes(d.skipOff))
       return { ...d, skipOff: null }
     return d
   }
-  if (d.skipOff != null || d.pauseTo != null || d.pauseDays != null)
-    d = { ...d, skipOff: null, pauseTo: null, pauseDays: null }
+  if (d.skipOff != null || d.pauseTo != null || d.pauseDays != null || (d.exc && Object.keys(d.exc).length))
+    d = { ...d, skipOff: null, pauseTo: null, pauseDays: null, exc: {} }
   if (d.dateOff == null || (d.dateOff === 0 && d.time <= now)) return { ...d, dateOff: d.time > now ? 0 : 1 }
   return d
 }
 
 // 새 알람: 오전 7:00, 끄는 방법 기본, 소리 보통
 export const newAlarmDraft = (): AlarmDraft =>
-  fixDraft({ time: 7 * 60, days: [], dateOff: null, way: 'basic', volume: 2, lift: false, skipOff: null, pauseTo: null, pauseDays: null })
+  fixDraft({ time: 7 * 60, days: [], dateOff: null, way: 'basic', volume: 2, lift: false, skipOff: null, pauseTo: null, pauseDays: null, exc: {} })
 
 // "10월 16일 금요일"
 export function dateLabel(off: number | null, today = new Date()) {
@@ -136,7 +168,7 @@ export const needsScope = (before: AlarmDraft | null | undefined, d: AlarmDraft)
 
 // 이번만으로 저장하면 반복의 시각·끄는 방법은 그대로다. 그 일정으로 끄는 기간을 다시 센다(pauseNew: 이 창에서 잠시 끄기를 새로 고름)
 export function onceBase(before: AlarmDraft, d: AlarmDraft, pauseNew: boolean, now = nowMinutes()): AlarmDraft {
-  const b = { ...d, time: before.time, way: before.way }
+  const b = { ...d, time: before.time, way: before.way, exc: dropsOnly(d.exc) }
   return pauseNew && b.pauseDays ? { ...b, pauseTo: pauseEnd(b, b.pauseDays, now) } : b
 }
 
@@ -210,19 +242,15 @@ export function inLabel(mins: number) {
   return `${m}분 뒤`
 }
 
-// 켜진 알람 가운데 실제로 다음에 울릴 것. 없으면 null
+// 켜진 알람 가운데 실제로 다음에 울릴 회차. 없으면 null
 export function nextAlarm(alarms: Alarm[], now = nowMinutes(), today = new Date()) {
-  let best: { alarm: Alarm; off: number; mins: number } | null = null
+  let best: { alarm: Alarm; off: number; mins: number; tm: number; way: AlarmWay } | null = null
   for (const a of alarms) {
     if (!a.on) continue
-    const off = a.days.length
-      ? nextRings(a, 1, now, today)[0]
-      : a.dateOff != null && (a.dateOff > 0 || a.time > now)
-        ? a.dateOff
-        : undefined
-    if (off == null) continue
-    const mins = off * 1440 + a.time - now
-    if (!best || mins < best.mins) best = { alarm: a, off, mins }
+    const r = rings(a, 1, now, today)[0]
+    if (!r) continue
+    const mins = r.off * 1440 + r.tm - now
+    if (!best || mins < best.mins) best = { alarm: a, off: r.off, mins, tm: r.tm, way: r.way }
   }
   return best
 }
@@ -239,23 +267,25 @@ export const sampleAlarms = (): Alarm[] => [
   { ...fixDraft({ ...newAlarmDraft(), time: 14 * 60, dateOff: 2, way: 'q2' }), id: 3, on: false },
 ]
 
-// 알람이 앞으로 울릴 날(오늘부터 며칠 뒤) 모두. 한 번 알람은 그 날 하나(이미 지났으면 없음)
-export function ringOffs(a: AlarmDraft, now = nowMinutes(), today = new Date()): number[] {
-  if (a.days.length) return nextRings(a, Infinity, now, today)
-  return a.dateOff != null && (a.dateOff > 0 || a.time > now) ? [a.dateOff] : []
-}
+// 겹치는 다른 알람과 겹치는 회차들
+export type Clash = { alarm: Alarm; hits: Ring[] }
 
-// 겹치는 다른 알람과 겹치는 날들
-export type Clash = { alarm: Alarm; offs: number[] }
-
-// 같은 날 같은 시각에 울리는 다른 켜진 알람. 시각만이 아니라 실제로 울리는 날짜로 본다(건너뛰기·잠시 끄기 반영)
-export function findClashes(d: AlarmDraft, alarms: Alarm[], selfId?: number | null, now = nowMinutes(), today = new Date()) {
-  const mine = ringOffs(d, now, today)
+// 같은 날 같은 시각에 울리는 다른 알람. 시각만이 아니라 실제로 울리는 회차로 본다(건너뛰기·잠시 끄기·이번만 반영).
+// 꺼져 있어도 켜기 답을 기다리는 알람(busy)은 곧 켜질 일정이라 넣는다
+export function findClashes(
+  d: AlarmDraft,
+  alarms: Alarm[],
+  selfId?: number | null,
+  busy: (id: number) => boolean = () => false,
+  now = nowMinutes(),
+  today = new Date(),
+) {
+  const mine = rings(d, Infinity, now, today)
   const out: Clash[] = []
   for (const a of alarms) {
-    if (a.id === selfId || !a.on || a.time !== d.time) continue
-    const offs = ringOffs(a, now, today).filter((o) => mine.includes(o))
-    if (offs.length) out.push({ alarm: a, offs })
+    if (a.id === selfId || (!a.on && !busy(a.id))) continue
+    const hits = rings(a, Infinity, now, today).filter((x) => mine.some((y) => y.off === x.off && y.tm === x.tm))
+    if (hits.length) out.push({ alarm: a, hits })
   }
   return out
 }
@@ -263,37 +293,47 @@ export function findClashes(d: AlarmDraft, alarms: Alarm[], selfId?: number | nu
 // 겹치는 알람 확인 창 글: "평일 오전 7시 알람과 10월 19일 월요일 오전 7시에 겹쳐요. 덮어쓸까요?"
 export function clashLabel(c: Clash, today = new Date()) {
   const a = c.alarm
-  const off = c.offs[0]
-  const which = a.days.length ? daysLabel(a.days) : monthDayLabel(a.dateOff ?? off, today)
-  const day = `${monthDayLabel(off, today)} ${DAY_NAMES[(today.getDay() + off) % 7]}요일`
-  return `${which} ${clockLabel(a.time)} 알람과 ${day} ${clockLabel(a.time)}에 겹쳐요. 덮어쓸까요?`
+  const f = c.hits[0]
+  const which = a.days.length ? daysLabel(a.days) : monthDayLabel(a.dateOff ?? f.off, today)
+  const day = `${monthDayLabel(f.off, today)} ${DAY_NAMES[(today.getDay() + f.off) % 7]}요일`
+  return `${which} ${clockLabel(a.time)} 알람과 ${day} ${clockLabel(f.tm)}에 겹쳐요. 덮어쓸까요?`
 }
 
-// 덮어쓰기: 기존 알람에서 새 알람과 겹친 회차만 뺀다. 나머지 회차는 그대로 울린다
+// 덮어쓰기(시안 overwrite): 기존 알람의 실제 회차 중 새 알람과 겹친 회차만 뺀다. 나머지 회차는 그대로 울린다
 // - 한 번 알람은 그 한 회차가 겹친 것이라 지운다
-// - 반복끼리(겹치면 시각이 같다): 새 알람이 맡는 요일을 기존 알람에서 뺀다. 그 요일의 기존 회차 중 겹치지 않은 것
-//   (새 알람이 건너뛰거나 꺼 둔 날)은 그 날짜의 한 번 알람으로 남긴다. 요일이 다 빠지면 지운다
-// - 새 알람이 한 번이고 기존이 반복이면 그 날짜 하나만 빼야 하는데, 날짜별로 빼 두는 칸이 아직 없어 반영하지 않는다
+// - 같은 시각의 반복끼리: 새 알람이 맡는 요일을 기존 알람에서 뺀다. 그 요일의 기존 회차 중 겹치지 않은 것
+//   (새 알람이 건너뛰거나 꺼 두거나 시각을 바꾼 날, 기존 알람의 이번만)은 그 날짜의 한 번 알람으로 남긴다
+// - 그 밖(새 알람이 한 번이거나 시각이 다른 반복): 겹친 날짜마다 그날만 울리지 않게 한다(다른 날짜의 예외는 그대로)
 export function applyOverwrite(list: Alarm[], d: AlarmDraft, clashes: Clash[], now = nowMinutes(), today = new Date()) {
   let out = [...list]
   let id = Math.max(0, ...list.map((a) => a.id))
-  for (const { alarm: a, offs } of clashes) {
-    if (!out.some((x) => x.id === a.id)) continue
+  for (const { alarm, hits } of clashes) {
+    const a = out.find((x) => x.id === alarm.id)
+    if (!a) continue
     if (!a.days.length) {
       out = out.filter((x) => x.id !== a.id)
       continue
     }
-    if (!d.days.length) continue
-    const gone = d.days.filter((x) => a.days.includes(x))
-    const { missed: _missed, ...rest } = a
-    for (const off of ringOffs(a, now, today)) {
-      if (!gone.includes((today.getDay() + off) % 7) || offs.includes(off)) continue
-      out.push({ ...rest, id: ++id, days: [], dateOff: off, skipOff: null, pauseTo: null, pauseDays: null })
+    let next: Alarm
+    if (d.days.length && a.time === d.time) {
+      const gone = d.days.filter((x) => a.days.includes(x))
+      const hit = (x: Ring) => hits.some((h) => h.off === x.off && h.tm === x.tm)
+      const { missed: _missed, ...rest } = a
+      for (const x of rings(a, Infinity, now, today)) {
+        if (!gone.includes((today.getDay() + x.off) % 7) || hit(x)) continue
+        out.push({ ...rest, id: ++id, days: [], dateOff: x.off, time: x.tm, way: x.way, exc: {}, skipOff: null, pauseTo: null, pauseDays: null })
+      }
+      next = { ...a, days: a.days.filter((x) => !gone.includes(x)) }
+    } else {
+      const exc = { ...(a.exc ?? {}) }
+      hits.forEach((h) => {
+        exc[h.off] = { drop: true }
+      })
+      next = { ...a, exc }
     }
-    // 요일이 줄어 건너뛸 날이 빠졌으면 fixDraft가 건너뛰기를 푼다
-    const days = a.days.filter((x) => !gone.includes(x))
-    out = days.length
-      ? out.map((x) => (x.id === a.id ? { ...x, ...fixDraft({ ...x, days }, now) } : x))
+    // 요일이 줄어 건너뛸 날·예외가 빠졌으면 fixDraft가 푼다
+    out = next.days.length
+      ? out.map((x) => (x.id === a.id ? { ...next, ...fixDraft(next, now, today) } : x))
       : out.filter((x) => x.id !== a.id)
   }
   return out

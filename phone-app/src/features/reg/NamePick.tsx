@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SvgXml } from 'react-native-svg'
 
-import { ObScreen, obStyles } from '@/components/ObScreen'
+import { Ko, ObScreen, obStyles } from '@/components/ObScreen'
+import { useRipple } from '@/components/RippleButton'
 import { useInnerBack } from '@/features/app/flow'
 import { setBedInfo, useBedInfo } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
@@ -65,12 +66,14 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
     <ObScreen
       title="이 침대를 뭐라고 부를까요?"
       lead="고른 이름에 '침대'를 붙여 부를 때만 이 침대가 대답해요."
+      flow
       primary={{
         label,
         onPress: save,
         disabled: blocked || waiting || !pick || (!pending && renaming && pick === current),
       }}
-      secondary={{
+      // 시안: 취소는 이름을 바꿀 때나 저장을 기다릴 때만 보인다(처음 등록할 때는 이름을 꼭 정한다)
+      secondary={renaming || pending ? {
         label: '취소',
         onPress: () => {
           if (waiting) return
@@ -78,17 +81,17 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
           onCancel()
         },
         disabled: waiting,
-      }}
+      } : undefined}
     >
       <FruitGrid label="부르는 이름" value={pick} used={used} disabled={pending} onPick={setPick} />
       {(blocked || r.timedOut || taken) && (
-        <Text style={obStyles.noteBad} role="status">
+        <Ko style={obStyles.noteBad} role="status">
           {blocked
             ? '침대와 연결되어 정보를 확인한 뒤 저장할 수 있어요.'
             : taken
               ? '다른 침대가 먼저 사용한 이름이에요. 다른 이름을 골라 주세요.'
               : '저장 결과를 확인하지 못했어요. 다시 시도하거나 기다리기를 취소해 주세요.'}
-        </Text>
+        </Ko>
       )}
     </ObScreen>
   )
@@ -114,13 +117,11 @@ export function FruitGrid({
         const isUsed = used.includes(f.name)
         const on = f.name === value
         return (
-          <Pressable
+          <FruitButton
             key={f.name}
-            style={styles.fruit}
+            on={on}
             onPress={() => !disabled && onPick(f.name)}
-            disabled={isUsed || disabled}
-            role="radio"
-            aria-checked={on}
+            disabled={isUsed || !!disabled}
             accessibilityLabel={isUsed ? `${f.name}, 사용 중` : f.name}
           >
             <View style={[styles.ic, on && styles.icOn, isUsed && styles.dim]}>
@@ -128,19 +129,55 @@ export function FruitGrid({
             </View>
             <Text style={[styles.name, on && styles.nameOn, isUsed && styles.dim]}>{f.name}</Text>
             <Text style={styles.used}>{isUsed ? '사용 중' : ''}</Text>
-          </Pressable>
+          </FruitButton>
         )
       })}
     </View>
   )
 }
 
+// 과일 버튼 한 칸: 누르면 칸 전체(모서리 16)에 물결이 퍼진다(시안 .ob .fruits button)
+function FruitButton({
+  on,
+  onPress,
+  disabled,
+  accessibilityLabel,
+  children,
+}: {
+  on: boolean
+  onPress: () => void
+  disabled: boolean
+  accessibilityLabel: string
+  children: React.ReactNode
+}) {
+  const { host, onLayout, start, end, layer } = useRipple(on ? color.fg : color['fg-2'], FRUIT_RADIUS)
+  return (
+    <Pressable
+      ref={host}
+      onLayout={onLayout}
+      style={styles.fruit}
+      onPress={onPress}
+      onPressIn={start}
+      onPressOut={end}
+      disabled={disabled}
+      role="radio"
+      aria-checked={on}
+      accessibilityLabel={accessibilityLabel}
+    >
+      {children}
+      {layer}
+    </Pressable>
+  )
+}
+
+const FRUIT_RADIUS = { borderRadius: 16 }
 const IC = Platform.OS === 'ios' ? 52 : 46
 const IC_SVG = Platform.OS === 'ios' ? 28 : 25
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Platform.OS === 'ios' ? 10 : 6 },
-  fruit: { width: '33.33%', paddingVertical: 4, alignItems: 'center', gap: 4 },
+  // 세 칸 사이 8(시안 gap: 10px 8px, 갤럭시 6px 8px)
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: Platform.OS === 'ios' ? 10 : 6, columnGap: 8 },
+  fruit: { flexBasis: '30%', flexGrow: 1, paddingVertical: 4, alignItems: 'center', gap: 4, borderRadius: 16 },
   ic: {
     width: IC,
     height: IC,

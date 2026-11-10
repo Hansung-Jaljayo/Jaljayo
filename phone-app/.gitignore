@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# 침대 화면 사진·모델(시안 폴더를 가리키는 링크, 올리지 않는다)
+web/bed3d/assets
+web/bed3d/photo/room_coarse.txt
+web/bed3d/photo/room_webp_pack

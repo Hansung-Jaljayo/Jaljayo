@@ -1,14 +1,19 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
   onRetry?: () => void;
   onHome?: () => void;
+  // 시안: 실패 화면에도 아래에 '설정'(앱 정보) 링크
   onSettings?: () => void;
 }
 
 export default function BedWifiConnectFailScreen({ onRetry, onHome, onSettings }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           <View style={styles.iconBox}>
@@ -19,24 +24,23 @@ export default function BedWifiConnectFailScreen({ onRetry, onHome, onSettings }
             />
           </View>
 
-          <Text style={styles.title}>침대가 와이파이에{'\n'}연결하지 못했어요</Text>
+          <Text style={styles.title}>{keepAll(balance('침대가 와이파이에 연결하지 못했어요'))}</Text>
 
-          <Text style={styles.description}>공유기 전원과 비밀번호를 확인해 주세요.</Text>
+          <Text style={styles.description}>{keepAll(bySentence('공유기 전원과 비밀번호를 확인해 주세요.'))}</Text>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
+          <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onRetry}>
             <Text style={styles.primaryText}>다시 시도</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
+          <RippleButton style={styles.secondaryButton} onPress={onHome}>
             <Text style={styles.secondaryText}>다른 와이파이 고르기</Text>
-          </TouchableOpacity>
-
+          </RippleButton>
           <View style={styles.links}>
-            <TouchableOpacity style={styles.link} onPress={onSettings}>
-              <Text style={styles.linkText}>설정</Text>
-            </TouchableOpacity>
+            <RippleButton style={styles.link} rippleColor="#513E39" onPress={onSettings}>
+              <LinkText style={styles.linkText}>설정</LinkText>
+            </RippleButton>
           </View>
         </View>
       </View>
@@ -81,16 +85,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },
@@ -108,7 +112,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -127,7 +131,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },
@@ -143,7 +147,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,

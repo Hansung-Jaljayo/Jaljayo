@@ -1,4 +1,8 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
   onRetry?: () => void;
@@ -7,7 +11,7 @@ interface Props {
 
 export default function BedFirmwareUpdateScreen({ onRetry, onSettings }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           <View style={styles.iconBox}>
@@ -18,22 +22,20 @@ export default function BedFirmwareUpdateScreen({ onRetry, onSettings }: Props) 
             />
           </View>
 
-          <Text style={styles.title}>침대 프로그램 업데이트가{'\n'}필요해요</Text>
+          <Text style={styles.title}>{keepAll(balance('침대 프로그램 업데이트가 필요해요'))}</Text>
 
-          <Text style={styles.description}>
-            {'이 앱과 맞지 않는 침대 프로그램이에요.\n문의하기로 연락해 주시면 업데이트 방법을\n알려 드려요.'}
-          </Text>
+          <Text style={styles.description}>{keepAll(bySentence('이 앱과 맞지 않는 침대 프로그램이에요. 문의하기로 연락해 주시면 업데이트 방법을 알려 드려요.'))}</Text>
         </View>
 
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
+          <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onRetry}>
             <Text style={styles.primaryText}>문의하기</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
           <View style={styles.links}>
-            <TouchableOpacity style={styles.link} onPress={onSettings}>
-              <Text style={styles.linkText}>설정</Text>
-            </TouchableOpacity>
+            <RippleButton style={styles.link} rippleColor="#513E39" onPress={onSettings}>
+              <LinkText style={styles.linkText}>설정</LinkText>
+            </RippleButton>
           </View>
         </View>
       </View>
@@ -78,16 +80,16 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },
@@ -105,7 +107,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,

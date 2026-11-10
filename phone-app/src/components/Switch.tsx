@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Animated, Easing, Pressable, StyleSheet } from 'react-native'
 
-import { color, motion, radius, shadow } from '@/theme/tokens'
+import { color, cssEase, motion, radius, shadow } from '@/theme/tokens'
 
 type Props = {
   value: boolean
@@ -12,16 +12,21 @@ type Props = {
 
 // 피그마 컴포넌트 "sw · 스위치". 켜짐은 복숭아색, 꺼짐은 회갈색. 손잡이는 26 옮겨 간다
 export function Switch({ value, onValueChange, accessibilityLabel, disabled }: Props) {
+  // 손잡이(t)와 바탕색(bg)은 시안처럼 곡선이 다르다: 손잡이는 시트 곡선, 바탕색은 CSS ease. 둘 다 0.25초
   const [t] = useState(() => new Animated.Value(value ? 1 : 0))
+  const [bg] = useState(() => new Animated.Value(value ? 1 : 0))
 
   useEffect(() => {
-    Animated.timing(t, {
-      toValue: value ? 1 : 0,
-      duration: motion.switch.duration,
-      easing: Easing.bezier(...motion.switch.bezier),
-      useNativeDriver: false,
-    }).start()
-  }, [value, t])
+    Animated.parallel([
+      Animated.timing(t, {
+        toValue: value ? 1 : 0,
+        duration: motion.switch.duration,
+        easing: Easing.bezier(...motion.switch.bezier),
+        useNativeDriver: false,
+      }),
+      Animated.timing(bg, { toValue: value ? 1 : 0, duration: motion.switch.duration, easing: Easing.bezier(...cssEase), useNativeDriver: false }),
+    ]).start()
+  }, [value, t, bg])
 
   return (
     <Pressable
@@ -34,7 +39,7 @@ export function Switch({ value, onValueChange, accessibilityLabel, disabled }: P
       <Animated.View
         style={[
           styles.track,
-          { backgroundColor: t.interpolate({ inputRange: [0, 1], outputRange: [color.switchOff, color['accent-strong']] }) },
+          { backgroundColor: bg.interpolate({ inputRange: [0, 1], outputRange: [color.switchOff, color['accent-strong']] }) },
         ]}
       >
         <Animated.View

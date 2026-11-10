@@ -1,17 +1,18 @@
 import { Image } from 'expo-image'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { ClockBand } from '@/components/ClockBand'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Fade } from '@/components/Fade'
 import { RippleButton } from '@/components/RippleButton'
-import { TAB_BAR_SPACE, TabBar, type TabKey } from '@/components/TabBar'
+import { TAB_BAR_SPACE } from '@/components/TabBar'
 import { TabTop } from '@/components/TabTop'
 import { clockLabel, clockParts, inLabel, nowMinutes } from '@/features/alarm/alarm'
 import { useBedInfo } from '@/features/bed/bed'
 import { type BedMessage, type BedRequest, startBedRequest } from '@/features/bed/requests'
-import { color, font, radius, shadow, space } from '@/theme/tokens'
+import { color, cssEase, font, radius, shadow, space } from '@/theme/tokens'
 
 import {
   type Resv,
@@ -24,11 +25,12 @@ import {
   useResvState,
 } from './resv'
 import { ResvSheet } from './ResvSheet'
+import { PullScroll } from '@/components/PullScroll'
 
 // 예약 탭. 피그마 "예약 탭 / 있음"과 "예약 탭 / 없음 + 실패 카드"는 이 탭의 두 모습이다.
 // 맨 위 요약 카드: 예약이 있으면 시각·남은 시간·바꿀 자세, 없으면 "자세 예약하기".
 // 예약이 있으면 그 아래 10분 앞당기기·늦추기·예약 취소, 맨 아래 지난 예약을 실행하지 못한 이유 카드
-export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
+export function ResvTab() {
   const insets = useSafeAreaInsets()
   const { item, fail } = useResvState()
   // 남은 시간이 바뀌도록 30초마다 다시 그린다
@@ -121,7 +123,7 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 
   return (
     <View style={styles.screen}>
-      <ScrollView
+      <PullScroll
         contentContainerStyle={[
           styles.body,
           { paddingTop: insets.top + space[6], paddingBottom: TAB_BAR_SPACE + insets.bottom },
@@ -129,27 +131,33 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
         showsVerticalScrollIndicator={false}
       >
         <TabTop />
+        {/* 불러오는 중에는 위 줄을 뺀 내용이 0.2초 동안 흐려지고 막힌다(시안 .loading) */}
+        <Fade on={bed.loading} style={styles.inner}>
         {/* tban · 시계 무효 띠(침대가 시각을 모를 때만) */}
         <ClockBand />
 
         {/* tcard · 요약 카드 */}
         {item ? (
-          <ResvCard item={item} now={now} waiting={waiting} onEdit={() => setSheetOpen(true)} />
+          <ResvCard item={item} now={now} waiting={waiting} locked={!bed.connected} onEdit={() => setSheetOpen(true)} />
         ) : (
           <View style={styles.card}>
             <Text style={styles.eyebrow}>자세 예약</Text>
             <Text style={styles.none}>예약이 없어요</Text>
             <Text style={styles.noneSub}>정한 시각에 침대가 소리 없이 자세를 바꿔요</Text>
             {/* act · 버튼: 자세 예약 창을 연다 */}
+            {/* 연결이 끊기면 예약 버튼들을 흐리게 막는다(시안 .off-line [data-rnew] 등) */}
+            <View style={!bed.connected && styles.lockDim} pointerEvents={bed.connected ? 'auto' : 'none'}>
             <RippleButton style={styles.act} onPress={() => setSheetOpen(true)}>
               <Image source={require('../../../assets/icons/plus.svg')} style={styles.icon20} />
               <Text style={styles.actText}>자세 예약하기</Text>
             </RippleButton>
+            </View>
           </View>
         )}
 
         {/* 예약 버튼 묶음. 예약이 없으면 비어 있어도 카드 사이를 8 더 띄운다 */}
-        <View style={[styles.acts, waiting && styles.waiting]} pointerEvents={waiting ? 'none' : 'auto'}>
+        <Fade on={waiting} to={0.55}>
+        <View style={[styles.acts, !bed.connected && styles.lockDim]} pointerEvents={bed.connected ? 'auto' : 'none'}>
           {item && (
             <>
               {/* twin · 두 버튼 */}
@@ -171,16 +179,13 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
             </>
           )}
         </View>
+        </Fade>
 
         {/* mcard · 알림 카드: 실행하지 못한 예약 */}
-        {fail && (
-          <View style={styles.mcard}>
-            <Text style={styles.mTitle}>{fail.title}</Text>
-            <Text style={styles.mReason}>{fail.reason}</Text>
-          </View>
-        )}
-      </ScrollView>
-      <TabBar current="resv" onPick={onTab} />
+        {/* 꾹 누르면 가운데에 삭제 버튼이 뜬다. 카드를 다시 누르면 닫힌다 */}
+        {fail && <FailCard title={fail.title} reason={fail.reason} />}
+        </Fade>
+      </PullScroll>
       <ResvSheet
         open={sheetOpen}
         item={item}
@@ -211,15 +216,16 @@ export function ResvTab({ onTab }: { onTab?: (key: TabKey) => void }) {
 
 // 예약이 있을 때 요약 카드: "오늘 · 28분 뒤" / 오후 11:10 > / "잠 자세로 바꿔요 · 머리 0° 다리 0°".
 // 시각을 누르면 자세 예약 창으로 예약을 바꾼다
-function ResvCard({ item, now, waiting, onEdit }: { item: Resv; now: number; waiting: boolean; onEdit: () => void }) {
+function ResvCard({ item, now, waiting, locked, onEdit }: { item: Resv; now: number; waiting: boolean; locked: boolean; onEdit: () => void }) {
   const { ampm, hm } = clockParts(item.time)
   return (
-    <View style={[styles.card, styles.cardOn, waiting && styles.waiting]} pointerEvents={waiting ? 'none' : 'auto'}>
+    <Fade on={waiting} to={0.55} style={[styles.card, styles.cardOn]}>
       <Text style={styles.eyebrow}>
         {item.off ? '내일' : '오늘'} · {inLabel(Math.max(0, resvMinsLeft(item, now)))}
       </Text>
       <RippleButton
-        style={styles.big}
+        style={[styles.big, locked && styles.lockDim]}
+        disabled={locked}
         rippleColor={color['on-ink']}
         onPress={onEdit}
         accessibilityLabel={`예약 바꾸기, ${clockLabel(item.time)}`}
@@ -229,7 +235,54 @@ function ResvCard({ item, now, waiting, onEdit }: { item: Resv; now: number; wai
         <Image source={require('../../../assets/icons/chevron-on-ink.svg')} style={styles.chevron} />
       </RippleButton>
       <Text style={styles.sub}>{resvSubLabel(item)}</Text>
-    </View>
+    </Fade>
+  )
+}
+
+const EASE = Easing.bezier(...cssEase)
+
+// 실행하지 못한 예약 기록 카드. 꾹 누르면 글자가 흐려지며 가운데에 삭제 버튼이 커지며 나타나고(0.2초),
+// 삭제를 누르면 카드가 흐려지며 사라진 뒤 기록을 지운다(침대에 알리는 요청은 아직 없다)
+function FailCard({ title, reason }: { title: string; reason: string }) {
+  const [menu, setMenu] = useState(false)
+  const [k] = useState(() => new Animated.Value(0))
+  const [gone] = useState(() => new Animated.Value(1))
+  useEffect(() => {
+    Animated.timing(k, { toValue: menu ? 1 : 0, duration: 200, easing: EASE, useNativeDriver: true }).start()
+  }, [menu, k])
+  // 삭제 버튼의 물결이 보인 뒤에 사라지기 시작한다(바로 흐려지면 누른 물결이 안 보인다)
+  const remove = () => {
+    Animated.timing(gone, { toValue: 0, duration: 200, delay: 260, easing: EASE, useNativeDriver: true }).start(({ finished }) => {
+      if (finished) setResvState({ fail: null })
+    })
+  }
+  return (
+    <Animated.View style={{ opacity: gone, transform: [{ scale: gone.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) }] }}>
+      <RippleButton
+        style={styles.mcard}
+        rippleColor={color.fg}
+        onLongPress={() => setMenu(true)}
+        onPress={() => setMenu(false)}
+        delayLongPress={400}
+        accessibilityHint="꾹 누르면 기록을 지울 수 있어요"
+      >
+        <Animated.View style={{ opacity: k.interpolate({ inputRange: [0, 1], outputRange: [1, 0.25] }) }}>
+          <Text style={styles.mTitle}>{title}</Text>
+          <Text style={styles.mReason}>{reason}</Text>
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.mDelWrap,
+            { opacity: k, transform: [{ scale: k.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] },
+          ]}
+          pointerEvents={menu ? 'box-none' : 'none'}
+        >
+          <RippleButton style={styles.mDel} rippleColor={color['on-ink']} onPress={remove}>
+            <Text style={styles.mDelText}>삭제</Text>
+          </RippleButton>
+        </Animated.View>
+      </RippleButton>
+    </Animated.View>
   )
 }
 
@@ -290,7 +343,9 @@ const styles = StyleSheet.create({
   sub: { fontFamily: font.regular, fontSize: 17, color: color['on-ink-muted'] },
 
   // 침대의 답을 기다리는 동안
-  waiting: { opacity: 0.55 },
+  inner: { gap: space[8] },
+  // 연결 끊김으로 막힌 칸(시안 .off-line ... opacity: .45)
+  lockDim: { opacity: 0.45 },
 
   acts: { gap: space[6] },
   twin: { flexDirection: 'row', gap: space[8] },
@@ -318,4 +373,7 @@ const styles = StyleSheet.create({
   },
   mTitle: { fontFamily: font.bold, fontSize: 17, lineHeight: 21.25, color: color.fg },
   mReason: { fontFamily: font.regular, fontSize: 15, lineHeight: 22.5, color: color.muted },
+  mDelWrap: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, alignItems: 'center', justifyContent: 'center' },
+  mDel: { height: 44, paddingHorizontal: 28, borderRadius: 14, backgroundColor: color.red, alignItems: 'center', justifyContent: 'center' },
+  mDelText: { fontFamily: font.bold, fontSize: 17, color: color['on-ink'] },
 })

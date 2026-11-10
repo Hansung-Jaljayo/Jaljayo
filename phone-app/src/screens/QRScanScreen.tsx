@@ -1,7 +1,10 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
+import { balance, bySentence, keepAll, LinkText, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
   // 잘자요 침대 QR을 읽었을 때(한 번만 부른다)
@@ -12,7 +15,9 @@ interface Props {
 }
 
 // 개발 빌드에서 카메라 칸을 길게 누르면 찍은 것처럼 넘어간다(시뮬레이터에는 카메라가 없다)
-const DEV_QR = 'jaljayo://bed/1';
+export const DEV_QR = 'jaljayo://bed/1';
+// 개발용: 시험 도구가 "QR을 읽은 것처럼" 부른다(지금 QR 화면이 떠 있을 때만 들어 있다)
+export const qrScanDev: { current: ((data: string) => void) | null } = { current: null };
 
 export default function QRScanScreen({ onScanned, onDenied, onSettings }: Props) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -39,16 +44,21 @@ export default function QRScanScreen({ onScanned, onDenied, onSettings }: Props)
     }
   };
 
+  useEffect(() => {
+    qrScanDev.current = handleScanned;
+    return () => {
+      qrScanDev.current = null;
+    };
+  });
+
   if (!permission || !permission.granted) {
     return <View style={styles.container} />;
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>침대 등록</Text>
-      <Text style={styles.description}>
-        {'침대 모듈에 붙은 QR 코드를 네모 안에\n비춰 주세요'}
-      </Text>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
+      <Text style={styles.title}>{keepAll(balance('침대 등록'))}</Text>
+      <Text style={styles.description}>{keepAll(bySentence('침대 모듈에 붙은 QR 코드를 네모 안에 비춰 주세요.'))}</Text>
 
       <View style={styles.fill}>
         <Pressable
@@ -109,12 +119,12 @@ export default function QRScanScreen({ onScanned, onDenied, onSettings }: Props)
       )}
 
       <View style={styles.links}>
-        <TouchableOpacity style={styles.link} onPress={() => { setShowWhere(!showWhere); setWrongQR(false); }}>
-          <Text style={styles.linkText}>{showWhere ? '접기' : 'QR 코드가 안 보여요'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.link} onPress={onSettings}>
-          <Text style={styles.linkText}>설정</Text>
-        </TouchableOpacity>
+        <RippleButton style={styles.link} rippleColor="#513E39" onPress={() => { setShowWhere(!showWhere); setWrongQR(false); }}>
+          <LinkText style={styles.linkText}>{showWhere ? '접기' : 'QR 코드가 안 보여요'}</LinkText>
+        </RippleButton>
+        <RippleButton style={styles.link} rippleColor="#513E39" onPress={onSettings}>
+          <LinkText style={styles.linkText}>설정</LinkText>
+        </RippleButton>
       </View>
     </SafeAreaView>
   );
@@ -131,15 +141,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
   },
   fill: {
@@ -190,12 +200,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 0,
     borderBottomRightRadius: 12,
   },
+  // 시안 .ob .links: 높이 48 줄, 아래 여백은 화면 여백(아이폰 40·갤럭시 16)뿐
   links: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
+    alignItems: 'center',
+    height: 48,
     gap: 8,
-    paddingBottom: 16,
   },
   link: {
     paddingVertical: 1,
@@ -205,7 +217,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,
@@ -219,7 +231,7 @@ const styles = StyleSheet.create({
   },
   noteText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     lineHeight: 22,
     color: '#AD332C',
   },
@@ -296,8 +308,8 @@ const styles = StyleSheet.create({
   },
   whereText: {
     fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 26,
+    fontFamily: font.semiBold,
+    lineHeight: 25.5,
     textAlign: 'center',
     color: '#2D2220',
   },
@@ -310,7 +322,7 @@ const styles = StyleSheet.create({
   },
   permissionButtonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontFamily: font.semiBold,
     fontSize: 15,
   },
 });

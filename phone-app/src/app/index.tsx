@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { BackHandler, StyleSheet, Text, View } from 'react-native'
+import { type ComponentRef, useCallback, useEffect, useRef, useState } from 'react'
+import { Animated, BackHandler, ScrollView, StyleSheet, Text, useWindowDimensions, View, Easing } from 'react-native'
 
 import { ConfirmDialog } from '@/components/ConfirmDialog'
-import type { TabKey } from '@/components/TabBar'
+import { PortalHost, PortalScope } from '@/components/Portal'
+import { TabBar, type TabKey } from '@/components/TabBar'
 import { AlarmTab } from '@/features/alarm/AlarmTab'
 import { closeSettings, getFlow, setFlow, useFlow } from '@/features/app/flow'
 import { bedName, getBedInfo, setBedInfo, useBedInfo } from '@/features/bed/bed'
 import { useBedRequest } from '@/features/bed/useBedRequest'
 import { CONTACT } from '@/features/hospital/hospital'
 import { PoseTab } from '@/features/pose/PoseTab'
+import { resetPoseStore } from '@/features/pose/poseStore'
 import { obBack, RegisterFlow, regActions } from '@/features/reg/RegisterFlow'
 import { setResvState } from '@/features/resv/resv'
 import { ResvTab } from '@/features/resv/ResvTab'
@@ -16,13 +18,19 @@ import OpenSourceScreen from '@/screens/OpenSourceScreen'
 import PrivacyPolicyScreen from '@/screens/PrivacyPolicyScreen'
 import SettingsScreen from '@/screens/SettingsScreen'
 import TermsScreen from '@/screens/TermsScreen'
-import { color, font, radius } from '@/theme/tokens'
+import { color, font, radius, cssEase } from '@/theme/tokens'
+
+// 시안 CSS ease
+const EASE = Easing.bezier(...cssEase)
 
 // 침대 상태를 읽는 시간. 침대와 주고받는 길이 생기면 침대가 상태를 보내 줄 때 loading을 끈다
 const LOAD_MS = 2000
 
-// 첫 화면: 자세 탭. 탭을 바꿔도 각 탭의 상태가 남도록 세 탭을 모두 그려 두고 고른 탭만 보인다.
-// 등록·오류·병원 관리 화면과 설정 화면은 탭 위에 덮는다
+const TAB_ORDER: TabKey[] = ['pose', 'alarm', 'resv']
+
+// 첫 화면: 자세 탭. 시안처럼 세 탭을 옆으로 나란히 붙인 넘김 판에 그려 두고(탭을 바꿔도 각 탭의 상태가 남는다),
+// 손가락으로 밀어 넘기거나 아래 탭을 누르면 옆 탭으로 간다. 아래 탭 막대는 하나만 두고 알약이 넘긴 정도를 따라간다.
+// 탭 안의 시트·확인 창은 탭 막대 위층(PortalHost)에 그린다. 등록·오류·병원 관리 화면과 설정 화면은 그 위에 덮는다
 export default function Index() {
   const [tab, setTab] = useState<TabKey>('pose')
   const flow = useFlow()
@@ -32,6 +40,21 @@ export default function Index() {
   const [ringBlock, setRingBlock] = useState(false)
   const [toast, setToast] = useState('')
   const lastBack = useRef(0)
+  const { width } = useWindowDimensions()
+  const pager = useRef<ComponentRef<typeof ScrollView>>(null)
+  const [scrollX] = useState(() => new Animated.Value(0))
+  // 자세 탭이 움직이는 중이거나 저장을 기다리면 넘기지 못한다
+  // 자세 탭이 움직이는 동안 탭 넘기기를 막는다. 잠금 값은 TabPager 안에만 두어, 잠그고 풀 때 세 탭·설정 화면을 다시 그리지 않는다
+  const lockRef = useRef<((on: boolean) => void) | null>(null)
+  const onLock = useCallback((on: boolean) => lockRef.current?.(on), [])
+  // 탭으로 가기: 판을 그 탭까지 부드럽게 넘긴다
+  const go = useCallback(
+    (key: TabKey) => {
+      setTab(key)
+      pager.current?.scrollTo({ x: TAB_ORDER.indexOf(key) * width, animated: true })
+    },
+    [width],
+  )
 
   // 앱을 열 때와 연결이 돌아왔을 때 침대 상태를 다시 읽는다. 읽기 전에는 옛 값으로 조작하지 않게 막는다
   useEffect(() => {
@@ -51,6 +74,7 @@ export default function Index() {
       () => {
         setResetFail(false)
         setResvState({ item: null, fail: null })
+        resetPoseStore()
         setBedInfo({ registered: false })
         setFlow({ settings: false, doc: null, wipe: getFlow().wipe + 1 })
         setTab('pose')
@@ -74,7 +98,7 @@ export default function Index() {
       }
       if (obBack.current()) return true
       if (!f.ob && tab !== 'pose') {
-        setTab('pose')
+        go('pose')
         return true
       }
       const now = Date.now()
@@ -84,7 +108,7 @@ export default function Index() {
       return true
     })
     return () => sub.remove()
-  }, [tab])
+  }, [tab, go])
 
   useEffect(() => {
     if (!toast) return
@@ -92,21 +116,50 @@ export default function Index() {
     return () => clearTimeout(t)
   }, [toast])
 
-  const pick = (key: TabKey) => setTab(key)
+  // 개발 도구가 고르라고 한 탭으로 바꾼다(새 요청일 때만)
+  const [askSeen, setAskSeen] = useState(0)
+  if (flow.tabAsk && flow.tabAsk.n !== askSeen) {
+    setAskSeen(flow.tabAsk.n)
+    setTab(flow.tabAsk.key)
+  }
+  const askN = flow.tabAsk?.n
+  const askKey = flow.tabAsk?.key
+  useEffect(() => {
+    if (askKey) pager.current?.scrollTo({ x: TAB_ORDER.indexOf(askKey) * width, animated: true })
+  }, [askN, askKey, width])
+
+  // 판을 넘기는 동안 화면 가운데에 더 많이 걸친 탭을 고른 탭으로
+  const onScroll = Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+    useNativeDriver: true,
+    listener: (e: { nativeEvent: { contentOffset: { x: number } } }) => {
+      const i = Math.max(0, Math.min(2, Math.round(e.nativeEvent.contentOffset.x / width)))
+      setTab((t) => (t === TAB_ORDER[i] ? t : TAB_ORDER[i]))
+    },
+  })
+  const bedForTabs = useBedInfo()
+  const alarmOff = !bedForTabs.hasButton || (!!bedForTabs.ward && !bedForTabs.ward.alarmAllowed)
   // 설정을 등록 화면에서 열면 침대 묶음 없이 앱·병원 관리만
   const noBed = !!flow.ob && flow.ob !== 'splash'
   return (
     <View style={styles.fill}>
       <View style={styles.fill} key={flow.wipe}>
-        <View style={[styles.fill, tab !== 'pose' && styles.hidden]}>
-          <PoseTab onTab={pick} />
-        </View>
-        <View style={[styles.fill, tab !== 'alarm' && styles.hidden]}>
-          <AlarmTab onTab={pick} />
-        </View>
-        <View style={[styles.fill, tab !== 'resv' && styles.hidden]}>
-          <ResvTab onTab={pick} />
-        </View>
+        <PortalScope>
+          <TabPager pagerRef={pager} lockRef={lockRef} onScroll={onScroll}>
+            {TAB_ORDER.map((k) => (
+              // 화면 밖 탭은 읽기 순서에서 뺀다
+              <View
+                key={k}
+                style={{ width }}
+                accessibilityElementsHidden={tab !== k}
+                importantForAccessibility={tab === k ? 'auto' : 'no-hide-descendants'}
+              >
+                {k === 'pose' ? <PoseTab onLock={onLock} /> : k === 'alarm' ? <AlarmTab /> : <ResvTab />}
+              </View>
+            ))}
+          </TabPager>
+          <TabBar current={tab} position={Animated.divide(scrollX, width)} onPick={go} dimmed={alarmOff ? ['alarm'] : []} />
+        </PortalScope>
+        <PortalHost />
       </View>
       <RegisterFlow />
       <SettingsScreen
@@ -170,18 +223,29 @@ export default function Index() {
         onOk={() => setRingBlock(false)}
         onClose={() => setRingBlock(false)}
       />
-      {!!toast && (
-        <View style={styles.toast} pointerEvents="none" role="status">
-          <Text style={styles.toastText}>{toast}</Text>
-        </View>
-      )}
+      <Toast text={toast} />
     </View>
+  )
+}
+
+// 알림 한 줄: 0.2초 동안 나타나고 사라진다(시안 .toast)
+function Toast({ text }: { text: string }) {
+  const [shown, setShown] = useState(text)
+  const [op] = useState(() => new Animated.Value(0))
+  if (text && text !== shown) setShown(text)
+  useEffect(() => {
+    Animated.timing(op, { toValue: text ? 1 : 0, duration: 200, easing: EASE, useNativeDriver: true }).start()
+  }, [text, op])
+  if (!shown) return null
+  return (
+    <Animated.View style={[styles.toast, { opacity: op }]} pointerEvents="none" role="status">
+      <Text style={styles.toastText}>{shown}</Text>
+    </Animated.View>
   )
 }
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  hidden: { display: 'none' },
   // 시안 .toast
   toast: {
     position: 'absolute',
@@ -194,3 +258,40 @@ const styles = StyleSheet.create({
   },
   toastText: { fontFamily: font.semiBold, fontSize: 14, color: color['on-ink'] },
 })
+
+// 탭 넘김 판. 잠금 값을 여기서만 바꾸므로, 안에 든 탭들은 부모가 다시 그리지 않는 한 다시 그려지지 않는다
+function TabPager({
+  pagerRef,
+  lockRef,
+  onScroll,
+  children,
+}: {
+  pagerRef: React.RefObject<ComponentRef<typeof ScrollView> | null>
+  lockRef: React.RefObject<((on: boolean) => void) | null>
+  onScroll: (...args: unknown[]) => void
+  children: React.ReactNode
+}) {
+  const [lock, setLock] = useState(false)
+  useEffect(() => {
+    lockRef.current = setLock
+    return () => {
+      lockRef.current = null
+    }
+  }, [lockRef])
+  return (
+    <Animated.ScrollView
+      ref={pagerRef}
+      horizontal
+      pagingEnabled
+      scrollEnabled={!lock}
+      showsHorizontalScrollIndicator={false}
+      bounces={false}
+      overScrollMode="never"
+      scrollEventThrottle={16}
+      onScroll={onScroll}
+      keyboardShouldPersistTaps="handled"
+    >
+      {children}
+    </Animated.ScrollView>
+  )
+}

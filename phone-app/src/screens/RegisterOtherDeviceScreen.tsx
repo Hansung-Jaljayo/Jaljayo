@@ -1,4 +1,8 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
   description: string;
@@ -8,7 +12,7 @@ interface Props {
 
 export default function RegisterOtherDeviceScreen({ description, onRetry, onHome }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           {/* 아이콘 */}
@@ -20,20 +24,20 @@ export default function RegisterOtherDeviceScreen({ description, onRetry, onHome
             />
           </View>
 
-          <Text style={styles.title}>다른 폰에 등록된 침대예요</Text>
+          <Text style={styles.title}>{keepAll(balance('다른 폰에 등록된 침대예요'))}</Text>
 
-          <Text style={styles.description}>{description}</Text>
+          <Text style={styles.description}>{keepAll(bySentence(description))}</Text>
         </View>
 
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
+          <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onRetry}>
             <Text style={styles.primaryText}>연결하기</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
+          <RippleButton style={styles.secondaryButton} onPress={onHome}>
             <Text style={styles.secondaryText}>취소</Text>
-          </TouchableOpacity>
+          </RippleButton>
         </View>
       </View>
     </SafeAreaView>
@@ -67,21 +71,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconImage: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
   },
   title: {
     fontSize: Platform.OS === 'ios' ? 30 : 24,
-    fontWeight: '700',
+    fontFamily: font.bold,
     letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: Platform.OS === 'ios' ? 36 : 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },
@@ -99,7 +103,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -118,7 +122,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },
