@@ -39,7 +39,7 @@ class AlarmTest {
         assertEquals("이미 내일 오전 일곱 시 알람이 맞춰져 있어요", set7(t.state).say)
     }
 
-    // 11/09 이도 님 결정: 새벽=0~5시(dawn), 아침=6~11시(morning). 시각 없이 고를 때만 쓴다
+    // 11/09 결정: 새벽=0~5시(dawn), 아침=6~11시(morning). 시각 없이 고를 때만 쓴다
     @Test fun dawnAndMorningPickByHour() {
         val a = say(BedState(), "내일 새벽 다섯 시에 깨워 줘", "<maum_1>(command=set, date=tomorrow, ampm=am, time=05:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>")
         val b = say(a.state, "내일 오전 일곱 시에 깨워 줘", "<maum_1>(command=set, date=tomorrow, ampm=am, time=07:00, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>")

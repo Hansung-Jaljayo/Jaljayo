@@ -24,6 +24,10 @@ data class AlarmItem(
     val offFrom: LocalDate? = null,          // 기간 동안 끄기
     val offUntil: LocalDate? = null,
     val lastFired: LocalDateTime? = null,
+    val volume: Int = 2,                     // 11/14: 알람 소리 크기(폰 앱 1·2·3)
+    val lift: Boolean = false,               // 11/14: 울릴 때 상체 올림(폰 앱에서 켬, 설계서 4절)
+    val parent: Int? = null,                 // 11/14: 폰 앱에서 반복 알람의 그날만 바꾼 회차(이번만). 원래 알람 번호. 폰에는 원래 알람의 exc로 보인다
+    val setAt: Long = 0L,                    // 11/17: 맞춘 때(벽시계 ms). 병원 시연에서 여러 침대 알람이 겹치면 먼저 맞춘 것부터 울린다. 0이면 이 칸이 생기기 전 알람
 ) {
     val repeating get() = days.isNotEmpty()
 
@@ -95,7 +99,7 @@ data class AlarmItem(
 }
 
 object AlarmFinder {
-    /** 하루 중 때: am=0~11시, pm=12~23시, dawn(새벽)=0~5시, morning(아침)=6~11시(11/09 이도 님 결정) */
+    /** 하루 중 때: am=0~11시, pm=12~23시, dawn(새벽)=0~5시, morning(아침)=6~11시(11/09 결정) */
     fun inDayPart(hour: Int, ap: String): Boolean = when (ap) { "am" -> hour < 12; "pm" -> hour >= 12; "dawn" -> hour in 0..5; "morning" -> hour in 6..11; else -> true }
     /** 말로 가리킨 조건에 맞는 알람들. 조건이 하나도 없으면 null(앞 대화의 알람을 쓰거나 물어봐야 함) */
     fun find(alarms: List<AlarmItem>, c: Command, today: LocalDate, includeOff: Boolean = true): List<AlarmItem>? {

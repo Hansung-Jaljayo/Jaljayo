@@ -3,7 +3,7 @@ package com.jaljayo.board
 import org.json.JSONObject
 import java.io.File
 
-// 보드 시계(11/11 이도 님): 폰은 어쩌다 한 번 붙어 시각을 맞춰 주고, 그 뒤로는 보드가 스스로 센다.
+// 보드 시계(11/11): 폰은 어쩌다 한 번 붙어 시각을 맞춰 주고, 그 뒤로는 보드가 스스로 센다.
 // 맞춘 값을 파일에 남겨 앱을 다시 켜도 그대로 쓴다. 보드가 다시 부팅됐으면(시계 배터리가 없음) 보드 시계가 인터넷 시간으로
 // 맞춰졌을 때만 믿는다. 한 번도 맞춘 적이 없고 인터넷 시간도 없을 때만 폰 연결을 안내한다.
 class BoardClock(private val file: File, private val bootId: () -> String, private val autoTime: () -> Boolean,
