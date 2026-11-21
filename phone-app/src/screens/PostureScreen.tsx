@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, type StyleProp, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SvgXml } from 'react-native-svg';
 
 import { RippleButton, useRipple } from '@/components/RippleButton';
@@ -9,7 +9,7 @@ import { TAB_BAR_SPACE } from '@/components/TabBar';
 import { Fade } from '@/components/Fade';
 import { TabTop } from '@/components/TabTop';
 import { useColorAnim } from '@/components/useColorAnim';
-import { color, font, cssEase } from '@/theme/tokens';
+import { color, font, cssEase, shadow } from '@/theme/tokens';
 import { PullScroll } from '@/components/PullScroll';
 import { BedView } from '@/features/pose/BedView';
 
@@ -320,6 +320,7 @@ export default function PostureScreen({
   footAngle = 45,
   activePreset = 0,
   isLoading = false,
+  isDisconnected = false,
   isMoving = false,
   showStop = false,
   pressingButton,
@@ -343,26 +344,29 @@ export default function PostureScreen({
   const stop = useStable(onStop);
   const editPresets = useStable(onEditPresets);
   // 화면에 남는 높이로 사진 칸 높이를 정한다. 나머지 칸 높이(bodyH - heroH)는 사진 칸과 상관없어 한 번에 맞는다
+  // 탭 막대는 아래 안전 영역(홈 막대·제스처 줄)만큼 더 올라가 있으므로 그만큼 더 비운다(알람·예약 탭과 같게)
+  const insets = useSafeAreaInsets();
+  const bottomSpace = TAB_BAR_SPACE + insets.bottom;
   const [viewH, setViewH] = useState(0);
-  const [bodyH, setBodyH] = useState(0);
-  const [heroH, setHeroH] = useState(HERO_MAX);
-  if (viewH && bodyH) {
-    const fit = Math.round(Math.min(HERO_MAX, Math.max(HERO_MIN, viewH - TAB_BAR_SPACE - (bodyH - heroH))));
-    if (Math.abs(fit - heroH) > 0.5) setHeroH(fit);
-  }
+  // 사진 칸을 뺀 나머지 칸 높이. 잴 때 그 순간 그려진 사진 칸 높이를 빼서 저장한다
+  const [restH, setRestH] = useState(0);
+  const heroH =
+    viewH && restH
+      ? Math.round(Math.min(HERO_MAX, Math.max(HERO_MIN, viewH - bottomSpace - restH)))
+      : HERO_MAX;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* 끝까지 당기면 아이폰은 튕기고 갤럭시는 늘어난다 */}
       <PullScroll
         style={styles.fill}
-        contentContainerStyle={styles.inner}
+        contentContainerStyle={[styles.inner, { paddingBottom: bottomSpace }]}
         scrollEnabled={!pressingButton}
         showsVerticalScrollIndicator={false}
         onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
       >
         {/* 사진 칸 높이는 화면에 남는 만큼(최대 240). 작은 화면에서는 줄어들어 자세 버튼까지 탭에 가리지 않고 다 들어간다 */}
-        <View onLayout={(e) => setBodyH(e.nativeEvent.layout.height)}>
+        <View onLayout={(e) => setRestH(Math.round(e.nativeEvent.layout.height - heroH))}>
         {/* Header */}
         <TopRow onGear={onGear} />
 
@@ -403,7 +407,8 @@ export default function PostureScreen({
 
         {/* Angle Card */}
         <Fade on={isLoading}>
-        <View style={styles.card}>
+        {/* 연결이 끊겨 조작할 수 없으면 떠 보이지 않게 그림자를 뺀다 */}
+        <View style={[styles.card, isDisconnected && styles.cardFlat]}>
           <AngleRow
             label="머리"
             range="0 - 60도"
@@ -458,14 +463,11 @@ const holdStyles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     backgroundColor: '#FFFCFA',
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 3,
+    // 시안 .hold: 0 1px 2px rgba(52,39,36,.08), 0 4px 10px -4px rgba(52,39,36,.18)
+    boxShadow: '0px 1px 2px 0px rgba(52, 39, 36, 0.08), 0px 4px 10px -4px rgba(52, 39, 36, 0.18)',
   },
   hit: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  off: { shadowOpacity: 0, elevation: 0 },
+  off: { boxShadow: [] },
   h: { position: 'absolute', width: 10, height: 2, borderRadius: 1 },
   v: { position: 'absolute', width: 2, height: 10, borderRadius: 1 },
 });
@@ -560,7 +562,6 @@ const styles = StyleSheet.create({
   inner: {
     flexGrow: 1,
     paddingHorizontal: 18,
-    paddingBottom: TAB_BAR_SPACE,
   },
   // Hero
   // 시안: 아이폰 240, 갤럭시 184. 실제 높이는 화면 크기로 정한다(HERO_MAX 이하)
@@ -593,16 +594,12 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#FFFCFA',
     borderRadius: 17,
-    shadowColor: '#1D1614',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
+    // 시안 .hero .undo
+    boxShadow: '0px 2px 10px 0px rgba(29, 22, 20, 0.3)',
   },
   undoBtnDisabled: {
     backgroundColor: '#4A3530',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: [],
   },
   undoIcon: {
     width: 16,
@@ -649,12 +646,10 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     padding: 10,
     gap: 8,
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
+    // 시안 var(--shadow)
+    boxShadow: shadow.card,
   },
+  cardFlat: { boxShadow: [] },
   // Edit presets
   editLong: {
     marginTop: 8,
@@ -666,11 +661,8 @@ const styles = StyleSheet.create({
     paddingLeft: 18,
     paddingRight: 16,
     gap: 12,
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
+    // 시안 var(--shadow)
+    boxShadow: shadow.card,
   },
   editIcon: {
     width: 22,
@@ -689,8 +681,7 @@ const styles = StyleSheet.create({
   },
   editLongDisabled: {
     backgroundColor: '#F0EAE6',
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: [],
   },
   editTextDisabled: {
     color: '#B3A6A1',
@@ -714,11 +705,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFCFA',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#342724',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.16,
-    shadowRadius: 32,
-    elevation: 4,
+    // 시안 var(--shadow)
+    boxShadow: shadow.card,
   },
   presetIcon: {
     width: 24,
@@ -726,8 +714,7 @@ const styles = StyleSheet.create({
   },
   // 막힌 자세 버튼은 그림자가 없다(시안 .preset:disabled .ic box-shadow: none)
   presetBtnFlat: {
-    shadowOpacity: 0,
-    elevation: 0,
+    boxShadow: [],
   },
   presetLabel: {
     fontSize: 15,
@@ -764,11 +751,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    shadowColor: '#AD332C',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    elevation: 6,
+    // 시안 .dock .stop-l
+    boxShadow: '0px 12px 24px -10px rgba(173, 51, 44, 0.5)',
   },
   stopIcon: {
     width: 16,

@@ -1,5 +1,5 @@
-// 병원용 침대: 부르는 이름(과일 12개), 병실, 납품 때 넣어 보낸 침대 목록과 병원 관리 상태.
-// 실제 앱은 침대 목록·관리 비밀번호를 납품 설정에서 받는다. 아직 그 길이 없어 시안과 같은 표본 목록으로 시작한다
+// 병원용 침대: 부르는 이름(과일 12개), 병실, 보드에서 받은 병원 침대 목록과 병원 관리 상태.
+// 침대 목록은 병원 관리에 들어올 때와 바꿀 때마다 보드에 admin-list로 다시 받는다(docs/interfaces/hospital-beds.md)
 
 import { useSyncExternalStore } from 'react'
 
@@ -24,42 +24,48 @@ export const fruitXml = (svg: string, stroke: string) =>
 
 // 2층·3층 각 8개 병실
 export const ROOMS = [2, 3].flatMap((f) => Array.from({ length: 8 }, (_, i) => `${f}0${i + 1}호`))
+// 한 병실의 침대 번호(1~10)
+export const BED_NOS = Array.from({ length: 10 }, (_, i) => i + 1)
 
-export type WardBed = { id: number; room: string; name: string; phone: boolean; ok: boolean }
+// 병원 침대 하나(docs/interfaces/hospital-beds.md). id는 보드가 정한 고유 번호(예: B7Q2-1)라 글자다.
+// name은 환자가 고른 과일 이름이고, 아직 고르지 않았거나 사용을 끝냈으면 null. ok는 지난 저장 때 답했는지(앱이 따로 센다)
+export type WardBed = { id: string; room: string; no: number; name: string | null; phone: boolean; ok: boolean }
 
-// 병실마다 침대 10대, 과일 12개 중 10개를 병실마다 다르게 돌려 쓴다. 1번(201호 사과)이 이 폰이 쓰는 침대
-export const MY_BED = 1
-const sampleBeds = (): WardBed[] =>
-  ROOMS.flatMap((room, r) =>
-    Array.from({ length: 10 }, (_, k) => ({
-      room,
-      name: FRUITS[k === 0 && r === 0 ? 0 : (k * 5 + r * 3) % 12].name,
-      phone: (k * 7 + r * 3) % 10 < 8,
-    })),
-  ).map((b, i) => ({ ...b, id: i + 1, ok: true }))
+// 이 폰이 환자 폰으로 등록한 침대(bed-register 답). used는 같은 호실에서 이미 쓰는 과일 이름
+export type MyWardBed = { id: string; room: string; no: number; used: string[] }
 
 type Hospital = {
+  // 보드가 admin-list로 알려 준 병원 침대 목록. 병원 관리에 들어오기 전에는 비어 있다
   beds: WardBed[]
-  // 지난 저장 때 답하지 않은 침대
-  unconfirmed: number[]
+  // 보드가 알려 준 호실 목록(없으면 ROOMS)
+  rooms: string[]
+  // 목록을 한 번이라도 받았는지
+  loaded: boolean
+  // 지난 저장 때 답하지 않은 침대 고유 번호
+  unconfirmed: string[]
   // 병원 관리 화면 아래 결과 한 줄
   message: string
+  // 침대 목록 화면 위 결과 한 줄(추가·빼기 뒤)
+  bedsMessage: string
   // 지금 보고 있는 침대(침대 하나 화면)
-  bedId: number | null
+  bedId: string | null
+  // 이 폰이 등록한 병원 침대
+  mine: MyWardBed | null
   // 직원이 이 폰의 침대 사용을 끝냈는지(병원 관리를 나가면 "사용을 끝낸 침대" 화면)
   endedMine: boolean
   // 병원 관리를 나가면 돌아갈 화면
   back: string | null
 }
 
-let state: Hospital = { beds: sampleBeds(), unconfirmed: [], message: '', bedId: null, endedMine: false, back: null }
+const EMPTY = { beds: [], rooms: ROOMS, loaded: false, unconfirmed: [], message: '', bedsMessage: '', bedId: null, endedMine: false }
+let state: Hospital = { ...EMPTY, mine: null, back: null }
 const listeners = new Set<() => void>()
 export const getHospital = () => state
 export function setHospital(patch: Partial<Hospital>) {
   state = { ...state, ...patch }
   listeners.forEach((l) => l())
 }
-export const resetHospital = () => setHospital({ beds: sampleBeds(), unconfirmed: [], message: '', bedId: null, endedMine: false })
+export const resetHospital = () => setHospital({ ...EMPTY, mine: null })
 function subscribe(l: () => void) {
   listeners.add(l)
   return () => {
@@ -68,8 +74,38 @@ function subscribe(l: () => void) {
 }
 export const useHospital = () => useSyncExternalStore(subscribe, getHospital, getHospital)
 
-// 같은 병실의 다른 침대가 쓰는 이름
-export const usedNames = (beds: WardBed[], room: string, exceptId: number) =>
-  beds.filter((b) => b.id !== exceptId && b.room === room).map((b) => b.name)
+// 보드 답의 침대 하나를 읽는다. 모양이 맞지 않으면 null
+export function bedFrom(v: unknown, ok = true): WardBed | null {
+  if (!v || typeof v !== 'object') return null
+  const b = v as Record<string, unknown>
+  if (typeof b.id !== 'string' || typeof b.room !== 'string' || typeof b.no !== 'number') return null
+  return { id: b.id, room: b.room, no: b.no, name: typeof b.name === 'string' && b.name ? b.name : null, phone: !!b.phone, ok }
+}
+
+// admin-list 답으로 목록을 바꾼다. 지난 저장 때 답하지 않았던 침대는 그 표시를 이어 간다
+export function applyAdminList(reply: Record<string, unknown>) {
+  const miss = state.unconfirmed
+  const beds = (Array.isArray(reply.beds) ? reply.beds : [])
+    .map((v) => bedFrom(v))
+    .filter((b): b is WardBed => !!b)
+    .map((b) => ({ ...b, ok: !miss.includes(b.id) }))
+  const rooms = Array.isArray(reply.rooms) && reply.rooms.every((r) => typeof r === 'string') && reply.rooms.length ? (reply.rooms as string[]) : ROOMS
+  setHospital({ beds, rooms, loaded: true, unconfirmed: miss.filter((id) => beds.some((b) => b.id === id)) })
+}
+
+// 호실 안 침대 번호 순서
+export const byNo = (a: WardBed, b: WardBed) => a.no - b.no
+
+// 같은 호실의 다른 침대가 쓰는 번호
+export const usedNos = (beds: WardBed[], room: string, exceptId: string) =>
+  beds.filter((b) => b.id !== exceptId && b.room === room).map((b) => b.no)
+
+// 보드 답에 실린 거절 이유. 없으면 넘긴 기본 글
+export const reasonOf = (reply: Record<string, unknown>, fallback: string) =>
+  typeof reply.reason === 'string' && reply.reason ? reply.reason : fallback
+
+// QR 글에서 고유 번호를 꺼낸다(jaljayo://bed/<id>)
+export const idFromQr = (qr: string) => qr.replace(/^jaljayo:\/\/bed\//, '')
+export const qrFromId = (id: string) => `jaljayo://bed/${id}`
 
 export const CONTACT = '문의 이메일 준비 중'

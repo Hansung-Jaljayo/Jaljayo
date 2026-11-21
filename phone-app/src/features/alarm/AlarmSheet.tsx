@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
 import { BottomSheet } from '@/components/BottomSheet'
+import { DragFill } from '@/components/DragFill'
 import { ExpandRow } from '@/components/ExpandRow'
 import { OptionRows } from '@/components/OptionRows'
 import { RippleButton } from '@/components/RippleButton'
@@ -64,7 +65,7 @@ type Props = {
   // 고치는 알람이 지금 울리는 중이면 끝날 때까지 저장·삭제를 막는다(설계서 4장)
   ringing?: boolean
   // "이번만"으로 바꿀 회차의 시각이 이미 지났을 때(확인 창으로 알린다)
-  onPast?: (off: number, time: number) => void
+  onPast?: (off: number, time: number, once?: boolean) => void
   // 침대와 연결이 끊겼거나 상태를 읽는 중이면 저장·삭제를 막는다
   offline?: boolean
 }
@@ -98,10 +99,10 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
   }
 
   // 묻는 중에 값을 바꾸면 묻기를 닫고 저장 버튼으로 되돌린다(묻는 글의 날짜가 바뀐 값과 어긋나지 않게)
-  const update = (patch: Partial<AlarmDraft>, recount = pauseNew) => {
+  const update = (patch: Partial<AlarmDraft> | ((d: AlarmDraft) => Partial<AlarmDraft>), recount = pauseNew) => {
     setAsking(false)
     setDraft((d) => {
-      const next = fixDraft({ ...d, ...patch })
+      const next = fixDraft({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) })
       return recount && next.pauseDays ? { ...next, pauseTo: pauseEnd(next, next.pauseDays) } : next
     })
   }
@@ -126,6 +127,8 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
   }
 
   const save = () => {
+    // 11/17: 한 번 알람인데 고른 날의 그 시각이 이미 지났으면 저장하지 않고 알린다
+    if (!draft.days.length && (draft.dateOff ?? 0) * 1440 + draft.time <= nowMinutes()) return onPast?.(draft.dateOff ?? 0, draft.time)
     if (needsScope(alarm, draft)) setAsking(true)
     else onSave?.(draft)
   }
@@ -139,7 +142,7 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
     const off = onceTarget(alarm, draft, pauseNew)
     if (off == null) return
     // 바꿀 회차의 날에 고른 시각이 이미 지났으면 저장하지 않고 "이미 지난 시각이에요" 확인 창을 띄운다
-    if (off * 1440 + draft.time <= nowMinutes()) return onPast?.(off, draft.time)
+    if (off * 1440 + draft.time <= nowMinutes()) return onPast?.(off, draft.time, true)
     onSave?.({ ...draft, pauseTo: onceBase(alarm, draft, pauseNew).pauseTo }, 'once', off)
   }
 
@@ -147,25 +150,30 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
 
   const toggleDay = (day: number) =>
     update({ days: draft.days.includes(day) ? draft.days.filter((x) => x !== day) : [...draft.days, day] })
+  // 누른 채 끌어 지나간 요일을 켜거나 끈다(끄는 동안 여러 번 불리므로 바로 앞 값을 기준으로)
+  const setDay = (day: number, on: boolean) =>
+    update((d) => ({ days: on ? (d.days.includes(day) ? d.days : [...d.days, day]) : d.days.filter((x) => x !== day) }))
 
   return (
     // 저장 중에는 바탕 누르기·끌어내리기·뒤로 가기로도 닫히지 않는다
-    <BottomSheet open={open} onClose={locked ? noop : onClose} tall toEnd={failed}>
-      {/* shead · 시트 머리 */}
-      <View style={styles.head}>
-        <Text style={styles.title} role="heading">
-          {alarm ? '알람 고치기' : '알람 추가'}
-        </Text>
-        <RippleButton
-          style={[styles.close, locked && styles.closeLocked]}
-          onPress={onClose}
-          disabled={locked}
-          accessibilityLabel="닫기"
-        >
-          <Image source={require('../../../assets/icons/x.svg')} style={styles.icon22} />
-        </RippleButton>
-      </View>
-
+    <BottomSheet open={open} onClose={locked ? noop : onClose} tall toEnd={failed}
+      // shead · 시트 머리. 손잡이와 함께 잡고 끌어내리면 시트 전체가 내려간다
+      header={
+        <View style={styles.head}>
+          <Text style={styles.title} role="heading">
+            {alarm ? '알람 고치기' : '알람 추가'}
+          </Text>
+          <RippleButton
+            style={[styles.close, locked && styles.closeLocked]}
+            onPress={onClose}
+            disabled={locked}
+            accessibilityLabel="닫기"
+          >
+            <Image source={require('../../../assets/icons/x.svg')} style={styles.icon22} />
+          </RippleButton>
+        </View>
+      }
+    >
       {/* hint · 울리지 못한 이유 */}
       {alarm?.missed ? <Text style={styles.hint}>{alarm.missed}</Text> : null}
 
@@ -207,11 +215,15 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
             <Text style={styles.everydayText}>매일</Text>
           </RippleButton>
         </View>
-        <View
+        <View pointerEvents={locked ? 'none' : 'auto'} role="group" accessibilityLabel="반복할 요일">
+        <DragFill
           style={[styles.days, locked && styles.locked]}
-          pointerEvents={locked ? 'none' : 'auto'}
-          role="group"
-          accessibilityLabel="반복할 요일"
+          count={DAY_ORDER.length}
+          gap={space[5]}
+          on={DAY_ORDER.map((d) => draft.days.includes(d))}
+          onSet={(i, on) => setDay(DAY_ORDER[i], on)}
+          onTap={(i) => toggleDay(DAY_ORDER[i])}
+          disabled={locked}
         >
           {DAY_ORDER.map((day) => {
             const on = draft.days.includes(day)
@@ -221,12 +233,12 @@ export function AlarmSheet({ open, alarm, onClose, onSave, onDelete, wait = null
                 style={[styles.day, on && styles.dayOn]}
                 rippleColor={color.fg}
                 accessibilityState={{ selected: on }}
-                onPress={() => toggleDay(day)}
               >
                 <Text style={styles.dayText}>{DAY_NAMES[day]}</Text>
               </RippleButton>
             )
           })}
+        </DragFill>
         </View>
 
         <View style={locked && styles.locked} pointerEvents={locked ? 'none' : 'auto'}>

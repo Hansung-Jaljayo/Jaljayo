@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { createContext, useEffect, useState } from 'react'
 import {
   Animated,
   Easing,
@@ -10,16 +10,33 @@ import {
   type ScrollViewInstance,
   type ScrollViewProps,
 } from 'react-native'
-import { Gesture, GestureDetector } from 'react-native-gesture-handler'
+import { Gesture, GestureDetector, type GestureType } from 'react-native-gesture-handler'
 
 // 끝까지 당기면 내용이 손을 따라 밀렸다가 놓으면 튕겨 돌아오는 세로 스크롤 칸.
 // 아이폰은 기본 동작을 그대로 쓰고, 갤럭시는 기본(고무처럼 늘어남)을 끄고 아이폰처럼 튕기게 직접 만든다
 // ref로 스크롤 칸을 직접 움직일 수 있다(scrollToEnd 등)
 type Props = ScrollViewProps & { ref?: React.Ref<ScrollViewInstance> }
 
+// 바깥 칸의 손동작(스크롤, 갤럭시는 당김까지). 안에 든 바퀴는 이것을 막아 손가락을 처음부터 끝까지 가진다.
+// 막지 않으면 바깥이 몇 px만 움직여도 손가락을 가져가 바퀴는 안 돌고 시트만 밀린다
+export const PullGestures = createContext<GestureType[] | null>(null)
+
 export function PullScroll(props: Props) {
-  if (Platform.OS !== 'android') return <ScrollView alwaysBounceVertical {...props} />
+  if (Platform.OS !== 'android') return <IosScroll {...props} />
   return <AndroidBounce {...props} />
+}
+
+// 아이폰은 기본 스크롤 그대로. 안쪽 바퀴가 막을 수 있게 스크롤 손동작만 알려 준다
+function IosScroll({ children, ...props }: Props) {
+  const [native] = useState(() => Gesture.Native())
+  const [outer] = useState(() => [native])
+  return (
+    <GestureDetector gesture={native}>
+      <ScrollView alwaysBounceVertical {...props}>
+        <PullGestures.Provider value={outer}>{children}</PullGestures.Provider>
+      </ScrollView>
+    </GestureDetector>
+  )
 }
 
 // 아이폰과 같은 당김 저항: 많이 당길수록 덜 따라온다(d는 칸 높이)
@@ -53,7 +70,8 @@ function makeBounce() {
   const native = Gesture.Native()
   const pan = Gesture.Pan()
     .runOnJS(true)
-    .activeOffsetY([-4, 4])
+    // 폰 기본 스크롤처럼 10px 움직여야 시작한다. 더 짧으면 살짝 누르다 조금만 밀려도 안쪽 버튼 누르기가 취소된다
+    .activeOffsetY([-10, 10])
     .failOffsetX([-16, 16])
     .simultaneousWithExternalGesture(native)
     .onBegin(() => {
@@ -145,6 +163,7 @@ function AndroidBounce({
   ...rest
 }: Props) {
   const [b] = useState(makeBounce)
+  const [outer] = useState(() => [b.pan, b.native])
   const enabled = rest.scrollEnabled !== false
   useEffect(() => {
     b.set.enabled(enabled)
@@ -182,7 +201,7 @@ function AndroidBounce({
             onMomentumScrollEnd?.(e)
           }}
         >
-          {children}
+          <PullGestures.Provider value={outer}>{children}</PullGestures.Provider>
         </Animated.ScrollView>
       </GestureDetector>
     </GestureDetector>

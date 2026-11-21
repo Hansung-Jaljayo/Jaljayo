@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics'
 import { Image } from 'expo-image'
 import { useState } from 'react'
 import { Animated, Platform, StyleSheet, Text, View } from 'react-native'
@@ -47,6 +48,16 @@ type Props = {
 // 피그마 "tabs · 아래 탭 막대". 화면 아래에 떠 있는 둥근 막대.
 // 시안: 짙은 알약이 넘긴 정도를 그대로 따라가고, 알약 위 글자는 밝은 글자 한 벌을 알약 모양대로 잘라 겹친다
 // (알약이 반만 덮어도 덮인 쪽만 밝게 보인다)
+// 탭을 바꿀 때 한 번 "톡". 소리는 없다. 누를 때는 손가락이 닿는 순간, 밀어서 넘길 때는 탭이 넘어가는 순간 한 번만 부른다
+// 갤럭시는 키보드 자판을 누를 때와 같은 가장 짧은 시스템 진동(폰 설정의 터치 진동을 따른다), 아이폰은 가장 가벼운 선택 진동
+export function tabTick() {
+  const tap =
+    Platform.OS === 'android'
+      ? Haptics.performAndroidHapticsAsync(Haptics.AndroidHaptics.Keyboard_Tap)
+      : Haptics.selectionAsync()
+  tap.catch(() => {})
+}
+
 export function TabBar({ current, position, onPick, dimmed = [] }: Props) {
   const insets = useSafeAreaInsets()
   const [w, setW] = useState(0)
@@ -79,6 +90,9 @@ export function TabBar({ current, position, onPick, dimmed = [] }: Props) {
           accessibilityState={{ selected: t.key === current }}
           style={styles.tab}
           rippleColor={color.muted}
+          onPressIn={() => {
+            if (t.key !== current) tabTick()
+          }}
           onPress={() => onPick?.(t.key)}
         >
           {row(false).find((x) => x.key === t.key)}
