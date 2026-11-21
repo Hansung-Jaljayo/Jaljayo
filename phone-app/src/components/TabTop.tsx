@@ -1,27 +1,29 @@
 import { Image } from 'expo-image'
 import { StyleSheet, Text, View } from 'react-native'
 
+import { openSettings } from '@/features/app/flow'
 import { bedName, useBedInfo } from '@/features/bed/bed'
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
 import { RippleButton } from './RippleButton'
 
 type Props = {
-  // 오른쪽 위 설정 버튼. 설정 화면이 생기면 연결한다
+  // 오른쪽 위 설정 버튼. 없으면 앱 설정 화면을 연다
   onGear?: () => void
 }
 
 // 모든 탭 맨 위 머리: 침대 사진 · 연결 상태 · 침대 이름(병원용이면 "사과 침대"), 오른쪽 설정 버튼
-export function TabTop({ onGear }: Props) {
+export function TabTop({ onGear = openSettings }: Props) {
   const bed = useBedInfo()
+  const off = !bed.connected
   return (
     <View style={styles.top}>
       <View style={styles.who}>
         <Image source={require('../../assets/images/logo.png')} style={styles.photo} accessibilityLabel="잘자요 로고" />
         <View>
           <View style={styles.state}>
-            <View style={styles.dot} />
-            <Text style={styles.stateText}>연결됨</Text>
+            <View style={[styles.dot, off && styles.dotOff]} />
+            <Text style={styles.stateText}>{off ? '연결 끊김' : bed.loading ? '불러오는 중' : '연결됨'}</Text>
           </View>
           <Text style={styles.name}>{bedName(bed)}</Text>
         </View>
@@ -49,6 +51,7 @@ const styles = StyleSheet.create({
   photo: { width: 36, height: 36 },
   state: { height: 16, flexDirection: 'row', alignItems: 'center', gap: space[6] },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: color['accent-strong'] },
+  dotOff: { backgroundColor: color.red },
   stateText: { fontFamily: font.medium, fontSize: 13, color: color.muted },
   // 연결 상태 줄과 1 겹친다(피그마 top 15)
   name: { marginTop: -1, fontFamily: font.semiBold, fontSize: 20, letterSpacing: -0.6, color: color.fg },

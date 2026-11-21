@@ -1,23 +1,26 @@
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, keepAll, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
 
 interface Props {
   ssid: string;
 }
 
 export default function WifiConnectingScreen({ ssid }: Props) {
-  const rotation = useRef(new Animated.Value(0)).current;
+  const [rotation] = useState(() => new Animated.Value(0));
 
   useEffect(() => {
     Animated.loop(
       Animated.timing(rotation, {
         toValue: 1,
-        duration: 1000,
+        duration: 800,
         easing: Easing.linear,
         useNativeDriver: true,
       })
     ).start();
-  }, []);
+  }, [rotation]);
 
   const rotate = rotation.interpolate({
     inputRange: [0, 1],
@@ -25,11 +28,11 @@ export default function WifiConnectingScreen({ ssid }: Props) {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.center}>
         <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
-        <Text style={styles.title}>침대에 연결하고 있어요</Text>
-        <Text style={styles.subtitle}>침대 와이파이({ssid})에 연결해요.</Text>
+        <Text style={styles.title}>{keepAll(balance('침대에 연결하고 있어요'))}</Text>
+        <Text style={styles.subtitle}>{keepAll(`침대 와이파이(${ssid})에 연결해요.`)}</Text>
       </View>
     </SafeAreaView>
   );
@@ -40,8 +43,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4F0ED',
   },
+  // 시안 .ob 안쪽 여백(위 16, 아래 아이폰 40·갤럭시 16) 안에서 가운데
   center: {
     flex: 1,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 14,
@@ -55,17 +61,17 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.72,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
+    fontFamily: font.bold,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   subtitle: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },

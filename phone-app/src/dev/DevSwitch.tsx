@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 
 import { Switch } from '@/components/Switch'
-import { color, font, radius, shadow, space } from '@/theme/tokens'
+import { color, font, space } from '@/theme/tokens'
 
 type Props = {
   label: string
@@ -13,7 +13,6 @@ type Props = {
 export function DevSwitch({ label, value, onValueChange }: Props) {
   return (
     <View style={styles.box}>
-      <Text style={styles.tag}>시험</Text>
       <Text style={styles.label}>{label}</Text>
       <Switch value={value} onValueChange={onValueChange} accessibilityLabel={`시험: ${label}`} />
     </View>
@@ -21,17 +20,14 @@ export function DevSwitch({ label, value, onValueChange }: Props) {
 }
 
 const styles = StyleSheet.create({
+  // 판 안의 목록 한 줄: 이름 왼쪽, 스위치 오른쪽
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[8],
-    paddingVertical: space[6],
-    paddingLeft: space[12],
-    paddingRight: space[6],
-    borderRadius: radius[26],
-    backgroundColor: color.card,
-    boxShadow: shadow.card,
+    gap: space[12],
+    minHeight: 48,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.line,
   },
-  tag: { fontFamily: font.bold, fontSize: 13, color: color.red },
-  label: { fontFamily: font.semiBold, fontSize: 15, color: color.fg },
+  label: { flex: 1, fontFamily: font.medium, fontSize: 15, color: color.fg },
 })

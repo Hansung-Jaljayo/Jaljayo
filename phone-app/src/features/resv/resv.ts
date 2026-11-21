@@ -3,19 +3,13 @@
 import { useSyncExternalStore } from 'react'
 
 import { nowMinutes } from '@/features/alarm/alarm'
+import { resolvePoseKey } from '@/features/pose/poseStore'
 
 // 자세 이름. 시안의 PRESETS와 같다
 export type PoseKey = 'read' | 'tv' | 'rest' | 'sleep'
 export const POSE_NAMES: Record<PoseKey, string> = { read: '독서', tv: 'TV', rest: '휴식', sleep: '잠' }
 // 바꿀 자세 버튼 순서
 export const POSE_ORDER: PoseKey[] = ['read', 'tv', 'rest', 'sleep']
-// 자세마다 기본 머리·다리 각도(도). 시안의 PRESETS와 같다
-export const POSE_ANGLES: Record<PoseKey, { head: number; leg: number }> = {
-  read: { head: 45, leg: 15 },
-  tv: { head: 30, leg: 10 },
-  rest: { head: 15, leg: 20 },
-  sleep: { head: 0, leg: 0 },
-}
 
 // 예약 한 개: 그 시각에 침대가 소리 없이 자세를 바꾼다. 지금부터 24시간 안으로만 정할 수 있다
 export type Resv = {
@@ -65,12 +59,14 @@ export const quickDraft = (d: ResvDraft, mins: number, now = nowMinutes()): Resv
 }
 
 // 저장할 예약. 지금부터 24시간 안이 아니면 null.
-// 자세를 그대로 두고 시각만 바꾸면 예약에 저장해 둔 각도를 그대로 쓰고, 자세를 바꾸면 그 자세의 기본 각도를 쓴다
+// 자세를 그대로 두고 시각만 바꾸면 예약에 저장해 둔 각도를 그대로 쓰고, 새 예약이거나 자세를 바꾸면 자세 탭이 그 자세로 가는 각도를 쓴다
 export function resvFromDraft(d: ResvDraft, old: Resv | null, now = nowMinutes()): Resv | null {
   const off = d.off ?? (d.time > now ? 0 : 1)
   const abs = off * 1440 + d.time
   if (abs <= now || abs > now + 1440) return null
-  const angles = old && old.purpose === d.purpose ? { head: old.head, leg: old.leg } : POSE_ANGLES[d.purpose]
+  // 자세 탭과 같은 각도(저장한 기본 각도 → 지난번 → 처음 각도)
+  const v = resolvePoseKey(d.purpose)
+  const angles = old && old.purpose === d.purpose ? { head: old.head, leg: old.leg } : { head: v.head, leg: v.foot }
   return { time: d.time, off, purpose: d.purpose, ...angles }
 }
 
@@ -88,7 +84,8 @@ export const sampleResv = (now = nowMinutes()): ResvState => {
 
 // 침대가 알려 주는 예약 상태(지금 예약, 실행하지 못한 기록). 예약 탭은 useResvState()로 읽는다.
 // 침대가 저장했다고 답하거나 새 상태를 알려 줄 때 setResvState로 바꾼다
-let state: ResvState = sampleResv()
+// 처음 상태는 시안과 같게: 예약 없음 + 실행하지 못한 기록 하나(개발 도구의 "예약 없음"을 끄면 표본 예약이 생긴다)
+let state: ResvState = { ...sampleResv(), item: null }
 const listeners = new Set<() => void>()
 
 export const getResvState = () => state

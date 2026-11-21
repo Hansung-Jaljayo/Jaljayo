@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 11/17: 첫 스플래시 화면에서 아이콘 남색 칸과 바탕이 나뉘어 보였다. 바탕을 아이콘 남색(#232D46, ic_launcher_background와 같음)으로 맞춰 이어 보이게 한다 -->
+    <style name="Theme.Jaljayo" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+    </style>
+</resources>

@@ -3,6 +3,7 @@ import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { color, font, radius, shadow, space } from '@/theme/tokens'
 
+import { Portal } from './Portal'
 import { RippleButton } from './RippleButton'
 
 type Props = {
@@ -32,29 +33,31 @@ export function ConfirmDialog({ open, title, message, okLabel = '확인', noLabe
   if (!open) return null
 
   return (
-    <View style={[StyleSheet.absoluteFill, styles.back]}>
-      {/* 화면이 작거나 글자가 커서 상자가 넘치면 굴려 볼 수 있다. 넘치지 않으면 가운데 */}
-      <ScrollView contentContainerStyle={styles.center} showsVerticalScrollIndicator={false}>
-        {/* dbox · 확인 창 상자 */}
-        <View style={styles.box} role="alertdialog" aria-modal accessibilityLabel={title}>
-          <Text style={styles.title} role="heading">
-            {title}
-          </Text>
-          <Text style={styles.message}>{message}</Text>
-          {/* dacts · 버튼 줄 */}
-          <View style={styles.acts}>
-            {noLabel && (
-              <RippleButton style={[styles.action, styles.gray]} rippleColor={color.fg} onPress={onClose}>
-                <Text style={[styles.actionText, styles.grayText]}>{noLabel}</Text>
+    <Portal>
+      <View style={[StyleSheet.absoluteFill, styles.back]}>
+        {/* 화면이 작거나 글자가 커서 상자가 넘치면 굴려 볼 수 있다. 넘치지 않으면 가운데 */}
+        <ScrollView contentContainerStyle={styles.center} showsVerticalScrollIndicator={false}>
+          {/* dbox · 확인 창 상자 */}
+          <View style={styles.box} role="alertdialog" aria-modal accessibilityLabel={title}>
+            <Text style={styles.title} role="heading">
+              {title}
+            </Text>
+            <Text style={styles.message}>{message}</Text>
+            {/* dacts · 버튼 줄 */}
+            <View style={styles.acts}>
+              {noLabel && (
+                <RippleButton style={[styles.action, styles.gray]} rippleColor={color.fg} onPress={onClose}>
+                  <Text style={[styles.actionText, styles.grayText]}>{noLabel}</Text>
+                </RippleButton>
+              )}
+              <RippleButton style={styles.action} rippleColor={color['on-ink']} onPress={onOk}>
+                <Text style={styles.actionText}>{okLabel}</Text>
               </RippleButton>
-            )}
-            <RippleButton style={styles.action} rippleColor={color['on-ink']} onPress={onOk}>
-              <Text style={styles.actionText}>{okLabel}</Text>
-            </RippleButton>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </Portal>
   )
 }
 

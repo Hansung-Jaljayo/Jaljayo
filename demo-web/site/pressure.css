@@ -1,0 +1,27 @@
+/* 압력 센서 칸: 오른쪽 위 메뉴 아래 */
+.pressure{position:fixed;right:24px;top:86px;width:340px;max-width:calc(100vw - 48px);background:#faf9f1f2;backdrop-filter:blur(22px);border:1px solid #ffffffa0;border-radius:18px;padding:14px 18px 14px;box-shadow:0 8px 24px #242a2320;color:#292c26}
+.pressure[hidden]{display:none}
+body.clean .pressure{display:none}
+.pressure-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pressure-top .title{letter-spacing:1px}
+#pressure-source{font-size:11px;color:#626859;text-align:right}
+#pressure-figure{display:block;width:100%;height:auto;margin:8px 0 2px}
+#pressure-figure .pf-bed{fill:#b8afa0}
+#pf-lying,#pf-standing{fill:#394a3b;transition:opacity .25s}
+.pressure-state{font-size:26px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums}
+.pressure-state[data-kind=on]{color:#394a3b}
+.pressure-state[data-kind=count]{color:#a44836}
+.pressure-state[data-kind=off],.pressure-state[data-kind=none]{color:#777c6b}
+.pressure-bar{position:relative;height:18px;margin:26px 0 8px;background:#dfe0d4;border-radius:9px}
+#pressure-fill{height:100%;width:0;border-radius:9px;background:#a9ab94;transition:width .1s linear}
+#pressure-fill.over{background:#52694c}
+#pressure-line{position:absolute;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:#a44836}
+#pressure-line span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);padding-bottom:2px;font-size:10px;color:#a44836;white-space:nowrap}
+.pressure-nums{display:flex;justify-content:space-between;font-size:11px;color:#626859;font-variant-numeric:tabular-nums}
+.pressure-nums b{font-size:13px;color:#292c26}
+.pressure-alarm{margin-top:10px;font-size:13px;font-weight:600;min-height:18px}
+.pressure-alarm[data-kind=ring]{color:#a44836}
+.pressure-alarm[data-kind=done]{color:#394a3b;font-size:18px}
+.pressure-keys{margin-top:8px;padding-top:8px;border-top:1px solid #dddfd2;font-size:10px;color:#777c6b}
+.pressure-keys[hidden]{display:none}
+@media(max-width:700px){.pressure{right:10px;top:66px;width:250px;padding:10px 12px}.pressure-state{font-size:20px}}

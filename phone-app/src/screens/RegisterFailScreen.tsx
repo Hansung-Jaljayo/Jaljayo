@@ -1,13 +1,19 @@
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, View, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { balance, bySentence, keepAll, LinkText, OB_EDGES } from '@/components/ObScreen';
+import { font } from '@/theme/tokens';
+import { RippleButton } from '@/components/RippleButton';
 
 interface Props {
+  // 시안: 실패 화면에도 아래에 '설정'(앱 정보) 링크
+  onSettings?: () => void;
   onRetry?: () => void;
   onHome?: () => void;
 }
 
-export default function RegisterFailScreen({ onRetry, onHome }: Props) {
+export default function RegisterFailScreen({ onRetry, onHome, onSettings }: Props) {
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
         <View style={styles.center}>
           {/* 아이콘 */}
@@ -19,27 +25,25 @@ export default function RegisterFailScreen({ onRetry, onHome }: Props) {
             />
           </View>
 
-          <Text style={styles.title}>등록됐는지 확인하지 못했어요</Text>
+          <Text style={styles.title}>{keepAll(balance('등록됐는지 확인하지 못했어요'))}</Text>
 
-          <Text style={styles.description}>
-            {'침대와 연결이 잠시 끊겼어요. 침대 전원과\n인터넷 연결을 확인하고 다시 시도해 주세요.'}
-          </Text>
+          <Text style={styles.description}>{keepAll(bySentence('침대와 연결이 잠시 끊겼어요. 침대 전원과 와이파이를 확인한 뒤 다시 확인해 주세요.'))}</Text>
         </View>
 
         {/* 버튼 묶음 */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.primaryButton} onPress={onRetry}>
+          <RippleButton rippleColor="#FFFAF7" style={styles.primaryButton} onPress={onRetry}>
             <Text style={styles.primaryText}>다시 확인</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
-          <TouchableOpacity style={styles.secondaryButton} onPress={onHome}>
+          <RippleButton style={styles.secondaryButton} onPress={onHome}>
             <Text style={styles.secondaryText}>처음으로</Text>
-          </TouchableOpacity>
+          </RippleButton>
 
           <View style={styles.links}>
-            <TouchableOpacity style={styles.link}>
-              <Text style={styles.linkText}>설정</Text>
-            </TouchableOpacity>
+            <RippleButton style={styles.link} rippleColor="#513E39" onPress={onSettings}>
+              <LinkText style={styles.linkText}>설정</LinkText>
+            </RippleButton>
           </View>
         </View>
       </View>
@@ -56,10 +60,12 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 18,
     paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 16,
     gap: 16,
-    justifyContent: 'center',
   },
   center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: 14,
   },
@@ -77,21 +83,21 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   iconImage: {
-    width: 56,
-    height: 56,
+    width: 44,
+    height: 44,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    letterSpacing: -0.72,
+    fontSize: Platform.OS === 'ios' ? 30 : 24,
+    fontFamily: font.bold,
+    letterSpacing: Platform.OS === 'ios' ? -0.9 : -0.72,
     color: '#2D2220',
     textAlign: 'center',
-    lineHeight: 30,
+    lineHeight: Platform.OS === 'ios' ? 37.5 : 30,
   },
   description: {
     fontSize: 17,
-    fontWeight: '400',
-    lineHeight: 26,
+    fontFamily: font.regular,
+    lineHeight: 25.5,
     color: '#513E39',
     textAlign: 'center',
   },
@@ -109,7 +115,7 @@ const styles = StyleSheet.create({
   },
   primaryText: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#FFFAF7',
     lineHeight: 24,
   },
@@ -128,7 +134,7 @@ const styles = StyleSheet.create({
   },
   secondaryText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     color: '#2D2220',
     lineHeight: 20,
   },
@@ -144,7 +150,7 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: font.bold,
     textDecorationLine: 'underline',
     color: '#513E39',
     lineHeight: 20,

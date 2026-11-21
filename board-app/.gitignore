@@ -1,0 +1,7 @@
+.gradle/
+build/
+app/build/
+local.properties
+# 음성 모델·실행 파일은 크고 출처별 조건이 있어 레포에 올리지 않는다(tools/fetch_assets.sh로 받음)
+app/src/main/assets/models/
+app/src/main/jniLibs/

@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>잘자요 침대</title>
+<style>
+  /* 앱 홈 사진 칸에 들어가는 3D 침대. 시점은 고정, 침대만 움직인다 */
+  html, body { margin: 0; height: 100%; background: #342724; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; touch-action: none; opacity: 0; transition: opacity .4s ease; }
+  canvas.ready { opacity: 1; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas aria-hidden="true"></canvas>
+<script type="module" src="scene.js"></script>
+</body>
+</html>

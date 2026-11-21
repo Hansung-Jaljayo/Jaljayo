@@ -15,12 +15,9 @@ type Props = {
 export function AlarmOff({ title, lines }: Props) {
   return (
     <View style={styles.box}>
-      {/* ic · 아이콘: 피그마는 시계 고리와 바늘·빗금 두 층이라 42 칸 안 같은 자리에 겹쳐 둔다 */}
+      {/* ic · 아이콘: 시안 그림(24 칸)을 42로 키운다. 선도 같이 굵어진다 */}
       <View style={styles.ic}>
-        <View style={styles.icon42}>
-          <Image source={require('../../../assets/icons/alarm-off-ring.svg')} style={styles.ring} />
-          <Image source={require('../../../assets/icons/alarm-off-marks.svg')} style={styles.marks} />
-        </View>
+        <Image source={require('../../../assets/icons/alarm-off.svg')} style={styles.icon42} />
       </View>
       <Text style={styles.title} role="heading">
         {title}
@@ -43,8 +40,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   icon42: { width: 42, height: 42 },
-  ring: { position: 'absolute', left: 7.85, top: 9.6, width: 26.3, height: 26.3 },
-  marks: { position: 'absolute', left: 4.35, top: 4.35, width: 33.3, height: 33.3 },
   title: { marginTop: space[6], fontFamily: font.bold, fontSize: 24, lineHeight: 30, letterSpacing: -0.48, color: color.fg, textAlign: 'center' },
   text: { fontFamily: font.regular, fontSize: 17, lineHeight: 25.5, color: color['fg-2'], textAlign: 'center' },
 })

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 11/17: 앱 테마. 화면 바탕은 전과 같은 기기 기본 어두운 테마 -->
+    <style name="Theme.Jaljayo" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
+</resources>
