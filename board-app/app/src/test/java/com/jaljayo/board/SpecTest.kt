@@ -23,14 +23,16 @@ class SpecTest {
             else if (a == "max" && "direction=down" in m.value) "direction=none, amount=0, amount_type=target"
             else "direction=none, amount=$a, amount_type=target"
         }
+        x = x.replace("direction=context_up", "direction=up")   // 11/11 context_up 없앰
+        x = x.replace("repeat=once", "repeat=none")             // 11/10 repeat once 없앰
         return x
     }
 
     @Test fun allGoldOutputsPass() {
         val files = listOf(
-            "/Users/lumos/Jaljayo/ai/data/datasets/v0.8-round7-1026/train.jsonl",
-            "/Users/lumos/Jaljayo/ai/data/datasets/v0.8-round7-1026/dev.jsonl",
-            "/Users/lumos/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl",
+            "../../ai/data/datasets/v0.8-round7-1026/train.jsonl",
+            "../../ai/data/datasets/v0.8-round7-1026/dev.jsonl",
+            "${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl",
         ).map(::File)
         assumeTrue(files.all { it.exists() })
         var n = 0
@@ -44,9 +46,9 @@ class SpecTest {
         assertEquals(16084, n)
     }
 
-    // 9차(v0.9) 학습·보강 정답과 코덱스 평가 후보를 그대로 검사한다
+    // 9차(v0.9) 학습·보강 정답과 평가 후보를 그대로 검사한다
     @Test fun v09GoldOutputsPass() {
-        val d = "/Users/lumos/GoodNight/ai-training-v5/data/round9-merged-skip/"
+        val d = "${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/round9-merged-skip/"
         val files = listOf("train_round9_skip.jsonl", "supplement_round9_skip.jsonl", "supplement_skip_off_1103.jsonl", "eval_candidate_810.jsonl").map { File(d + it) }
         assumeTrue(files.all { it.exists() })
         var n = 0
@@ -66,7 +68,7 @@ class SpecTest {
 
     // 보드의 옮기기(Spec.upgrade)가 학습 자료 변환(convert_v09.py)과 한 줄도 다르지 않은지
     @Test fun upgradeMatchesPythonConverter() {
-        val g = "/Users/lumos/GoodNight/ai-training-v5/data/"
+        val g = "${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/"
         val pairs = listOf("round9-work-1103/train_round9_tv.jsonl" to "round9-merged-skip/train_round9_skip.jsonl",
             "round9-work-1103/supplement_round9.jsonl" to "round9-merged-skip/supplement_round9_skip.jsonl").map { File(g + it.first) to File(g + it.second) }
         assumeTrue(pairs.all { it.first.exists() && it.second.exists() })
@@ -92,7 +94,7 @@ class SpecTest {
     @Test fun round9fTrainPasses() = trainPasses("train_round9f_1104.jsonl")
     @Test fun round9gTrainPasses() = trainPasses("train_round9g_1105.jsonl")
     private fun trainPasses(name: String) {
-        val f = File("/Users/lumos/GoodNight/ai-training-v5/data/round9-merged-skip/$name")
+        val f = File("${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/round9-merged-skip/$name")
         assumeTrue(f.exists())
         val bad = mutableListOf<String>(); var n = 0
         f.forEachLine { line ->
@@ -122,7 +124,7 @@ class SpecTest {
         )) assertTrue(o, spec.parse(o) is Spec.Result.Bad)
     }
 
-    // 11/09 이도 님 "하나로 통일해": 지금 각도 묻기의 both는 없앴고, 옛 모델이 내는 both는 none으로 받는다
+    // 11/09: 지금 각도 묻기의 both는 없앴고, 옛 모델이 내는 both는 none으로 받는다
     @Test fun tellAnglesBothBecomesNone() {
         assertTrue(spec.parse("<maum_4>(command=tell_angles, part=both)<maum_end>") is Spec.Result.Bad)
         val up = Spec.upgrade("<maum_4>(command=tell_angles, part=both)<maum_end>")

@@ -17,16 +17,19 @@ import java.time.LocalTime
 import java.time.temporal.ChronoUnit
 
 // 폰 앱의 요청을 처리하고, 폰에 보낼 상태를 만든다. 형식은 docs/interfaces/board-link.md
-// 보드 장부에 없는 알람 값(소리 크기, 머리 올리기, 이번만 바꾼 회차, 잠시 끄기 기간)은 extras에 그대로 보관해 폰에 돌려준다.
-// 아직 보드가 울릴 때 쓰지는 않는다
+// 11/19: bed-find·bed-register는 병원 침대 목록(HospitalBeds)이 답한다(가정용 답도 그쪽에 옮김)
+// 11/14: 소리 크기·상체 올림은 알람 장부(AlarmItem)에 넣어 울릴 때 쓴다.
+// 이번만 바꾼 회차(exc의 시각·종류)는 말로 "이번만" 바꾼 것과 같게, 원래 알람은 그날 건너뛰고 그날 한 번 울리는 알람(parent=원래 번호)을 만든다.
+// 그 알람은 폰 목록에 따로 보이지 않고, 폰에는 원래 알람의 exc로 돌려준다. exc와 잠시 끄기 일수(pauseDays)는 extras에 보관한다(exc는 날짜로)
 class AppApi {
     data class Result(val state: BedState, val reply: JSONObject?, val extras: Map<Int, JSONObject>)
 
     private fun ok() = JSONObject().put("ok", true)
     private fun no(why: String) = JSONObject().put("ok", false).put("reason", why)
 
-    /** name을 처리한다. 보드에 없는 기능이면 reply가 null이다(폰은 5초 뒤 실패로 처리) */
-    fun handle(s: BedState, name: String, body: JSONObject?, today: LocalDate, extras: Map<Int, JSONObject>): Result {
+    /** name을 처리한다. 보드에 없는 기능이면 reply가 null이다(폰은 5초 뒤 실패로 처리)
+     *  alarmsAllowed: 11/19 병원 설정에서 알람 쓰기를 끈 병원이면 false. 알람을 새로 만들거나 고치는 요청을 받지 않는다(켜고 끄기·지우기는 받음) */
+    fun handle(s: BedState, name: String, body: JSONObject?, today: LocalDate, extras: Map<Int, JSONObject>, alarmsAllowed: Boolean = true): Result {
         fun done(ns: BedState, r: JSONObject = ok(), ex: Map<Int, JSONObject> = extras) = Result(ns, r, ex)
         fun refuse(why: String) = Result(s, no(why), extras)
         return when (name) {
@@ -49,9 +52,13 @@ class AppApi {
             "alarm-delete" -> {
                 val id = body?.getInt("id") ?: return refuse(BAD)
                 if (s.ringing?.id == id) return refuse(RINGING)
-                done(s.copy(alarms = s.alarms.filter { it.id != id }), ex = extras - id)
+                done(s.copy(alarms = s.alarms.filter { it.id != id && it.parent != id }), ex = extras - id)
             }
-            "alarm-save" -> alarmSave(s, body ?: return refuse(BAD), today, extras)
+            "alarm-save" -> {
+                val b = body ?: return refuse(BAD)
+                if (!alarmsAllowed && !b.isNull("draft") && b.has("draft")) return refuse(NO_ALARM)
+                alarmSave(s, b, today, extras)
+            }
             "resv-save" -> {
                 if (!s.timeValid) return refuse(NO_CLOCK)
                 val b = body ?: return refuse(BAD)
@@ -65,8 +72,6 @@ class AppApi {
                 done(s.copy(reservation = Reservation(at, label, named ?: Purpose.FLAT, t, angleOnly = named == null)))
             }
             "resv-cancel" -> done(s.copy(reservation = null))
-            "bed-find" -> done(s, ok().put("taken", false).put("ward", false).put("name", "잘자요"))
-            "bed-register" -> done(s, ok().put("ward", false).put("name", "잘자요"))
             "bed-reset" -> {
                 if (s.ringing != null) return refuse(RINGING)
                 done(s.copy(alarms = emptyList(), reservation = null, memory = emptyMap(), prevMemory = emptyMap()), ex = emptyMap())
@@ -81,17 +86,36 @@ class AppApi {
         val cur = id?.let { i -> s.alarms.firstOrNull { it.id == i } }
         if (id != null && cur == null) return Result(s, no(BAD), extras)
         var ex = extras
-        val item: AlarmItem = if (b.isNull("draft")) {
-            // 켜고 끄기만
+        var kids = s.alarms.filter { it.parent != null && it.parent == id }   // 이 알람의 이번만 회차
+        var item: AlarmItem = if (b.isNull("draft")) {
+            // 켜고 끄기만(이번만 회차도 함께)
+            kids = kids.map { it.copy(enabled = b.getBoolean("on")) }
             cur!!.copy(enabled = b.getBoolean("on"))
         } else {
             val d = b.getJSONObject("draft")
             val newId = id ?: ((s.alarms.maxOfOrNull { it.id } ?: 0) + 1)
-            ex = ex + (newId to JSONObject().put("volume", d.optInt("volume", 2)).put("lift", d.optBoolean("lift", false))
-                .put("pauseDays", d.opt("pauseDays") ?: JSONObject.NULL).put("exc", d.optJSONObject("exc") ?: JSONObject()))
-            draftToItem(newId, d, today, cur)
+            val exc = d.optJSONObject("exc") ?: JSONObject()
+            // exc 열쇠는 폰이 보낸 오늘부터의 일수다. 날이 지나도 맞도록 날짜로 바꿔 보관한다
+            val excAt = JSONObject().also { o -> exc.keys().forEach { k -> o.put(today.plusDays(k.toLong()).toString(), exc.getJSONObject(k)) } }
+            ex = ex + (newId to JSONObject().put("pauseDays", d.opt("pauseDays") ?: JSONObject.NULL).put("exc", excAt))
+            var it0 = draftToItem(newId, d, today, cur)
+            // 이번만 회차를 다시 만든다(반복 알람일 때만. 한 번 알람은 폰이 exc를 지운다)
+            kids = emptyList()
+            if (it0.repeating) {
+                var next = (s.alarms.maxOfOrNull { it.id } ?: 0).coerceAtLeast(newId) + 1
+                for (k in exc.keys()) {
+                    val e = exc.getJSONObject(k)
+                    if (e.optBoolean("drop")) continue
+                    val day = today.plusDays(k.toLong())
+                    val way = e.getString("way")
+                    it0 = it0.copy(skips = it0.skips + day)
+                    kids = kids + AlarmItem(id = next++, time = LocalTime.ofSecondOfDay(e.getInt("time") * 60L), onceDate = day,
+                        type = wayType(way), level = if (way == "q2") 2 else 1, enabled = it0.enabled, volume = it0.volume, lift = it0.lift, parent = newId)
+                }
+            }
+            it0
         }
-        var others = s.alarms.filter { it.id != item.id }
+        var others = s.alarms.filter { it.id != item.id && it.parent != item.id }
         // 겹쳐서 덮어쓰는 알람: 한 번 알람은 지우고, 반복 알람은 새 알람이 울리는 날만 건너뛴다
         b.optJSONArray("overwrite")?.let { arr ->
             val over = (0 until arr.length()).map { arr.getInt(it) }.toSet()
@@ -99,8 +123,13 @@ class AppApi {
             others = others.mapNotNull { a -> if (a.id !in over) a else if (a.repeating) a.copy(skips = a.skips + day) else null }
             ex = ex - over.filter { i -> others.none { it.id == i } }.toSet()
         }
-        return Result(s.copy(alarms = (others + item).sortedBy { it.id }), ok().put("alarmId", item.id), ex)
+        // 원래 알람이 지워졌으면 그 이번만 회차도 지운다
+        val all = others + item + kids
+        val kept = all.filter { a -> a.parent == null || all.any { it.id == a.parent && it.parent == null } }
+        return Result(s.copy(alarms = kept.sortedBy { it.id }), ok().put("alarmId", item.id), ex)
     }
+
+    private fun wayType(way: String) = when (way) { "q1", "q2" -> "question"; else -> way }
 
     private fun draftToItem(id: Int, d: JSONObject, today: LocalDate, cur: AlarmItem?): AlarmItem {
         val days = d.getJSONArray("days").let { a -> (0 until a.length()).map { dayOf(a.getInt(it)) }.toSet() }
@@ -114,13 +143,15 @@ class AppApi {
             time = LocalTime.ofSecondOfDay(d.getInt("time") * 60L),
             days = days,
             onceDate = if (days.isEmpty()) off("dateOff") ?: today else null,
-            type = when (way) { "q1", "q2" -> "question"; else -> way },
+            type = wayType(way),
             level = if (way == "q2") 2 else 1,
             enabled = cur?.enabled ?: true,
             skips = setOfNotNull(off("skipOff")) + drops,
             offFrom = pause?.let { today },
             offUntil = pause,
             lastFired = null,
+            volume = d.optInt("volume", 2).coerceIn(1, 3),
+            lift = d.optBoolean("lift", false),
         )
     }
 
@@ -132,23 +163,33 @@ class AppApi {
         return JSONObject().put("type", "app-state")
             .put("angles", ang(s.angles)).put("target", ang(s.target)).put("moving", s.moving)
             .put("clockOk", s.timeValid).put("ringingId", s.ringing?.id ?: JSONObject.NULL)
-            .put("alarms", JSONArray(s.alarms.map { appAlarm(it, today, extras[it.id]) }))
+            .put("alarms", JSONArray(s.alarms.filter { it.parent == null }.map { a -> appAlarm(a, today, extras[a.id], s.alarms.filter { it.parent == a.id }.mapNotNull { it.onceDate }.toSet()) }))
             .put("resv", s.reservation?.let { appReservation(it, nowMs) } ?: JSONObject.NULL)
             .put("presets", presets)
     }
 
-    private fun appAlarm(a: AlarmItem, today: LocalDate, ex: JSONObject?): JSONObject {
+    private fun appAlarm(a: AlarmItem, today: LocalDate, ex: JSONObject?, moved: Set<LocalDate>): JSONObject {
         fun off(d: LocalDate?): Any = d?.let { ChronoUnit.DAYS.between(today, it) } ?: JSONObject.NULL
         val way = if (a.type == "question") (if (a.level == 2) "q2" else "q1") else a.type
-        val future = a.skips.filter { !it.isBefore(today) }.minOrNull()
+        // 날짜로 보관한 exc를 오늘부터의 일수로 돌려준다(지난 날은 뺌). 11/14 전에 일수로 보관한 것은 그대로
+        val excSaved = ex?.optJSONObject("exc") ?: JSONObject()
+        val exc = JSONObject()
+        val excDays = mutableSetOf<LocalDate>()
+        for (k in excSaved.keys()) {
+            if (!k.contains('-')) { exc.put(k, excSaved.get(k)); continue }
+            val d = LocalDate.parse(k); excDays += d
+            if (!d.isBefore(today)) exc.put(ChronoUnit.DAYS.between(today, d).toString(), excSaved.get(k))
+        }
+        // 이번만 회차·그날 안 울림 때문에 넣은 건너뛰기는 "다음 한 번 건너뛰기"로 보이지 않게 뺀다
+        val future = a.skips.filter { !it.isBefore(today) && it !in moved && it !in excDays }.minOrNull()
         return JSONObject().put("id", a.id).put("on", a.enabled)
             .put("time", a.time.hour * 60 + a.time.minute)
             .put("days", JSONArray(a.days.map { it.value % 7 }.sorted()))
             .put("dateOff", off(a.onceDate)).put("way", way)
-            .put("volume", ex?.optInt("volume", 2) ?: 2).put("lift", ex?.optBoolean("lift", false) ?: false)
+            .put("volume", a.volume).put("lift", a.lift)
             .put("skipOff", off(future)).put("pauseTo", off(a.offUntil))
             .put("pauseDays", ex?.opt("pauseDays") ?: JSONObject.NULL)
-            .put("exc", ex?.optJSONObject("exc") ?: JSONObject())
+            .put("exc", exc)
     }
 
     private fun appReservation(r: Reservation, nowMs: Long): JSONObject {
@@ -165,5 +206,7 @@ class AppApi {
         const val RINGING = "알람이 울리는 중이에요"
         const val NO_CLOCK = "침대가 지금 시각을 몰라요"
         const val BAD = "잘못된 요청이에요"
+        // 11/19: 병원 설정에서 알람 쓰기를 끈 병원. 말로 알람을 맞추려 할 때도 이 문장으로 대답한다
+        const val NO_ALARM = "이 병원에서는 알람을 쓰지 않아요"
     }
 }

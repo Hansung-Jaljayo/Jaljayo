@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 // 대답 문장, 대기 중인 질문, 이후 동작에 영향을 주는 상태까지 비교하고, 되물으면 "응"까지 이어 넣는다.
 // 말 듣기와 단독 정지 말 처리는 거치지 않는다. 이 시험의 통과는 재생이 오류 없이 돌았다는 뜻이고, 오답이 고쳐졌다는 뜻이 아니다.
 class ReplayWrongTest {
-    private val dir = File("/Users/lumos/GoodNight/ai-training-v5/reports/v08-7-wrong-table-1102")
+    private val dir = File("${System.getProperty("user.home")}/GoodNight/ai-training-v5/reports/v08-7-wrong-table-1102")
     private val spec = Spec(File("src/main/assets/spec_v09.json").readText())
     private val brain = Brain { LocalDateTime.of(2026, 11, 2, 22, 0).atZone(KST).toInstant().toEpochMilli() }
     private val yes = "<maum_2>(type=yes, value=none)<maum_end>"
@@ -210,8 +210,8 @@ class ReplayWrongTest {
 
     // 정답이 먼저 묻기(confirm=yes)인데 두뇌가 묻지 않고 바로 바꾸는 문장을 세어 파일로 남긴다(개발·평가 정답 전체)
     @Test fun confirmYesThatRunsAtOnce() {
-        val files = listOf("/Users/lumos/Jaljayo/ai/data/datasets/v0.8-round7-1026/dev.jsonl",
-            "/Users/lumos/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl").map(::File)
+        val files = listOf("../../ai/data/datasets/v0.8-round7-1026/dev.jsonl",
+            "${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl").map(::File)
         assumeTrue(files.all { it.exists() })
         val res = JSONArray(); var total = 0; val generic = LinkedHashSet<String>()
         val ss = scenarios().filterKeys { !it.startsWith("대기") && it != "알람 울리는 중" }
@@ -236,9 +236,9 @@ class ReplayWrongTest {
 
     // 규격을 통과하는 모든 출력(학습·개발·평가 정답과 오답)을 모든 상황에 넣어 두뇌 오류가 있는지 본다
     @Test fun noOutputCrashesBrainInAnyState() {
-        val files = listOf("/Users/lumos/Jaljayo/ai/data/datasets/v0.8-round7-1026/train.jsonl",
-            "/Users/lumos/Jaljayo/ai/data/datasets/v0.8-round7-1026/dev.jsonl",
-            "/Users/lumos/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl").map(::File)
+        val files = listOf("../../ai/data/datasets/v0.8-round7-1026/train.jsonl",
+            "../../ai/data/datasets/v0.8-round7-1026/dev.jsonl",
+            "${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl").map(::File)
         assumeTrue(files.all { it.exists() } && File(dir, "base.json").exists())
         val outs = LinkedHashSet<String>()
         for (f in files) f.forEachLine { outs += JSONObject(it).getString("output") }

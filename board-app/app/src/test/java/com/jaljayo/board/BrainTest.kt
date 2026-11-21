@@ -520,7 +520,7 @@ class BrainTest {
         }
     }
 
-    // ---------- 코덱스 재현 시험(11/03) ----------
+    // ---------- 재현 시험(11/03) ----------
     private val oneAlarm get() = say(BedState(), "평일 일곱 시", weekday).state
 
     // 시각을 다시 받아도 바람(confirm=yes)이면 실행 전에 동의를 묻는다
@@ -642,7 +642,7 @@ class BrainTest {
         assertEquals(2, m.state.alarms.single().level)
     }
 
-    // 난이도·종류를 묻는 중 다른 알람을 가리키면 새 요청으로 처리하고, 바람이면 실행 전에 묻는다(코덱스 재현)
+    // 난이도·종류를 묻는 중 다른 알람을 가리키면 새 요청으로 처리하고, 바람이면 실행 전에 묻는다(재현 시험)
     private val lv = { level: String, target: String, confirm: String -> "<maum_1>(command=change_level, target=$target, target_ampm=none, target_days=none, level=$level, date=none, scope=none, target_type=question, target_order=none, context=alarm, confirm=$confirm)<maum_end>" }
     private fun twoQuestionAlarms(): BedState {
         val a = say(BedState(), "일곱 시 덧셈", "<maum_1>(command=set, date=none, ampm=am, time=07:00, time_type=absolute, type=question, repeat=weekly, days=daily, confirm=no)<maum_end>").state

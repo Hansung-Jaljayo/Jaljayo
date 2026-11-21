@@ -146,7 +146,7 @@ class DecisionTableTest {
         assertEquals("알람 문제 난이도는 날짜를 골라 바꿀 수 없어요", say(f.state, "이번만", "<maum_2>(type=scope, value=once)<maum_end>").say)
     }
 
-    // 코덱스 9차: "이번만"(날짜 없음)과 여러 알람의 그날만 바꾸기. 고른 알람마다 같은 원칙
+    // 9차 검토: "이번만"(날짜 없음)과 여러 알람의 그날만 바꾸기. 고른 알람마다 같은 원칙
     private fun withOneShot(s: BedState, time: String = "09:00") = say(s, "내일 알람 맞춰", "<maum_1>(command=set, date=tomorrow, ampm=am, time=$time, time_type=absolute, type=none, repeat=none, days=none, confirm=no)<maum_end>").state.copy(lastAlarmId = null)
     @Test fun r8OnceAppliesToEachChosenAlarm() {
         val s = daily()
@@ -177,7 +177,7 @@ class DecisionTableTest {
         val f = say(two, "알람 다 이번만 삼십 분 당겨", "<maum_1>(command=change_time, target=all, target_ampm=none, target_days=none, date=none, ampm=none, time=00:30, time_type=earlier, scope=once, target_type=none, target_order=none, confirm=no)<maum_end>")
         assertEquals(setOf(LocalTime.of(6, 30), LocalTime.of(7, 30)), f.state.alarms.filter { it.onceDate == today }.map { it.time }.toSet())
         assertTrue(f.say, f.say.contains("삼십 분 당겼어요"))
-        // 당기거나 늦춰 자정을 넘으면 날짜도 넘어간다(코덱스 10차). 오늘 밤 11시 반 회차를 한 시간 늦추면 내일 0시 반
+        // 당기거나 늦춰 자정을 넘으면 날짜도 넘어간다(10차 검토). 오늘 밤 11시 반 회차를 한 시간 늦추면 내일 0시 반
         val late = say(BedState(), "매일 밤 열한 시 반 알람", "<maum_1>(command=set, date=none, ampm=pm, time=11:30, time_type=absolute, type=none, repeat=weekly, days=daily, confirm=no)<maum_end>").state.copy(lastAlarmId = null)
         val g = say(late, "알람 이번만 한 시간 늦춰", "<maum_1>(command=change_time, target=none, target_ampm=none, target_days=none, date=none, ampm=none, time=01:00, time_type=later, scope=once, target_type=none, target_order=none, confirm=no)<maum_end>")
         assertTrue(today in g.state.alarms.first { it.repeating }.skips)
@@ -193,7 +193,7 @@ class DecisionTableTest {
         assertTrue(i.state.alarms.any { it.onceDate == today && it.time == LocalTime.of(23, 30) })
     }
 
-    // 코덱스 11차: 바꾼 결과가 지금이거나 이미 지났으면 그 알람은 그대로 두고(시각·날짜·건너뛰기) 이유를 알린다. 안내는 바꾼 방식부터 가른다
+    // 11차 검토: 바꾼 결과가 지금이거나 이미 지났으면 그 알람은 그대로 두고(시각·날짜·건너뛰기) 이유를 알린다. 안내는 바꾼 방식부터 가른다
     private fun sayAt(h: Int, m: Int, s: BedState, heard: String, out0: String): Turn {
         val b = Brain { LocalDateTime.of(2026, 11, 4, h, m).atZone(KST).toInstant().toEpochMilli() }
         val out = Spec.upgrade(out0); val r = spec.parse(out)
@@ -256,7 +256,7 @@ class DecisionTableTest {
         assertEquals("confirm", c.state.pending?.kind); assertEquals(s.alarms, c.state.alarms)
     }
 
-    // 11/04(코덱스 16차): "이번 주만 알람 꺼 둬 주말 빼고"(until=fri, 직접 명령). 주중에는 금요일까지 끄고, 주말에 말하면 다음 주로 넘기지 않고 안내한다
+    // 11/04(16차 검토): "이번 주만 알람 꺼 둬 주말 빼고"(until=fri, 직접 명령). 주중에는 금요일까지 끄고, 주말에 말하면 다음 주로 넘기지 않고 안내한다
     @Test fun skipThisWeekExceptWeekendDoesNotSpillIntoNextWeek() {
         val out = "<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=none, start=none, until=fri, period=none, target_type=none, target_order=none, confirm=no)<maum_end>"
         fun on(day: LocalDate, s: BedState, heard: String): Turn {
@@ -277,7 +277,7 @@ class DecisionTableTest {
         assertTrue(sat2.say, sat2.state.alarms != s.alarms)
     }
 
-    // 11/09 이도 님 결정: 저장값 되돌리기는 침대 이동과 상관없다. 예전 모델의 object=unclear도 처음 값 되돌리기로 받아 늘 한 번 묻고, 침대는 움직이지 않는다
+    // 11/09 결정: 저장값 되돌리기는 침대 이동과 상관없다. 예전 모델의 object=unclear도 처음 값 되돌리기로 받아 늘 한 번 묻고, 침대는 움직이지 않는다
     @Test fun resetNeverAsksToMoveBed() {
         val s = BedState(angles = Angles(10.0, 5.0), target = Angles(10.0, 5.0), memory = mapOf(Purpose.SLEEP to Angles(12.0, 8.0)))
         val a = say(s, "잠 자세 처음 상태로 돌려 놔", "<maum_0>(command=reset_default, purpose=sleep, object=unclear, confirm=no)<maum_end>")

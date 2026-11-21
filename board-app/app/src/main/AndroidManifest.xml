@@ -7,26 +7,39 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 11/19 침대 버튼·압력 센서 나노를 보드 USB로 바로 읽습니다(UsbNano) -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
         android:label="잘자요 보드"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:extractNativeLibs="true"
         android:usesCleartextTraffic="true"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+        android:theme="@style/Theme.Jaljayo">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:keepScreenOn="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- 11/19 나노를 꽂으면 이 앱을 열지 묻습니다. "항상"을 고르면 USB 사용 허락이 기억됩니다. 이미 떠 있으면 새 화면을 겹쳐 띄우지 않습니다(singleTop) -->
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
+                android:resource="@xml/usb_nano_filter" />
         </activity>
 
         <service
             android:name=".BoardService"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="microphone" />
     </application>
 </manifest>
