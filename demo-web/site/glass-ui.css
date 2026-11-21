@@ -1,0 +1,217 @@
+/* 잘자요 시연 패널 · 밝은 유리(2026-11-15, 다크가 어울리지 않아 바꿈)
+   가정용(river-1114/site)과 병상용(ward-1115)이 같은 파일을 쓴다. 원본은 ward-1115/preview/src/glass-ui.css
+   방향(ui-ux-pro-max: Smart Home/IoT → Glassmorphism + Dark, Spatial UI → glass material):
+   밝은 방 장면 위에 흰 서리 유리 한 장, 검은 글자, 선택·막대는 파랑 하나, 멈춤은 빨강 */
+html body{
+  --g-bg:rgba(255,255,255,.66);
+  --g-bg-strong:rgba(255,255,255,.78);
+  --g-line:rgba(255,255,255,.7);
+  --g-fill:rgba(255,255,255,.62);
+  --g-fill-hover:rgba(255,255,255,.92);
+  --g-text:#1d1d1f;
+  --g-muted:#6e6e73;
+  --g-sel:#0a72e8;
+  --g-sel-text:#ffffff;
+  --g-track:rgba(118,118,128,.14);
+  --g-ok:#28b44c;
+  --g-stop:#ff3b30;
+  --g-radius:24px;
+  --g-blur:blur(30px) saturate(180%);
+  --g-shadow:0 20px 50px rgba(40,34,26,.16),0 2px 6px rgba(40,34,26,.08);
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;
+}
+
+/* ── 조작판 한 장: 위 탭줄 + 아래 내용이 하나의 유리 ── */
+html body .remote{gap:0;filter:none;border-radius:var(--g-radius);background:var(--g-bg);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-line);box-shadow:var(--g-shadow);overflow:hidden;color:var(--g-text)}
+html body .remote .rail,html body .remote .console{background:transparent;border:0;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:none;border-radius:0;color:var(--g-text)}
+html body .remote .rail{display:flex;flex-direction:row;align-items:center;gap:6px;min-height:0;padding:12px 12px 10px;border-bottom:1px solid var(--g-line)}
+html body .remote .rail .remote-mark{font:600 20px/1 Georgia,serif;color:var(--g-sel);opacity:1;margin:0 6px 0 4px}
+html body .remote .rail button[data-tab],html body .remote .rail button[aria-selected]{flex:1;min-height:36px;padding:0 10px;border:0;border-radius:999px;background:transparent;color:var(--g-muted);font-size:14px;font-weight:600;letter-spacing:-.01em;transition:background .18s,color .18s}
+html body .remote .rail button[aria-selected=true]{background:var(--g-sel);color:var(--g-sel-text)}
+html body .remote .rail button[aria-selected=false]:hover{background:var(--g-fill);color:var(--g-text)}
+html body .remote .rail .stop{flex:none;min-height:36px;padding:0 16px;margin-left:4px;border:0;border-radius:999px;background:var(--g-stop);color:#fff;font-size:14px;font-weight:700;box-shadow:0 4px 14px rgba(255,59,48,.3)}
+html body .remote .rail .stop:hover{filter:brightness(1.08)}
+html body .remote .console{padding:18px 18px 16px;scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.2) transparent}
+
+/* 소제목: 작고 흐린 글자, 상자 없이 여백으로 구역을 나눈다 */
+html body .console h2,html body .console-top .title{margin:0 0 10px;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--g-muted)}
+html body .console-top{margin-bottom:10px}
+html body .console-top #motion-status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--g-text)}
+html body .console-top #motion-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--g-ok);box-shadow:0 0 0 3px rgba(40,180,76,.18)}
+html body .pane h2:not(:first-child),html body .console > h2{margin-top:20px}
+
+/* 공통 버튼: 유리 위 옅은 면 */
+html body .console button{min-height:40px;border:0;border-radius:12px;background:var(--g-fill);color:var(--g-text);font-size:14px;font-weight:500;letter-spacing:-.01em;transition:background .15s,transform .1s}
+html body .console button:hover{background:var(--g-fill-hover)}
+html body .console button:active{transform:scale(.97)}
+html body .console button:disabled{opacity:.35}
+html body .console button[aria-pressed=true]{background:var(--g-sel);color:var(--g-sel-text);font-weight:650}
+html body .console button:focus-visible,html body .remote .rail button:focus-visible,html body .console input:focus-visible{outline:2px solid var(--g-sel);outline-offset:2px}
+
+/* 병상·카메라: 한 줄 세그먼트(바깥 홈 + 흰 선택칸) */
+html body .beds,html body .console .views{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;padding:3px;margin:0 0 4px;border-radius:14px;background:var(--g-track);border:0}
+html body .beds button,html body .console .views button{min-height:36px;border-radius:11px;background:transparent;color:var(--g-muted);font-weight:600;font-size:13.5px;padding:0 6px;white-space:nowrap}
+html body .beds button:hover,html body .console .views button:hover{background:var(--g-fill);color:var(--g-text)}
+html body .beds button[aria-pressed=true],html body .console .views button[aria-pressed=true]{background:#fff;color:var(--g-text);box-shadow:0 1px 4px rgba(0,0,0,.12),0 0 0 .5px rgba(0,0,0,.04)}
+
+/* 각도: 이름과 큰 숫자 한 줄, 그 아래 − 막대 + */
+html body .console .sliders{display:grid;grid-template-columns:1fr;gap:14px;margin:0 0 6px}
+html body .sliderline{display:grid;grid-template-columns:32px 1fr 32px;grid-template-areas:'name name num' 'minus bar plus';align-items:center;column-gap:10px;row-gap:6px}
+html body .sliderline label{grid-area:name;font-size:14px;font-weight:600;color:var(--g-text)}
+html body .sliderline output{grid-area:num;justify-self:end;font-size:20px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--g-text);text-align:right;min-width:48px}
+html body .sliderline button:nth-of-type(1){grid-area:minus}
+html body .sliderline button:nth-of-type(2){grid-area:plus}
+html body .sliderline input{grid-area:bar}
+html body .sliderline button{width:32px;min-width:32px;height:32px;min-height:32px;padding:0;border-radius:50%;background:var(--g-fill);font-size:18px;font-weight:500;line-height:1}
+html body .console input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;margin:0;background:transparent;cursor:pointer;--p:0%}
+html body .console input[type=range]::-webkit-slider-runnable-track{height:8px;border-radius:999px;background:linear-gradient(90deg,var(--g-sel) 0,var(--g-sel) var(--p),rgba(118,118,128,.2) var(--p))}
+html body .console input[type=range]::-moz-range-track{height:8px;border-radius:999px;background:rgba(118,118,128,.2)}
+html body .console input[type=range]::-moz-range-progress{height:8px;border-radius:999px;background:var(--g-sel)}
+html body .console input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;margin-top:-7px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 6px rgba(0,0,0,.22),0 0 0 .5px rgba(0,0,0,.06)}
+html body .console input[type=range]::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:0;box-shadow:0 1px 6px rgba(0,0,0,.22),0 0 0 .5px rgba(0,0,0,.06)}
+
+/* 저장 자세: 2×2 타일 */
+html body .console .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+html body .console .presets button{min-height:48px;border-radius:14px;font-size:14.5px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.06),inset 0 0 0 .5px rgba(0,0,0,.06)}
+
+/* 말하기 */
+html body #talk-items section{display:grid;gap:6px}
+html body #talk-items section+section{margin-top:16px}
+html body #talk-items button{text-align:left;padding:10px 14px;border-radius:12px;line-height:1.45}
+html body #talk-groups button{border-radius:999px;padding:6px 12px;font-size:12.5px}
+
+/* 기기 */
+html body .device-state{color:var(--g-muted);font-size:12.5px;line-height:1.6;margin-bottom:12px}
+html body .console .device-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+html body .device-actions label{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:12px;background:var(--g-fill);font-size:13.5px;color:var(--g-text)}
+html body .device-actions input[type=checkbox]{width:18px;height:18px;accent-color:var(--g-sel)}
+
+/* 대답 줄: 말풍선처럼 한 칸 */
+html body .console .feedback{display:block;margin:18px 0 6px;padding:12px 14px;border:0;border-radius:14px;background:var(--g-track);color:var(--g-text)}
+html body .console .feedback>span{display:block;max-width:none;margin-bottom:4px;font-size:12px;color:var(--g-muted);white-space:normal}
+html body .console .feedback strong{display:block;font-size:14px;font-weight:500;line-height:1.55;color:var(--g-text)}
+html body .console .feedback:has(.confirm-actions:not([hidden])){display:flex;align-items:center;gap:10px}
+html body .confirm-actions{display:flex;gap:6px;flex:none}
+html body .confirm-actions button{min-height:34px;padding:0 14px;border-radius:999px}
+html body .confirm-actions button:first-child{background:var(--g-sel);color:var(--g-sel-text);font-weight:650}
+
+/* ── 모델 출력 ── */
+html body .model-panel{padding:12px 16px;border-radius:18px;background:var(--g-bg-strong);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-line);box-shadow:var(--g-shadow);color:var(--g-text)}
+html body .model-panel .title{display:block;margin:0 0 4px;font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--g-muted)}
+html body .model-panel code{font:500 13.5px/1.5 'SF Mono',ui-monospace,Menlo,monospace;color:#1d1d1f;background:none;border:0;padding:0}
+
+/* ── 가정용/병상용 전환 ── */
+html body .mode-switch{gap:2px;padding:4px;border-radius:999px;background:var(--g-bg);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-line);box-shadow:var(--g-shadow);font:600 14px/1.2 Pretendard,-apple-system,'Apple SD Gothic Neo',sans-serif}
+html body .mode-switch a{padding:9px 18px;border-radius:999px;color:var(--g-muted)}
+html body .mode-switch a:hover{color:var(--g-text)}
+html body .mode-switch a[aria-current]{background:var(--g-sel);color:var(--g-sel-text)}
+
+/* ── 압력 센서(가정용) ── */
+html body .pressure{border-radius:18px;background:var(--g-bg-strong);-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);border:1px solid var(--g-line);box-shadow:var(--g-shadow);color:var(--g-text)}
+html body .pressure .title,html body .pressure-nums,html body #pressure-source{color:var(--g-muted)}
+
+/* 가정용 예전 규칙(밝은 판·화살표 목록) 덮기 */
+html body .remote .console-top{margin-bottom:14px;padding-bottom:0;border-bottom:0}
+html body .remote .console-top .title{font-size:17px;font-weight:700;letter-spacing:-.02em;color:var(--g-text);margin:0}
+html body .remote .console h2{color:var(--g-muted);font-size:12.5px;font-weight:600;margin-bottom:10px}
+html body .remote .sliderline button{border-radius:50%;background:var(--g-fill);color:var(--g-text);min-height:32px}
+html body .remote .presets{gap:8px}
+html body .remote .presets button{padding:0 10px;border:0;border-radius:14px;background:var(--g-fill);color:var(--g-text);text-align:center}
+html body .remote .presets button::after{content:none}
+html body .remote .presets button:hover,html body .remote .sliderline button:hover{background:var(--g-fill-hover)}
+html body .remote .views{background:var(--g-track);border-radius:14px;padding:3px;gap:2px}
+html body .remote .views button{border:0;background:transparent;border-radius:11px;padding:0 6px;font-size:13.5px;color:var(--g-muted)}
+html body .remote .views button[aria-pressed=true]{background:#fff;color:var(--g-text);box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:650}
+html body .beds{margin-bottom:22px}
+html body .remote .sliderline output,html body .remote .sliderline label{color:var(--g-text)}
+html body .remote .console-top+.pane,html body .remote .console-top+.beds{margin-top:4px}
+/* 왼쪽 위 J 로고(fig-moon.svg): 16×28로는 작아서 키운다 */
+html body .remote .rail .remote-mark{margin:0 10px 0 8px;display:flex;align-items:center}
+html body .remote .rail .remote-mark img{width:auto;height:46px}
+/* 병상용 이름 부르기 버튼: 네 개를 2×2로 */
+html body .call-names{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+html body .call-names button{text-align:center}
+
+/* ── 말하기 개편(11/16): 번호 붙은 대표 장면 + 접힌 '예시 더 보기' ── */
+html body .scenes{display:grid;gap:6px}
+html body .console button.scene{display:flex;align-items:center;gap:12px;text-align:left;padding:10px 12px;min-height:54px}
+html body .scene-no{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--g-sel);color:#fff;font-size:13px;font-weight:700}
+html body .scene-text{display:flex;flex-direction:column;gap:2px;font-size:14.5px;font-weight:600;line-height:1.35}
+html body .scene-text small{font-size:11.5px;font-weight:600;color:var(--g-muted)}
+html body .console details.more{margin-top:14px;border-radius:14px;background:var(--g-track);padding:0 12px}
+html body .console details.more>summary{cursor:pointer;list-style:none;padding:12px 0;font-size:13.5px;font-weight:600;color:var(--g-text)}
+html body .console details.more>summary::-webkit-details-marker{display:none}
+html body .console details.more>summary::after{content:'+';float:right;font-size:17px;line-height:1;color:var(--g-muted)}
+html body .console details.more[open]>summary::after{content:'−'}
+html body .console details.more[open]{padding-bottom:12px}
+html body .console details.more section{display:grid;gap:6px}
+html body .console details.more section+section{margin-top:14px}
+html body .console details.more .device-actions{margin-top:2px}
+
+/* ── 방금 처리: 말 → 출력 → 동작 ── */
+html body .model-panel.trace{display:grid;gap:5px;max-height:none}
+html body .trace-row{display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:baseline}
+html body .trace-row>span{font-size:11.5px;font-weight:700;color:var(--g-muted)}
+html body .trace-row>b{font-size:14px;font-weight:600;color:var(--g-text);line-height:1.45}
+html body .trace-row>code{font:500 12.5px/1.5 'SF Mono',ui-monospace,Menlo,monospace;color:#1d1d1f;overflow-wrap:anywhere;max-height:none}
+html body .trace-row[hidden]{display:none}
+/* 대답은 왼쪽 아래 '방금 처리'에 나오므로, 조작판 안 대답 칸은 예·아니오를 기다릴 때만 보인다 */
+html body .console .feedback{display:none}
+html body .console .feedback:has(.confirm-actions:not([hidden])){display:flex}
+html body #talk-items{max-height:calc(100dvh - 330px)}
+/* 조작판이 오른쪽 아래 가정용/병상용 전환 버튼을 덮지 않게 */
+html body .remote{max-height:calc(100dvh - 2 * var(--edge, 24px) - 64px)}
+html body #talk-items{max-height:calc(100dvh - 400px)}
+html body .remote .confirm-actions button:first-child{background:var(--g-sel);color:#fff;border:0}
+html body .remote .confirm-actions button{border:0}
+html body .console .feedback>span{flex:none;max-width:30%;margin:0}
+html body .console .feedback strong{flex:1}
+/* 가정용은 id(#confirm-actions)를 쓴다 */
+html body .console .feedback:has(#confirm-actions:not([hidden])){display:flex;align-items:center;gap:10px}
+html body #confirm-actions button{min-height:34px;padding:0 14px;border:0;border-radius:999px}
+html body #confirm-actions button:first-child{background:var(--g-sel);color:#fff}
+/* 병상용: 침대 고르기를 탭 위 첫 줄로(예약·알람·각도가 침대마다 따로라서) */
+html body .remote .bed-head{display:flex;align-items:center;gap:10px;padding:12px 14px 4px}
+html body .remote .bed-head .remote-mark{flex:none;margin:0 2px 0 4px}
+html body .remote .bed-head .beds{flex:1;margin:0}
+html body .remote .bed-head .beds button{border:0;font-family:inherit;cursor:pointer}
+html body .remote .bed-head #motion-status{flex:none;min-width:78px;justify-content:flex-end;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--g-text)}
+html body .remote .bed-head #motion-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--g-ok);box-shadow:0 0 0 3px rgba(40,180,76,.18)}
+html body .remote .bed-head + .rail{padding-top:8px}
+/* 병상용: 위 줄은 이름 부르기. 눌린 침대가 지금 듣고 있는 침대. 수박(없는 이름)은 말하기 탭 맨 위 작은 버튼 */
+html body .console .ghost-call{display:block;width:100%;min-height:36px;margin:0 0 16px;background:transparent;border:1px dashed rgba(60,60,67,.28);color:var(--g-muted);font-size:13px;font-weight:600}
+html body .console .ghost-call:hover{background:var(--g-fill);color:var(--g-text)}
+html body .console > .call-names{margin:0 0 18px}
+/* 알람이 울리는 동안 화면 가장자리를 노랗게 깜빡인다(가정용·병상용 공용). 클릭은 통과 */
+.ring-overlay{position:fixed;inset:0;z-index:5;pointer-events:none;box-shadow:inset 0 0 120px 24px rgba(255,176,32,.55);animation:ring-pulse .9s ease-in-out infinite alternate}
+.ring-overlay[hidden]{display:none}
+@keyframes ring-pulse{from{opacity:.25}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.ring-overlay{animation:none;opacity:.7}}
+/* 저장 자세: 버튼 아래 각도, 저장한 값은 파랑. 저장·되돌리기 고르는 중이면 네 버튼에 파란 테두리 */
+html body .console .presets button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:58px;padding:8px 6px}
+html body .console .presets button b{font-weight:600}
+html body .console .presets button small{font-size:11.5px;font-weight:500;color:var(--g-muted);font-variant-numeric:tabular-nums}
+html body .console .presets button small.saved{color:var(--g-sel);font-weight:600}
+html body .console .presets.picking button{box-shadow:inset 0 0 0 2px var(--g-sel)}
+html body .console .pose-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+html body .console .pose-tools button{min-height:36px;font-size:13px;font-weight:600;color:var(--g-muted);background:transparent;box-shadow:inset 0 0 0 1px rgba(60,60,67,.2)}
+html body .console .pose-tools button[aria-pressed=true]{background:var(--g-sel);color:var(--g-sel-text);box-shadow:none}
+html body .console .pose-mode-hint{color:var(--g-sel);font-weight:600}
+/* 병상용 말하기: 예·아니오 칸이 생기면 목록이 줄어들어 칸 전체가 보이고, 칸은 두루마리처럼 펼쳐진다(11/18) */
+html body .remote .console:has(> .call-names):has(#talk-pane){display:flex;flex-direction:column}
+html body .remote .console:has(> .call-names):has(#talk-pane)>*{flex:none}
+html body .remote .console:has(> .call-names) #talk-pane{flex:1 1 auto;min-height:120px;display:flex;flex-direction:column}
+html body .remote .console:has(> .call-names) #talk-items{flex:1 1 auto;min-height:0;max-height:none;overflow-y:auto}
+html body .console .feedback:has(.confirm-actions:not([hidden])),html body .console .feedback:has(#confirm-actions:not([hidden])){overflow:hidden;animation:feedback-unroll .32s cubic-bezier(.2,.8,.2,1) both}
+@keyframes feedback-unroll{from{max-height:0;opacity:0;padding-block:0;margin-top:0;margin-bottom:0}to{max-height:140px;opacity:1}}
+@media (prefers-reduced-motion:reduce){html body .console .feedback{animation:none!important}}
+/* 자세 탭: 자세 예약(11/18) */
+html body .console .pose-tools .wide{grid-column:1/-1}
+html body .console .presets button[aria-pressed=true]{background:var(--g-fill);box-shadow:inset 0 0 0 2px var(--g-sel);color:var(--g-text)}
+html body .console .reserve-times{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:10px;padding:10px 12px;border-radius:14px;background:var(--g-track);animation:feedback-unroll .32s cubic-bezier(.2,.8,.2,1) both}
+html body .console .reserve-times>span{flex:1 0 100%;font-size:12.5px;font-weight:600;color:var(--g-muted)}
+html body .console .reserve-times button{flex:1;min-height:36px;font-size:13.5px;font-weight:600;background:#fff}
+html body .console .reserve-times button.ghost{flex:none;padding:0 12px;background:transparent;color:var(--g-muted)}
+html body .console .reserve-line{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13.5px;font-weight:600;color:var(--g-sel)}
+html body .console .reserve-line span{flex:1}
+html body .console .reserve-line button{min-height:30px;padding:0 12px;font-size:12.5px;color:var(--g-muted)}

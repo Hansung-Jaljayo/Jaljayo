@@ -1,0 +1,38 @@
+/* 손글씨 글씨체가 다 올 때까지 문구를 숨긴다. 기본 글씨체로 먼저 크게 뜨는 것 방지. 글씨체를 못 받아도 loading-type.js가 보이게 한다 */
+.loading-type:not(.pen-ready) { visibility: hidden; }
+.loading-type {
+  color: #382e29;
+  -webkit-text-stroke: .012em currentColor;
+  position: relative;
+  letter-spacing: -.025em;
+  line-height: 1.28;
+  white-space: pre;
+}
+.loading-type.writing span {
+  display: inline-block;
+  animation: ink-write 300ms var(--delay) cubic-bezier(.24,.6,.36,1) both;
+}
+.loading-type.shining::after {
+  content: attr(aria-label);
+  position: absolute;
+  inset: 0;
+  color: white;
+  opacity: .55;
+  pointer-events: none;
+  mask-image: linear-gradient(135deg, transparent 43%, #0006 47%, #000 50%, #0006 53%, transparent 57%);
+  mask-size: 260% 100%;
+  mask-repeat: no-repeat;
+  animation: ink-light 540ms linear both;
+}
+@keyframes ink-write {
+  from { clip-path: polygon(0 0,0 0,0 0,0 0); }
+  to { clip-path: polygon(0 0,200% 0,100% 200%,0 200%); }
+}
+@keyframes ink-light {
+  from { mask-position: 140% center; }
+  to { mask-position: -40% center; }
+}
+@media(prefers-reduced-motion:reduce){
+  .loading-type.shining::after { display: none; }
+  .loading-type.writing,.loading-type.writing span { animation:none;color:#382e29; }
+}

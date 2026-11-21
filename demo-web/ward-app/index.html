@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>잘자요 시연 화면</title>
+    <link rel="icon" type="image/png" href="./logo.png" />
+  <style>
+@font-face{font-family:LoadingPen;src:url('./loading-pen.ttf') format('truetype');font-weight:400;font-display:swap}
+#loading:not([hidden]){position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;color:#394a3b;font:400 clamp(36px,6vw,84px)/1.2 LoadingPen,cursive;text-align:center}
+#loading[hidden],#loading #error:empty{display:none}
+#loading #error{font:14px/1.4 sans-serif}
+</style><link rel="preload" href="./models/ward_room.glb" as="fetch" crossorigin>
+<link rel="preload" href="./clinical-ward.glb" as="fetch" crossorigin>
+<link rel="preload" href="./entry.glb?v=footwall" as="fetch" crossorigin>
+<link rel="preload" href="./CityParkSky.jpg" as="image">
+<link rel="preload" href="./modern_arm_chair_01_legs.jpg" as="image">
+<link rel="preload" href="./tag-pen.ttf" as="font" crossorigin>
+<link rel="preload" href="./fruit/apple.png" as="image">
+<link rel="preload" href="./fruit/grape.png" as="image">
+<link rel="preload" href="./fruit/strawberry.png" as="image">
+</head>
+  <body>
+    <div id="loading" role="status">공간을 준비하고 있어요</div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <script src="./glass-ui.js"></script>
+  </body>
+</html>

@@ -1,0 +1,170 @@
+[
+{
+"file": "island_tree_01_0.webp",
+"w": 4.75,
+"h": 5.25,
+"kind": "tree"
+},
+{
+"file": "island_tree_01_1.webp",
+"w": 4.81,
+"h": 4.78,
+"kind": "tree"
+},
+{
+"file": "island_tree_01_2.webp",
+"w": 4.75,
+"h": 4.65,
+"kind": "tree"
+},
+{
+"file": "island_tree_01_3.webp",
+"w": 4.81,
+"h": 5.11,
+"kind": "tree"
+},
+{
+"file": "island_tree_02_0.webp",
+"w": 4.2,
+"h": 3.55,
+"kind": "tree"
+},
+{
+"file": "island_tree_02_1.webp",
+"w": 4.07,
+"h": 3.69,
+"kind": "tree"
+},
+{
+"file": "island_tree_02_2.webp",
+"w": 4.2,
+"h": 3.85,
+"kind": "tree"
+},
+{
+"file": "island_tree_02_3.webp",
+"w": 4.07,
+"h": 3.76,
+"kind": "tree"
+},
+{
+"file": "island_tree_03_0.webp",
+"w": 2.98,
+"h": 2.77,
+"kind": "tree"
+},
+{
+"file": "island_tree_03_1.webp",
+"w": 2.91,
+"h": 2.67,
+"kind": "tree"
+},
+{
+"file": "island_tree_03_2.webp",
+"w": 2.97,
+"h": 2.73,
+"kind": "tree"
+},
+{
+"file": "island_tree_03_3.webp",
+"w": 2.91,
+"h": 2.8,
+"kind": "tree"
+},
+{
+"file": "jacaranda_tree_0.webp",
+"w": 24.4,
+"h": 18.75,
+"kind": "tree"
+},
+{
+"file": "jacaranda_tree_1.webp",
+"w": 19.09,
+"h": 19.18,
+"kind": "tree"
+},
+{
+"file": "jacaranda_tree_2.webp",
+"w": 24.4,
+"h": 19.64,
+"kind": "tree"
+},
+{
+"file": "jacaranda_tree_3.webp",
+"w": 19.13,
+"h": 19.72,
+"kind": "tree"
+},
+{
+"file": "shrub_01_0.webp",
+"w": 2.59,
+"h": 0.4,
+"kind": "shrub"
+},
+{
+"file": "shrub_01_1.webp",
+"w": 0.22,
+"h": 1.02,
+"kind": "shrub"
+},
+{
+"file": "shrub_01_2.webp",
+"w": 2.59,
+"h": 0.39,
+"kind": "shrub"
+},
+{
+"file": "shrub_01_3.webp",
+"w": 0.21,
+"h": 1.02,
+"kind": "shrub"
+},
+{
+"file": "shrub_04_0.webp",
+"w": 0.58,
+"h": 0.22,
+"kind": "shrub"
+},
+{
+"file": "shrub_04_1.webp",
+"w": 0.15,
+"h": 0.29,
+"kind": "shrub"
+},
+{
+"file": "shrub_04_2.webp",
+"w": 0.58,
+"h": 0.21,
+"kind": "shrub"
+},
+{
+"file": "shrub_04_3.webp",
+"w": 0.15,
+"h": 0.34,
+"kind": "shrub"
+},
+{
+"file": "tree_small_02_0.webp",
+"w": 2.91,
+"h": 4.48,
+"kind": "tree"
+},
+{
+"file": "tree_small_02_1.webp",
+"w": 4.29,
+"h": 4.61,
+"kind": "tree"
+},
+{
+"file": "tree_small_02_2.webp",
+"w": 2.91,
+"h": 4.87,
+"kind": "tree"
+},
+{
+"file": "tree_small_02_3.webp",
+"w": 4.29,
+"h": 4.53,
+"kind": "tree"
+}
+]

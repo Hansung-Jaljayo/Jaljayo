@@ -1,0 +1,124 @@
+.remote{position:fixed;left:24px;bottom:22px;display:flex;align-items:flex-end;gap:0;max-width:calc(100vw - 48px);filter:drop-shadow(0 8px 24px #242a2320)}.rail,.console{background:#faf9f1f2;backdrop-filter:blur(22px);border:1px solid #ffffffa0}.rail{width:72px;flex-shrink:0;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:14px 8px;border-radius:20px 20px 0 20px;min-height:330px;border-right:0}.remote-mark{font:26px Georgia;text-align:center;margin:0 0 10px;color:#52694c}.rail button{border:0;border-radius:12px;min-height:44px;font-size:12px;padding:9px 4px}.rail button[aria-selected=true]{background:#394a3b;color:#fff}.rail .stop{margin-top:auto;background:#a44836;color:white;line-height:1.6}.console{width:650px;max-width:calc(100vw - 120px);padding:14px 20px 10px;border-radius:0 18px 18px 0}.console-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.console-top #motion-status{font-size:11px;color:#52694c}.pane{height:96px}.pane[hidden]{display:none}.sliders{gap:20px}.sliderline{gap:7px}.sliderline button{padding:0;min-width:28px;height:28px;font-size:18px;touch-action:none}.sliderline output{font-size:15px}.presets{margin-top:14px;gap:7px}.presets button{flex:1;font-size:12px}.feedback{position:relative;border-top:1px solid #dddfd2;padding-top:9px;display:flex;gap:12px;align-items:center;min-height:34px;font-size:11px}.feedback>span{color:#777c6b;max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.feedback strong{font-weight:500;flex:1}.feedback details{font-size:10px;color:#626859}.feedback summary{cursor:pointer}.feedback code{position:absolute;bottom:35px;left:0;right:0;background:#faf9f1;padding:14px;border:1px solid #d7d9cd;border-radius:10px;overflow-wrap:anywhere}.views{margin-top:7px;padding-top:7px;gap:3px}.views button{padding:5px;font-size:11px}.hint{display:none}#talk-groups{display:flex;gap:5px;overflow-x:auto;margin-bottom:7px}#talk-groups button{white-space:nowrap;padding:5px 8px;font-size:10px}#talk-items{display:flex;flex-wrap:wrap;gap:5px;max-height:63px;overflow-y:auto}#talk-items button{padding:7px 10px;font-size:12px}.device-state{display:flex;gap:18px;font-size:11px;color:#626859;margin-bottom:10px}.device-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.device-actions button{padding:6px 9px}.device-actions label{display:flex;align-items:center;gap:3px;font-size:11px}.device-actions input{width:auto;accent-color:#52694c}button:disabled{opacity:.4;cursor:default}button:focus-visible,input:focus-visible{outline:2px solid #52694c;outline-offset:3px}body.clean .remote{display:none}@media(max-width:700px){.remote{left:10px;bottom:10px;max-width:calc(100vw - 20px)}.rail{width:58px;min-height:310px}.console{max-width:calc(100vw - 78px);padding:12px}.pane{height:134px}.sliders{grid-template-columns:1fr;gap:8px}.presets{flex-wrap:wrap;margin-top:8px}.presets button{padding:6px}.feedback>span{display:none}.device-state{gap:8px;flex-wrap:wrap}.brand{top:16px;left:20px}#talk-items{max-height:98px}.badge{display:none}}
+/* 메뉴는 오른쪽 위, 각도와 선택한 탭의 조작은 아래에 유지 */
+.remote .rail{position:fixed;right:24px;top:24px;bottom:auto;min-height:0;width:auto;flex-direction:row;align-items:center;gap:5px;padding:7px 9px;border:1px solid #ffffffa0;border-radius:18px}.remote{filter:none}.remote .rail .remote-mark{font-size:22px;margin:0 8px}.remote .rail button{min-height:38px;padding:8px 13px}.remote .rail .stop{margin:0 0 0 5px;display:flex;align-items:center;gap:6px;line-height:1}.remote .rail .stop br{display:none}.remote .console{border-radius:18px;max-width:calc(100vw - 48px);box-shadow:0 8px 24px #242a2320}.badge{display:none}@media(max-width:700px){.remote .rail{right:10px;top:16px;gap:2px;padding:5px}.remote .rail .remote-mark{display:none}.remote .rail button{padding:8px;min-height:36px;font-size:11px}.remote .console{max-width:calc(100vw - 20px)}}
+/* コンパクトな常設操作盤 */
+.remote .console{width:560px;padding:12px 16px 9px}.console-top{margin-bottom:9px}.pane{height:82px}.presets{margin-top:10px}.feedback{min-height:30px;padding-top:7px}.feedback>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.views{gap:7px;margin-top:6px;padding-top:8px}.views button{border:1px solid #bfc5b6;background:#ffffff55;border-radius:9px;min-height:30px;padding:5px 9px}.views button:hover{background:#e5e9df;border-color:#65765c}.views button[aria-pressed=true]{background:#394a3b;color:#fff;border-color:#394a3b}.sliders{gap:14px}.sliderline{gap:5px}.sliderline output{min-width:28px;font-size:14px}@media(max-width:700px){.pane{height:134px}.remote .console{width:560px;padding:10px}.views{gap:4px}.views button{padding:5px;font-size:10px}}
+/* Keep the command list inside its row; output has a dedicated panel. */
+#talk-pane{display:grid;grid-template-rows:auto minmax(0,1fr);gap:7px;overflow:hidden}#talk-pane[hidden]{display:none}#talk-groups{margin-bottom:0;flex-shrink:0}#talk-items{min-height:0;max-height:none;overflow-y:auto;align-content:start;padding-right:5px;padding-bottom:3px}.pane{overflow:hidden}.feedback{margin-top:8px}.feedback>strong{white-space:normal;font-size:11px;line-height:1.4}.model-panel{position:fixed;right:24px;bottom:22px;width:min(420px,calc(100vw - 640px));min-height:130px;max-height:220px;background:#faf9f1f2;backdrop-filter:blur(22px);border:1px solid #ffffffa0;border-radius:18px;padding:18px 20px;box-shadow:0 8px 24px #242a2320}.model-panel .title{display:block;margin-bottom:14px;letter-spacing:1px}.model-panel code{display:block;font:12px/1.8 ui-monospace,SFMono-Regular,Menlo,monospace;color:#394a3b;white-space:pre-wrap;overflow-wrap:anywhere;max-height:150px;overflow-y:auto}body.clean .model-panel{display:none}@media(max-width:1000px){.remote .console{width:52vw}.model-panel{width:calc(48vw - 64px);padding:13px;min-height:130px}.sliders{gap:8px}.sliderline button{min-width:24px}.presets button{padding:6px 5px}}@media(max-width:700px){.remote .console{width:calc(100vw - 20px)}.model-panel{right:10px;bottom:285px;width:260px;min-height:80px;max-height:130px}.model-panel code{max-height:75px;font-size:10px}.model-panel .title{margin-bottom:6px}}
+
+.brand h1{font-family:'Nanum Pen Script','Apple SD Gothic Neo',cursive;font-size:54px;font-weight:400;line-height:1.05;letter-spacing:1px;color:#fff;margin:0 0 8px;text-shadow:0 2px 12px #17231935}.brand p{color:#ffffffd9;font-size:11px;letter-spacing:.5px;text-shadow:0 1px 8px #17231945}@media(max-width:600px){.brand h1{font-size:42px}}
+
+:root{--edge:clamp(12px,1.5vw,24px);--controls:clamp(304px,24vw,440px)}
+.stage{inset:0}
+.remote{left:auto;bottom:auto;right:var(--edge);top:var(--edge);width:var(--controls);max-width:none;max-height:calc(100dvh - 2*var(--edge));align-items:stretch;flex-direction:column;gap:8px}
+.remote .rail{position:static;width:100%;justify-content:space-between;padding:6px;flex-shrink:0}
+.remote .rail button{font-size:14px;min-height:38px;padding:6px 9px}
+.remote .rail .remote-mark{margin:0 4px}.remote .rail .stop{margin:0}
+.remote .console{width:100%;max-width:none;min-height:0;max-height:none;overflow:auto;overscroll-behavior:contain;padding:16px}
+.console h2,.console-top .title{margin:0 0 7px;font-size:14px;font-weight:650;letter-spacing:0;color:#394a3b}
+.console-top .title{margin:0}.console-top #motion-status{font-size:13px}
+.console button{font-size:13px;min-height:34px}
+.console .pane{height:auto;overflow:visible}
+.console .sliders{grid-template-columns:1fr;gap:8px;margin-bottom:15px}
+.sliderline{display:grid;grid-template-columns:30px 30px minmax(38px,1fr) 30px 34px}
+.sliderline output{text-align:right}.sliderline label,.sliderline output{font-size:14px}
+.console .presets,.console .views,.device-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0}
+.console .views{border:0;padding:0}
+.console .feedback{padding:10px 0;margin:12px 0;border-block:1px solid #d2d6c8;display:block}
+.console .feedback>span{display:none}.console .feedback strong{display:block;font-size:13px;line-height:1.5}
+#talk-pane{display:block}#talk-groups{flex-wrap:wrap;gap:4px;margin-bottom:12px}
+#talk-groups button{font-size:12px}#talk-items{display:grid;gap:5px;max-height:32vh}
+#talk-items button{text-align:left;border-radius:9px;line-height:1.5}
+.device-actions label{font-size:13px;min-height:32px}
+.model-panel{display:block;left:var(--edge);right:auto;bottom:var(--edge);width:min(370px,calc(100vw - var(--controls) - 4*var(--edge)));min-height:0;max-height:22vh;padding:10px 14px;pointer-events:auto}
+.model-panel .title{margin-bottom:3px;font-size:12px;letter-spacing:0}.model-panel code{font-size:13px;max-height:13vh}
+@media(max-width:720px){
+  .stage{inset:0}
+  .remote{top:50dvh;left:var(--edge);right:var(--edge);width:auto;max-height:calc(50dvh - var(--edge));gap:4px}
+  .remote .rail{justify-content:space-around}.remote .console{max-height:none;padding:12px}
+  .model-panel{bottom:51dvh;width:min(340px,calc(100vw - 2*var(--edge)));max-height:14vh}
+  .model-panel code{max-height:8vh}
+}
+
+@media(min-width:1000px){
+  .remote .console{padding:clamp(16px,1.2vw,24px)}
+  .console button,.remote .rail button,.console .feedback strong,.device-actions label,#talk-items button,#talk-groups button{font-size:clamp(14px,1vw,18px)}
+  .console button,.remote .rail button{min-height:clamp(36px,4.7vh,48px)}
+  .console h2,.console-top .title,.sliderline label,.sliderline output{font-size:clamp(15px,1.12vw,20px)}
+  .console h2{margin-bottom:clamp(7px,1vh,12px)}
+  .sliderline{grid-template-columns:40px 32px minmax(0,1fr) 32px 42px}
+  .console .presets,.console .views{gap:clamp(6px,.8vh,10px)}
+}
+#talk-items{max-height:42dvh;overflow-y:auto}
+#talk-items section{display:grid;gap:5px}
+#talk-items section+section{margin-top:10px}
+#talk-items section h2{margin:0}
+.console .feedback:has(#confirm-actions:not([hidden])){display:flex;align-items:center;gap:8px}
+#confirm-actions{display:flex;flex:none;gap:5px}
+#confirm-actions button{padding:6px 11px}
+#confirm-actions button:first-child{background:#394a3b;border-color:#394a3b;color:white}
+
+.remote .pane[hidden],#confirm-actions[hidden],#talk-groups{display:none!important}
+.console #confirm-actions:not([hidden]){display:flex;align-items:center;gap:4px;max-width:none}
+.console #device-pane{overflow:visible}
+#talk-pane{height:auto}
+body .pressure:not([hidden]){right:auto;left:var(--edge);top:125px;width:min(260px,36vw)}
+@media(max-width:720px){body .pressure:not([hidden]){top:65px;max-height:30vh;overflow:auto}}
+
+/* Home remote: a single instrument housing with a warm metal edge. */
+.remote {
+  --ink: #2c302d;
+  --metal: #827157;
+  --line: #dad7cf;
+  gap: 0;
+  background: #faf9f6;
+  border: 1px solid #c6c0b5;
+  border-radius: 13px;
+  box-shadow: 0 12px 36px #30291f26;
+  overflow: hidden;
+  color: var(--ink);
+}
+.remote .rail,.remote .console {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.remote .rail {
+  background: #323630;
+  padding: 4px 9px;
+  gap: 2px;
+}
+.remote .rail .remote-mark {color: #e0cba5}
+.remote .rail button[data-tab] {
+  background: transparent;
+  color: #d0d2ca;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+}
+.remote .rail button[aria-selected=true] {color: white;border-bottom-color: #ddc499}
+.remote .rail .stop {background: #773d32;color: white;border-radius: 5px;gap: 5px}
+.remote .stop::before {content: '';width: 7px;height: 7px;background: currentColor;border-radius: 1px}
+.remote .console {background: #faf9f6;padding: clamp(15px,1.4vw,23px)}
+.remote .console-top {margin-bottom: 16px;border-bottom: 1px solid var(--line);padding-bottom: 12px}
+.remote .console-top .title {font-size: 21px;letter-spacing: -.055em;color: var(--ink)}
+.remote .console h2 {color: #676258;font-size: 13px;font-weight: 600;margin-bottom: 8px}
+.remote .sliderline output {font-variant-numeric: tabular-nums;font-weight: 650;color: var(--ink)}
+.remote .sliderline button {border: 0;border-radius: 4px;background: #eceae4;color: var(--ink);min-height: 30px}
+.remote input[type=range] {accent-color: #70614d}
+.remote .presets {gap: 0 14px}
+.remote .presets button {
+  background: transparent;border: 0;border-bottom: 1px solid var(--line);
+  border-radius: 0;text-align: left;padding: 8px 2px;color: var(--ink);
+}
+.remote .presets button::after {content: '›';float: right;color: var(--metal)}
+.remote .feedback {border: 0;border-left: 2px solid #b9a480;background: #efede7;padding: 7px 10px}
+.remote .feedback strong {font-size: 13px;font-weight: 500}
+.remote .views {background: #eae8e2;border-radius: 6px;padding: 3px;gap: 2px;grid-template-columns: repeat(4,minmax(0,1fr))}
+.remote .views button {border: 0;background: transparent;border-radius: 4px;padding: 4px 1px;font-size: 12px;color: #575952}
+.remote .views button[aria-pressed=true] {background: #fff;color: #282c28;box-shadow: 0 1px 3px #30291f30;font-weight: 700}
+.remote button:focus-visible {outline: 2px solid #a78047;outline-offset: -2px}
+@media(hover:hover) {
+  .remote .presets button:hover,.remote .sliderline button:hover {background: #e5e1d8}
+}
+.remote .sliderline input[type=range] { width: 100%; min-width: 0; margin-inline: 0; }
