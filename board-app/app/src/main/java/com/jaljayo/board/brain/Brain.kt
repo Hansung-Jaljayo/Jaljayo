@@ -21,9 +21,13 @@ enum class Purpose(val code: String, val ko: String) {
     companion object { fun of(c: String) = entries.firstOrNull { it.code == c } }
 }
 
-data class Reservation(val atMs: Long, val label: String, val purpose: Purpose, val target: Angles, val angleOnly: Boolean = false) {
+// 11/12: adjust = 조절 예약(reserve_adjust)의 부위·방향·양·양 종류. 각도는 예약 시각에 그때 각도에서 계산한다(target은 예약할 때 짐작한 값, 앱 표시용)
+data class AdjustPlan(val part: String, val direction: String, val amount: String, val amountType: String)
+
+data class Reservation(val atMs: Long, val label: String, val purpose: Purpose, val target: Angles, val angleOnly: Boolean = false, val adjust: AdjustPlan? = null) {
     /** 예약 내용을 말로: "휴식 자세", "평평하게 바꾸는", 폰에서 각도만 정한 예약은 "머리 30도, 다리 20도로 바꾸는" */
     fun desc(): String = when {
+        adjust != null -> Brain.adjustDesc(adjust)
         angleOnly -> "머리 ${Math.round(target.head)}도, 다리 ${Math.round(target.leg)}도로 바꾸는"
         purpose == Purpose.FLAT -> "평평하게 바꾸는"
         else -> purpose.ko + " 자세"
@@ -62,6 +66,16 @@ data class BedState(
     val lastSpeech: String = "", // 직전에 한 말(다시 듣기용)
     val listed: List<Int> = emptyList(),      // 11/11: 방금 읽어 준 알람 목록(id). "세 개 다 지워"가 이 목록을 가리킴
     val listedUntil: Long = 0L,               // 이 시각(ms)까지만 위 목록을 씀
+    val skipAsk: String = "",                 // 11/13: 대상 없는 건너뛰기에 "어떤 알람을 건너뛸까요?"라고 물었을 때 이어 갈 건너뛰기 명령
+    val skipAskUntil: Long = 0L,              // 이 시각(ms)까지, 바로 다음 한 마디에만 위 물음의 대답으로 봄
+    val name: String = "잘자요",               // 11/12: 침대 이름(이름을 물으면 "저는 ○○ 침대예요"). 병상은 과일 이름으로 바꿔 넣는다
+    val angleAsks: Int = 0,                   // 11/12: 붙여 말한 두 각도를 못 읽어 연달아 다시 말해 달라고 한 횟수(두 번째부터 쉬어 말하라고 안내)
+    val volume: Int = Rules.VOLUME_DEFAULT,   // 11/12: 침대 말소리 크기 단계(1..VOLUME_MAX). 말로 바꾸고 앱에서도 바꾼다. 알람 소리와는 따로다
+    val sensorOk: Boolean = true,
+    val replyAlarms: List<Int> = emptyList(), // 11/14 22차 준비: 보드가 직전 대답([앞 대답])에서 말한 알람(id). 모델이 그 알람을 가리키며 날짜·오전오후를 비우면 여기서 채운다
+    val replyAt: Long = 0L,                   // 위 대답을 한 때(ms). PrevReply처럼 2분이 지나면 쓰지 않는다
+    val call: String? = null,                 // 11/19: 병원 침대 목록에서 이 침대를 부르는 이름(환자가 고른 과일). 없으면 name. 보드 앱이 채우고 저장하지 않는다
+    val ward: Boolean = false,                // 11/14: 병원용이면 "잘자요" 대신 "<과일 이름> 침대"로 부른다(name이 과일 이름)             // 11/14: 압력 센서 소식이 오고 있는지(보드 앱이 채움). 없으면 침대 이탈 알람을 맞출 때 알린다
 ) {
     val moving get() = !angles.same(target)
 }
@@ -70,6 +84,9 @@ data class BedState(
 data class Turn(val state: BedState, val say: String = "", val note: String = "")
 
 object Rules {
+    const val VOLUME_MAX = 10; const val VOLUME_DEFAULT = 8; const val VOLUME_LARGE = 3   // 말소리 크기 10단계(11/12 결정), 처음 값 8단계, "많이"는 세 칸
+    // 단계별 소리 배율. 한 칸에 약 2.2데시벨씩, 10단계가 기기 최대(1.0), 1단계가 약 10분의 1
+    val VOLUME_GAIN = floatArrayOf(0.10f, 0.13f, 0.17f, 0.22f, 0.28f, 0.36f, 0.47f, 0.60f, 0.78f, 1f)
     val LIMIT = Angles(60.0, 40.0)
     val DEFAULTS = mapOf(
         Purpose.READ to Angles(45.0, 15.0), Purpose.TV to Angles(30.0, 10.0), Purpose.REST to Angles(15.0, 20.0),
@@ -79,6 +96,7 @@ object Rules {
     const val LARGE = 20.0        // "많이"·"확"(11/10 R4)
     const val DEFAULT_STEP = 10.0 // 양 말 없는 조절. 올릴 때와 내릴 때 모두(11/10 R4, 전에는 내릴 때 끝까지)
     const val NOT_NOW = "지금은 할 수 없는 요청이에요"
+    const val NO_SENSOR_LEAVE = "지금은 침대 센서가 연결되어 있지 않아서, 울리면 침대 버튼을 길게 눌러야 꺼져요"   // 11/19: 사용자는 보드 화면을 보지 않으므로 침대 버튼으로 안내   // 11/14
     const val WHAT = "무엇을 할까요? '머리 올려'나 '알람 꺼'처럼 말씀해 주세요"
     const val EXACT = "정확한 시각을 다시 말씀해 주세요."
     const val MISHEARD = "잘 못 알아들었거나 제가 할 수 없는 일이에요. 다시 말씀해 주시겠어요?"
@@ -106,13 +124,19 @@ object Rules {
         "save" to "네 또는 아니요로 말씀해 주세요.", "reset" to "네 또는 아니요로 말씀해 주세요.", "reset_purpose" to "자세 이름을 말씀해 주세요.", "purpose" to "자세 이름을 말씀해 주세요.",
         "alarm_type" to "알람 종류를 말씀해 주세요.", "level" to "한 자리나 두 자리로 말씀해 주세요.")
     const val NO_RESERVATION = "걸려 있는 자세 예약이 없어요"
+    const val SKIP_ALARM_ONLY = "건너뛰는 건 알람만 할 수 있어요"  // 11/13: 어떤 알람을 건너뛸지 물었는데 자세 예약·각도 이야기로 답했을 때
+    const val LISTENING = "네, 듣고 있어요. 편하게 말씀해 주세요."
+    const val ANGLE_AGAIN = "다시 한 번 말씀해 주세요"
+    const val ANGLE_PAUSE = "각도만 말씀하실 때는 삼십, 오십처럼 숫자 사이에 잠깐 쉬어 말씀해 주세요"
     // 모델을 거치지 않는 단독 정지 말(설계서 6절). "타임"은 움직이는 중에만 멈춤
     val STOP_WORDS = setOf("멈춰", "그만", "스톱", "스탑", "올스톱", "얼음", "가만히 있어봐", "가만히 있어 봐", "멈춰 줘", "멈춰줘", "정지")
 }
 
 class Brain(private val clock: () -> Long) {
 
-    fun clamp(v: Double, p: Part) = v.coerceIn(0.0, Rules.LIMIT[p])
+    // 11/18 결정: 각도는 5도 단위로만 움직인다. 침대에서 1~2도 차이는 느끼기 어렵고, 받아쓰기가 헷갈리는 "삼십이로/삼십으로" 같은 말이 같은 각도가 된다
+    fun snap5(v: Double) = Math.round(v / 5.0) * 5.0
+    fun clamp(v: Double, p: Part) = snap5(v).coerceIn(0.0, Rules.LIMIT[p])
 
     /** 이번 턴에 말할 문장이 새로 묻기 시작했거나 다시 물은 질문이면 그 문장을 그대로 상태에 적어 둔다.
      *  보드 앱은 말하기 직전에 이것을 거친 상태를 쓴다. prev는 이 턴 앞의 상태 */
@@ -123,7 +147,7 @@ class Brain(private val clock: () -> Long) {
         if (np != null && np !== prev.pending && t.say.isNotEmpty()) ns = ns.copy(pending = np.copy(asked = t.say))
         ns = when {
             ns.ringing == null || ns.question == null -> if (ns.questionSaid.isEmpty()) ns else ns.copy(questionSaid = "")
-            t.say.endsWith("더하기 ${sino(ns.question.second)}는 얼마예요?") -> ns.copy(questionSaid = t.say)
+            t.say.endsWith(addQ(ns.question.first, ns.question.second)) -> ns.copy(questionSaid = t.say)
             else -> ns
         }
         return if (ns === t.state) t else t.copy(state = ns)
@@ -133,7 +157,7 @@ class Brain(private val clock: () -> Long) {
     fun waitingQuestion(s: BedState): String? {
         s.pending?.asked?.takeIf { it.isNotEmpty() }?.let { return it }
         val q = s.question
-        if (s.ringing != null && q != null) return s.questionSaid.ifEmpty { "${sino(q.first)} 더하기 ${sino(q.second)}는 얼마예요?" }
+        if (s.ringing != null && q != null) return s.questionSaid.ifEmpty { "${Brain.addQ(q.first, q.second)}" }
         return null
     }
 
@@ -147,13 +171,58 @@ class Brain(private val clock: () -> Long) {
     /** 단독 정지 말이면 모델을 기다리지 않고 바로 멈춘다. 처리했으면 Turn, 아니면 null */
     fun quickStop(s: BedState, text: String): Turn? {
         val t = text.removePrefix("야 ").trim()
-        // 11/10 이도 님 결정: 움직이는 중의 "잠깐만"도 "타임"처럼 바로 멈춘다
+        // 11/10 결정: 움직이는 중의 "잠깐만"도 "타임"처럼 바로 멈춘다
         val stop = t in Rules.STOP_WORDS || (t in setOf("타임", "잠깐만", "잠깐", "잠깐만요") && s.moving)
         if (!stop) return null
-        if (s.moving) return stopNow(s, "정지 말을 듣고 모델을 거치지 않고 멈췄어요.")
+        if (s.moving) return stopNow(s, "정지 말을 듣고 모델을 거치지 않고 멈췄어요.").let { it.copy(state = it.state.copy(replyAlarms = emptyList(), replyAt = clock())) }
         if (s.pending != null) return Turn(s.copy(pending = null), note = "물어보던 것을 접었어요.")
         return Turn(s, note = "움직이는 중이 아니라서 할 일이 없어요.")
     }
+
+    /** 11/17: 부위 없이 "다·둘 다·전부·싹·몽땅·모두 올려/내려"(머리·다리를 둘 다 말한 것 포함)는 모델 출력과 상관없이 보드가 정한다.
+     *  올려·세워·일으켜·높여 = 끝까지, 내려·눕혀·펴·낮춰 = 0도. 부위를 말하지 않았고 앞 대답이 한 부위 일이면 그 부위만(11-41). 해당 없으면 null */
+    fun allUpDown(s: BedState, heard: String, prev: String?): Turn? {
+        if (s.ringing != null) return null
+        val w = unstutter(heard).replace(Regex("[\\s,.?!~]"), "").removePrefix("야")
+        val m = ALL_UPDOWN.matchEntire(w) ?: return null
+        val up = m.groups["v"]!!.value in UP_VERBS
+        val part = if (m.groups["p"] != null) "both" else prev?.let {
+            val h = "머리" in it; val l = "다리" in it
+            if (h && !l) "head" else if (l && !h) "leg" else null
+        } ?: "both"
+        val out = "<maum_0>(command=adjust, part=$part, direction=none, amount=${if (up) "max" else "0"}, amount_type=target, confirm=no)<maum_end>"
+        val t = rerun(s, heard, out)
+        return t.copy(note = listOf(t.note, "\"다 ${if (up) "올려" else "내려"}\"류라 모델을 거치지 않고 ${if (part == "both") "머리와 다리" else if (part == "head") "머리" else "다리"}를 ${if (up) "끝까지" else "0도로"} 맞췄어요.").filter { it.isNotEmpty() }.joinToString(" "))
+    }
+
+    /** 11/17: 숫자 두 개 + 올려·내려에 "로"가 없으면("머리 십 도 다리 십 도 올려") 각각 그만큼 더 움직인다(숫자 하나일 때와 같은 기준).
+     *  "로"가 붙거나 맞춰·해 줘면 모델 출력(set_angles, 그 각도로 맞춤) 그대로 둔다. 부위 말이 없으면 앞이 머리, 뒤가 다리. 해당 없으면 null */
+    fun twoAngleDelta(s: BedState, heard: String): Turn? {
+        if (s.ringing != null) return null
+        val m = TWO_DELTA.matchEntire(unstutter(heard).trim().trimEnd('.', '?', '!', '~').trim()) ?: return null
+        val n1 = num(m.groups["n1"]!!.value) ?: return null
+        val n2 = num(m.groups["n2"]!!.value) ?: return null
+        val p1 = m.groups["p1"]?.value; val p2 = m.groups["p2"]?.value
+        val first = when { p1 != null -> p1; p2 != null -> if (p2 == "머리") "다리" else "머리"; else -> "머리" }
+        val second = p2 ?: if (first == "머리") "다리" else "머리"
+        if (first == second) return null
+        val head = if (first == "머리") n1 else n2; val leg = if (first == "머리") n2 else n1
+        val up = m.groups["v"]!!.value in UP_VERBS
+        val sign = if (up) 1 else -1
+        val t = Angles(clamp(s.target.head + sign * head, Part.HEAD), clamp(s.target.leg + sign * leg, Part.LEG))
+        val dh = abs(t.head - s.target.head).roundToInt(); val dl = abs(t.leg - s.target.leg).roundToInt()
+        val verb = if (up) "올렸어요" else "내렸어요"
+        if (dh == 0 && dl == 0) return Turn(s, say = if (up) "머리와 다리는 이미 최대예요" else "머리와 다리는 이미 가장 낮아요")
+        val what = when {
+            dh == 0 -> "다리를 ${dl}도 $verb"
+            dl == 0 -> "머리를 ${dh}도 $verb"
+            else -> "머리를 ${dh}도, 다리를 ${dl}도 $verb"
+        }
+        val r = remember(moveTo(s, t, s.purpose, what))
+        return r.copy(state = r.state.copy(lastPart = null, lastDir = if (up) "up" else "down"),
+            note = "숫자 두 개에 \"로\" 없이 ${if (up) "올려" else "내려"}라 모델을 거치지 않고 머리 ${head}도, 다리 ${leg}도 ${if (up) "더 올렸어요" else "더 내렸어요"}.")
+    }
+    private fun num(w: String): Double? = (w.toIntOrNull() ?: sinoNum(w))?.toDouble()
 
     fun stopNow(s: BedState, note: String): Turn {
         val a = Angles(s.angles.head.roundToInt().toDouble(), s.angles.leg.roundToInt().toDouble())
@@ -193,10 +262,67 @@ class Brain(private val clock: () -> Long) {
     }
 
     /** 처리 중 오류가 나도 상태를 바꾸지 않는다. 묻던 것이 있으면 무엇을 말해야 하는지와 직전 질문을, 없으면 다시 말해 달라고 한다 */
-    fun handleSafely(s: BedState, heard: String, c: Command, raw: String): Turn =
-        try { handle(s, heard, c, raw) } catch (e: Exception) {
+    fun handleSafely(s: BedState, heard: String, c0: Command, raw0: String): Turn {
+        val raw = fixMinute(heard, raw0); val c = if (raw == raw0) c0 else parseKv(raw)
+        return handleSafely0(s, heard, c, raw)
+    }
+
+    /** 11/14 보드 시험: 모델이 "아홉 시 사 분"을 9:40으로 냈다(학습에 "시 사 분" 0줄, "시 사십 분" 262줄). 들은 말에 시각이 하나뿐이고
+     *  시가 같은데 분이 다르면 들은 말의 분으로 바로잡는다. "N분 전"·상대 시각은 손대지 않는다 */
+    fun fixMinute(heard: String, raw: String): String {
+        val ms = HEARD_TIME.findAll(heard).toList()
+        if (ms.size != 1) return raw
+        val m = ms.first()
+        if (Regex("^\\s*(전|뒤|후|동안)").containsMatchIn(heard.substring(m.range.last + 1))) return raw
+        val h = NATIVE_HOUR[m.groupValues[1]] ?: sinoNum(m.groupValues[1])?.takeIf { it in 0..24 } ?: return raw
+        val mm = when { m.groupValues[2].isEmpty() -> 0; m.groupValues[2] == "반" -> 30; else -> sinoNum(m.groupValues[2].replace(" ", "").removeSuffix("분")) ?: return raw }
+        if (mm !in 0..59) return raw
+        if ("time_type=relative" in raw) return raw
+        val keys = listOf("time", "target", "value").filter { k -> Regex("\\b$k=(am_|pm_)?\\d\\d:\\d\\d").containsMatchIn(raw) }
+        if (keys.size != 1) return raw
+        val k = keys.first()
+        val f = Regex("\\b$k=((?:am_|pm_)?)(\\d\\d):(\\d\\d)").find(raw) ?: return raw
+        val hh = f.groupValues[2].toInt(); val m0 = f.groupValues[3].toInt()
+        if (hh % 12 != h % 12 || m0 == mm) return raw
+        return raw.replaceRange(f.range, "$k=${f.groupValues[1]}${f.groupValues[2]}:%02d".format(mm))
+    }
+
+    private fun handleSafely0(s: BedState, heard: String, c: Command, raw: String): Turn =
+        try { sensorWarn(s, handle(s, heard, c, raw)) } catch (e: Exception) {
             (reask(s, heard) ?: Turn(s, say = "다시 한 번 말씀해 주세요")).copy(note = "처리 중 오류라 아무것도 바꾸지 않았어요: $e")
         }
+
+    /** 11/14 보드 시험: 센서가 연결되지 않았는데 침대 이탈 알람이 새로 생기면, 울릴 때 끄는 방법(화면 버튼 길게)을 함께 알린다 */
+    private fun sensorWarn(s: BedState, t: Turn): Turn {
+        if (s.sensorOk || t.say.isEmpty()) return t
+        val before = s.alarms.associate { it.id to it.type }
+        val made = t.state.alarms.any { it.type == "leave_bed" && before[it.id] != "leave_bed" }
+        return if (made) t.copy(say = "${t.say}. ${Rules.NO_SENSOR_LEAVE}") else t
+    }
+
+    /** 11/14 보드 시험: 둘 중 하나를 물은 뒤 "전자·후자·앞에 거·뒤에 거·첫 번째·마지막" 같은 말이면 모델 없이 보드가 고른다. 해당 없으면 null */
+    fun pickByOrder(s: BedState, heard: String): Turn? {
+        val p = s.pending ?: return null
+        val w = heard.replace(" ", "").trimEnd('.', '?', '!')
+        val front = ORDER_FRONT.matches(w); val back = ORDER_BACK.matches(w)
+        if (!front && !back) return null
+        return when (p.kind) {
+            "part" -> rerun(s, heard, p.output.replace("part=none", "part=${if (front) "head" else "leg"}"))
+            "direction" -> rerun(s, heard, setField(p.output, "direction", if (front) "up" else "down"))
+            "alarm_type" -> rerun(s, heard, setField(p.output, "type", if (front) "leave_bed" else "question"))
+            "level" -> rerun(s, heard, setField(p.output, "level", if (front) "one" else "two"))
+            "scope" -> refill(s, heard, p, "scope", if (front) "once" else "always")
+            "save_or_move" -> rerun(s, heard, if (front) p.output else p.question)
+            else -> null
+        }
+    }
+
+    /** 11/14 보드 시험: 예·아니오를 물은 뒤 들은 말 전체가 "음·엉·웅·으응"이면 받아쓰기가 "응"을 잘못 적은 것으로 보고 "응"으로 받는다 */
+    fun mumbleYes(s: BedState, heard: String): Boolean {
+        val p = s.pending ?: return false
+        if (p.kind !in setOf("confirm", "ampm", "delete", "save", "reset") && !(p.kind == "alarm" && p.alarms != null)) return false
+        return heard.replace(" ", "").trimEnd('.', '?', '!', '~') in setOf("음", "엉", "웅", "으응", "응", "어엉", "음음", "으", "어", "허")   // 11/14 B1·B2: 한 글자 대답은 응
+    }
 
     fun badHour(heard: String) = Rules.badHours(heard).isNotEmpty()
 
@@ -220,7 +346,10 @@ class Brain(private val clock: () -> Long) {
         try { return handleTop(s0, heard, c0, raw0, depth == 1) } finally { depth-- }
     }
 
-    private fun handleTop(s0: BedState, heard: String, c0: Command, raw0: String, top: Boolean): Turn {
+    private fun handleTop(s0: BedState, heard: String, c1: Command, raw1: String, top: Boolean): Turn {
+        // 11/14 22차 준비: 모델이 [앞 대답]의 알람을 시각으로 가리키고 날짜·오전오후를 비웠으면 보드가 앞 대답에서 채운다(보드가 직접 한 말이라 그 알람을 안다)
+        val filled = if (top) fillFromReply(s0, c1, raw1) else null
+        val c0 = filled?.first ?: c1; val raw0 = filled?.second ?: raw1
         // 11/11: 지금 상태만 말한 불평("다리가 좀 낮아")은 명령이 아니므로, 모델이 바로 실행(confirm=no)으로 내도 먼저 묻는다.
         // 움직이라는 말(올려 줘, 낮춰, 해 줘 등)이 함께 있으면 그대로 둔다
         val guard = top && c0.token == "maum_0" && c0.command == "adjust" && c0["confirm"] == "no" && complaintOnly(heard)
@@ -239,6 +368,8 @@ class Brain(private val clock: () -> Long) {
         if (ns.lastAlarmId != null && (c.token == "maum_1" || c.command in setOf("select_alarm", "request") || ns.lastAlarmId != s0.lastAlarmId || (s0.ringing != null && ns.ringing == null)))
             t = t.copy(state = ns.copy(lastAlarmUntil = clock() + RECENT_MS))
         if (badHour(heard) && t.state.pending != null && t.say.endsWith("?") && !t.say.startsWith(Rules.EXACT)) t = t.copy(say = "${Rules.EXACT} ${t.say}")
+        if (filled != null) t = t.copy(note = listOf(t.note, filled.third).filter { it.isNotEmpty() }.joinToString(" "))
+        if (top) t = recordReply(s0, t)
         // 새로 묻기 시작한 질문을 묻던 것에 함께 담는다(다시 물을 때 그 사이에 한 다른 말을 쓰지 않으려고)
         val np = t.state.pending
         if (np != null && np.question.isEmpty() && t.say.isNotEmpty()) {
@@ -248,6 +379,74 @@ class Brain(private val clock: () -> Long) {
         }
         return t
     }
+
+    /** [앞 대답]의 알람(2분 안). 앞 대답이 알람 이야기가 아니었거나 지났으면 빈 목록 */
+    private fun replied(s: BedState): List<AlarmItem> =
+        if (s.replyAlarms.isEmpty() || clock() - s.replyAt > com.jaljayo.board.model.PrevReply.KEEP_MS) emptyList()
+        else s.alarms.filter { it.id in s.replyAlarms }
+
+    /** 11/14 22차 준비: 이번 대답이 [앞 대답]이 되면 그 대답에서 말한 알람을 적어 둔다. 규칙은 PrevReply.record와 같다:
+     *  묻는 말이면 비우고, 내용 없는 안내(다시 말해 달라 등)는 덮지 않고, 그 밖의 대답은 덮는다(알람 이야기가 아니면 빈 목록).
+     *  말한 알람 = 이번에 생기거나 바뀐 알람, 없으면 이번에 읽어 준 목록, 없으면 방금 다룬 알람 가운데 대답 문장에 그 시각("오후 네 시 오 분")이 나온 것 */
+    private fun recordReply(s0: BedState, t: Turn): Turn {
+        val ns = t.state
+        val say = t.say.ifEmpty { ns.after }.trim()
+        if (say.isEmpty()) return t
+        // 묻는 말인지: 보드 앱은 recordAsked를 거친 상태의 waitingQuestion으로 본다. 여기서는 아직 asked가 비어 있을 수 있어 묻는 상태로 본다
+        if (ns.pending != null || (ns.ringing != null && ns.question != null)) return if (ns.replyAlarms.isEmpty() && ns.replyAt == 0L) t else t.copy(state = ns.copy(replyAlarms = emptyList(), replyAt = 0L))
+        if (com.jaljayo.board.model.PrevReply.contentless(say)) return t
+        val old = s0.alarms.associateBy { it.id }
+        var ids = ns.alarms.filter { old[it.id] != it }.map { it.id }
+        if (ids.isEmpty() && ns.listedUntil != s0.listedUntil) ids = ns.listed
+        if (ids.isEmpty()) ids = listOfNotNull(ns.lastAlarmId)
+        val named = ids.mapNotNull { id -> ns.alarms.firstOrNull { it.id == id } }.filter { AlarmItem.timeKo(it.time) in say }.map { it.id }
+        if (named.isEmpty() && ns.replyAlarms.isEmpty()) return t   // 알람 이야기가 아니고 지울 것도 없으면 상태를 건드리지 않는다
+        return t.copy(state = ns.copy(replyAlarms = named, replyAt = clock()))
+    }
+
+    /** 11/14 22차 준비(계획 5절, 규칙 11-18·11-22·11-25·11-26): 모델이 알람 명령의 target을 [앞 대답] 알람의 시각으로 골랐는데
+     *  target_ampm·날짜가 비었으면 보드가 그 알람에서 채운다. 앞 대답에 같은 시각 알람이 둘 이상이라 오전·오후가 갈리면 채우지 않는다(되묻기).
+     *  - target_ampm: 앞 대답 알람이 모두 같은 쪽(오전·오후)일 때
+     *  - date: 알람 하나로 정해지고 한 번 울리는 알람이며, 날짜가 대상을 고르는 데만 쓰이는 명령(지우기·끄기·건너뛰기)일 때.
+     *    시각·종류·난이도 바꾸기의 날짜는 "그날만"이라는 뜻이 되고 켜기의 날짜는 "그 회차만"이 되므로 넣지 않는다(대상은 targets가 앞 대답 알람으로 고름)
+     *  - target_days: 알람 하나로 정해지고 반복 알람일 때(요일 이어받기)
+     *  - change_time의 새 시각 ampm: 시각을 정해 바꾸는데(absolute) 오전·오후가 없으면 그 알람의 오전·오후(11-25)
+     *  종류(target_type)는 이어받지 않는다(11-26). 바꾼 것이 없으면 null */
+    private fun fillFromReply(s: BedState, c: Command, raw: String): Triple<Command, String, String>? {
+        if (c.token != "maum_1" || c.command !in FILL_COMMANDS || c["target_order"] != "none") return null
+        val tg = c["target"]
+        if (!Regex("\\d\\d:\\d\\d").matches(tg)) return null
+        val rs = replied(s)
+        if (rs.isEmpty()) return null
+        val h = tg.take(2).toInt(); val m = tg.takeLast(2).toInt()
+        val ap = c["target_ampm"]
+        val hit = rs.filter { a -> a.time.minute == m && (if (h == 0 || h >= 13) a.time.hour == h % 24 else a.time.hour % 12 == h % 12 && AlarmFinder.inDayPart(a.time.hour, ap)) }
+        if (hit.isEmpty()) return null
+        var out = raw; val done = mutableListOf<String>()
+        val side = hit.map { if (it.time.hour < 12) "am" else "pm" }.distinct().singleOrNull()
+        if (ap == "none" && h in 1..12 && side != null) { out = setField(out, "target_ampm", side); done += "대상 오전·오후=${ampmKo(side)}" }
+        val one = hit.singleOrNull()
+        if (one != null && c["date"] == "none" && c["target_days"] == "none" && c.command in setOf("delete", "off", "skip")) {
+            if (one.onceDate != null) {
+                val n = java.time.temporal.ChronoUnit.DAYS.between(now().toLocalDate(), one.onceDate)
+                val code = when (n) { 0L -> "today"; 1L -> "tomorrow"; 2L -> "+2"; else -> if (n > 0) "days_$n" else null }
+                if (code != null) { out = setField(out, "date", code); done += "날짜=${dk(one.onceDate)}" }
+            }
+        }
+        if (one != null && one.repeating && c["target_days"] == "none" && c["date"] == "none") {
+            val code = dayCode(one.days)
+            out = setField(out, "target_days", code); done += "요일=${one.daysKo()}"
+        }
+        if (c.command == "change_time" && c["time_type"] == "absolute" && c["ampm"] == "none" && side != null &&
+            Regex("\\d\\d:\\d\\d").matches(c["time"]) && c["time"].take(2).toInt() in 1..12) { out = setField(out, "ampm", side); done += "새 시각 오전·오후=${ampmKo(side)}" }
+        if (done.isEmpty()) return null
+        return Triple(parseKv(out), out, "방금 대답에서 말한 알람으로 빈 칸을 채웠어요(${done.joinToString(", ")}).")
+    }
+    private fun dayCode(ds: Set<java.time.DayOfWeek>) = when (ds) {
+        java.time.DayOfWeek.entries.toSet() -> "daily"; AlarmItem.WEEKDAYS -> "weekdays"; AlarmItem.WEEKEND -> "weekend"
+        else -> ds.sorted().joinToString("+") { d -> AlarmItem.DAY_CODE.entries.first { it.value == d }.key }
+    }
+    private val FILL_COMMANDS = setOf("delete", "off", "change_time", "change_type", "change_level", "skip", "enable")
 
     private fun complaintOnly(heard: String): Boolean {
         val h = heard.trim()
@@ -278,11 +477,15 @@ class Brain(private val clock: () -> Long) {
         return t != "none" && t != k["target_type"] && !(c.command == "change_level" && t == "question")
     }
 
-    private fun handleInner(s0: BedState, heard: String, c: Command, raw: String): Turn {
+    private fun handleInner(s00: BedState, heard: String, c: Command, raw: String): Turn {
+        // 11/13: "어떤 알람을 건너뛸까요?"라는 물음은 바로 다음 한 마디에만 이어진다. 어떤 말이 오든 여기서 닫는다
+        val skipAsk = if (s00.pending == null && s00.ringing == null && s00.skipAsk.isNotEmpty() && clock() <= s00.skipAskUntil) s00.skipAsk else null
+        val s01 = if (s00.skipAsk.isNotEmpty() || s00.skipAskUntil != 0L) s00.copy(skipAsk = "", skipAskUntil = 0L) else s00
+        val s0 = if (s01.angleAsks > 0 && c.command !in setOf("set_angles", "reserve_angles")) s01.copy(angleAsks = 0) else s01
         val s = s0
         // 바람·불평: 같은 일을 바로 실행했을 때의 결과 문장을 질문으로 바꿔 먼저 묻는다. "응"을 들으면 그 일을 한다
         // 시각을 받기 전에는 알람·예약·시각 묻기를 하지 않는다(설계 509)
-        val needsClock = c.token == "maum_1" || c.command in setOf("reserve", "change_reserve", "reserve_undo", "tell_time", "tell_alarms")
+        val needsClock = c.token == "maum_1" || c.command in setOf("reserve", "reserve_angles", "reserve_adjust", "change_reserve", "reserve_undo", "tell_time", "tell_alarms")
         if (!s.timeValid && needsClock) return Turn(s, say = "시계를 맞추려면 스마트폰 잘자요 앱과 한 번 연결해 주세요")
         // 알람 진행 중(답을 기다리는 중 포함)에는 덧셈 답과 미루기만 받는다(설계 329)
         // 알람이 울리는 중 대상 없이 "알람 십오 분 미뤄"(change_time later)라고 하면 울리는 이번 회차를 미룬다(11/04 경계 점검, 정책 추가).
@@ -306,15 +509,26 @@ class Brain(private val clock: () -> Long) {
             return alarm(s, heard, Command("maum_1", "delay_active", mapOf("time" to c["value"], "confirm" to "no")), raw)
         if (s.ringing != null) {
             val allowed = c.command == "delay_active" || (c.command == "set" && c["time_type"] == "relative") || (c.token == "maum_2" && c["type"] in setOf("number", "reference", "cancel"))
-            // 11/10 이도 님 결정: 덧셈 문제를 묻는 중 끄라는 말 등은 "문제를 풀어야 꺼져요"라고 하고 문제를 다시 읽는다
+            // 11/10 결정: 덧셈 문제를 묻는 중 끄라는 말 등은 "문제를 풀어야 꺼져요"라고 하고 문제를 다시 읽는다
             val q = s.question
-            if (!allowed && s.ringing.type == "question" && q != null) return Turn(s, say = "${Rules.MUST_SOLVE}. ${Brain.sino(q.first)} 더하기 ${Brain.sino(q.second)}는 얼마예요?")
+            if (!allowed && s.ringing.type == "question" && q != null) return Turn(s, say = "${Rules.MUST_SOLVE}. ${Brain.addQ(q.first, q.second)}")
             if (!allowed) return Turn(s, say = Rules.NOT_NOW)
         }
         // 알람이 울리는 중에는 미루기를 돌려 말해도 묻지 않고 바로 미룬다(최대 30분, 말이 없으면 5분)
         if (s.ringing != null && (c.command == "delay_active" || (c.command == "set" && c["time_type"] == "relative"))) {
             val m = if (c["time"] == "none") "none" else c["time"]
             return alarm(s, heard, Command("maum_1", "delay_active", mapOf("time" to m, "confirm" to "no")), raw)
+        }
+        // 11/13 결정: "어떤 알람을 건너뛸까요?"라고 물은 바로 다음 말이 자세 예약 명령이거나 자세 이름·부위·숫자 대답이면
+        // 아무것도 실행하지 않고 건너뛰기는 알람만 된다고 안내한다. 지금 바로 움직이는 명령·멈춤·알람 명령·그 밖의 말은 평소대로 처리한다
+        if (skipAsk != null) {
+            val plain = c.token == "maum_2" && c.command == null
+            if ((c.token == "maum_0" && c.command in RESERVE_COMMANDS) || (c.token == "maum_4" && c.command == "tell_reservations") ||
+                (plain && c["type"] in setOf("purpose", "part", "number")))
+                return Turn(s, say = Rules.SKIP_ALARM_ONLY, note = "어떤 알람을 건너뛸지 물었는데 알람이 아닌 대답이라 아무것도 하지 않았어요.")
+            // 알람을 고르는 대답(시각·오전오후·전부·"일곱 시 거")이면 묻던 건너뛰기에 대상을 채워 이어 간다(알람을 묻는 다른 질문과 같은 길)
+            if (s.alarms.isNotEmpty() && c.token == "maum_2" && (c.command == "select_alarm" || (plain && c["type"] in setOf("time", "ampm", "selection"))))
+                return handle(s.copy(pending = Pending("alarm", skipAsk, heard, question = "어떤 알람을 건너뛸까요?")), heard, c, raw)
         }
         // 날짜 전체 건너뛰기를 묻는 중 "오전만 꺼 줘"·"오전만 건너뛰어 줘": 새 명령으로 실행하지 않고, 묻던 날짜에서 대상만 좁혀 다시 묻는다
         val p0 = s.pending
@@ -346,7 +560,7 @@ class Brain(private val clock: () -> Long) {
                 }
             }
         }
-        // 저장(되돌리기)과 이동 중 어느 쪽인지 묻는 중(11/04 B4, 코덱스 5차 검토 반영). 이 질문에만 적용한다
+        // 저장(되돌리기)과 이동 중 어느 쪽인지 묻는 중(11/04 B4, 5차 검토 반영). 이 질문에만 적용한다
         // 실행은 새 모델 출력·대화 문맥·안전 검사를 함께 본다. 이전 작업 종류나 확인 여부는 새 요청 대신 쓰지 않는다
         // - 지원 밖·앱 전용 등은 질문을 접고 원래 안내로, 망설임(wait)은 질문을 둔 채 기다린다
         // - 모델이 그만두기("아니"·"그만하자"·"그대로 둬")로 판정하면 앞에 옮기라는 말이 있어도 그만둔다(움직이는 중이면 멈춤 처리로)
@@ -378,7 +592,7 @@ class Brain(private val clock: () -> Long) {
                 c.token == "maum_2" && c["type"] == "purpose" -> c["value"]
                 else -> null
             }
-            // R3(11/04 코덱스 9·10차): "처음으로 돌려"에서 옮기기를 고르면, 처음 각도로 옮기는 기능은 없다고 알리고 지금 저장된 자세로 옮길지 동의를 받는다.
+            // R3(11/04 9·10차 검토): "처음으로 돌려"에서 옮기기를 고르면, 처음 각도로 옮기는 기능은 없다고 알리고 지금 저장된 자세로 옮길지 동의를 받는다.
             // 자세 이름을 다시 말해도("잠 자세로 옮겨 줘") 처음 각도를 원하던 요청이 풀린 것이 아니므로 바로 옮기지 않는다. 옮길 자세가 없으면 목적지를 묻는다
             if (p0.firstAngle && c.token == "maum_0" && c.command == "call" &&
                 MOVE_ASK.containsMatchIn(MOVE_NEG.replace(heard, " ")) && choiceClear("move", heard, name ?: offered)) {
@@ -398,6 +612,9 @@ class Brain(private val clock: () -> Long) {
                 else -> reask(name)
             }
         }
+        // 11/12: 두 각도를 묻는 중 숫자 두 개로 답하면(모델은 자세 이름 없는 set_angles로 냄) 묻던 명령(자세 저장 등)에 두 각도를 채운다
+        if (p0 != null && p0.kind == "angles" && c.token == "maum_0" && c.command == "set_angles" && c["purpose"] == "none" && c["head"] != "none" && c["leg"] != "none")
+            return rerun(s, heard, setField(setField(p0.output, "head", c["head"]), "leg", c["leg"]))
         // R6(11/04): 방향을 묻는 중 "올려"·"내려"(부위·양을 새로 말하지 않은 조절)는 묻던 조절에 방향만 채운다. 원래 조절량과 확인 여부는 그대로
         if (p0 != null && p0.kind == "direction" && c.token == "maum_0" && c.command == "adjust" && c["direction"] in setOf("up", "down") &&
             c["amount_type"] == "none" && (c["part"] == "none" || c["part"] == parseKv(p0.output)["part"]))
@@ -415,6 +632,9 @@ class Brain(private val clock: () -> Long) {
             !(c.command == "change_time" && c["time"] == "none")) {
             return Turn(s.copy(pending = Pending("alarm", raw, heard)), say = "${Rules.EXACT} 어떤 알람을 ${VERB[c.command]}?")
         }
+        // 11/13: 모델이 "하루하고도 세 시간 뒤"를 세 시간 뒤(time=03:00, relative)로 내는 일이 있다. 들은 말에 하루가 넘는 뒤가 있으면 예약하지 않는다
+        if (c.token == "maum_0" && c.command in setOf("reserve", "reserve_angles", "reserve_adjust", "change_reserve") && c["time_type"] == "relative" && DAY_AFTER.containsMatchIn(heard))
+            return Turn(s, say = RESERVE_LIMIT, note = "들은 말이 하루가 넘는 뒤라 예약하지 않았어요.")
         if (c.kv["confirm"] == "yes") {
             val direct = raw.replace("confirm=yes", "confirm=no")
             val dc = c.copy(kv = c.kv + ("confirm" to "no"))
@@ -461,13 +681,35 @@ class Brain(private val clock: () -> Long) {
             }
         }
         "adjust" -> adjust(s, heard, c, raw)
-        "set_angles" -> setAngles(s, heard, c)
+        "set_angles" -> setAngles(s, heard, c, raw)
+        // 11/12: 침대 말소리 크기(10단계). 칸 수(step 1..9, large=세 칸, none=한 칸)나 단계(volume=set, step=단계)로 바꾼다.
+        // 바꾼 크기로 바로 대답하고(BoardService가 말하기 전에 크기를 맞춤), 다음에 단계로 말할 수 있게 단계를 알려 준다
+        "set_volume" -> {
+            val n = c["step"]?.toIntOrNull()
+            val by = n ?: if (c["step"] == "large") Rules.VOLUME_LARGE else 1
+            val to = when (c["volume"]) {
+                "up" -> s.volume + by; "down" -> s.volume - by; "max" -> Rules.VOLUME_MAX; "min" -> 1
+                "set" -> n ?: s.volume
+                else -> s.volume
+            }.coerceIn(1, Rules.VOLUME_MAX)
+            val lv = "${sino(to)} 단계"
+            Turn(s.copy(volume = to), say = when {
+                c["volume"] == "set" && to == s.volume -> "지금이 ${lv}예요"
+                to == s.volume && to == Rules.VOLUME_MAX -> "지금이 가장 큰 소리예요"
+                to == s.volume -> "지금이 가장 작은 소리예요"
+                to == Rules.VOLUME_MAX -> "소리를 가장 크게 했어요. ${lv}예요"
+                to == 1 -> "소리를 가장 작게 했어요. ${lv}예요"
+                c["volume"] == "set" -> "소리를 ${lv}로 했어요"
+                to > s.volume -> "소리를 ${lv}로 키웠어요"
+                else -> "소리를 ${lv}로 줄였어요"
+            })
+        }
         "undo" -> when (c["destination"]) {
             "factory" -> moveTo(s, Angles(0.0, 0.0), null, "처음 자세로 돌아갔어요")
             "saved" -> { val p = s.lastCalled; if (p == null) moveTo(s, Angles(0.0, 0.0), null, "평평하게 맞췄어요") else moveTo(s, s.memory[p] ?: Rules.DEFAULTS.getValue(p), p, "${p.ko} 자세로 돌아갔어요") }
             else -> {
                 val u = s.undo
-                if (u == null) Turn(s, say = Rules.NOT_NOW)
+                if (u == null) Turn(s, say = "되돌릴 자세가 없어요")
                 else moveTo(s, u.first, u.second, "조절하기 전 자세로 돌아갔어요").let { it.copy(state = it.state.copy(undo = null)) }
             }
         }
@@ -484,7 +726,7 @@ class Brain(private val clock: () -> Long) {
         "reset_default" -> {
             val p = c["purpose"]
             val q0 = Purpose.of(p)
-            // 11/09 이도 님 결정: 저장값 되돌리기는 침대 이동과 상관없다(object 갈림 없앰). to=factory 처음 값, to=previous 바로 전에 저장돼 있던 값
+            // 11/09 결정: 저장값 되돌리기는 침대 이동과 상관없다(object 갈림 없앰). to=factory 처음 값, to=previous 바로 전에 저장돼 있던 값
             val prev = c["to"] == "previous"
             val dest = if (prev) "이전 값" else "처음 값"
             val noPrev = prev && p != "none" && !(if (p == "all") s.prevMemory.isNotEmpty() else q0 != null && q0 in s.prevMemory)
@@ -502,7 +744,7 @@ class Brain(private val clock: () -> Long) {
             when {
                 p == null -> Turn(s.copy(pending = Pending("purpose", raw, heard)), say = "어떤 자세로 예약할까요?")
                 mins == null -> Turn(s.copy(pending = Pending("set_time", raw, heard)), say = "몇 시에 바꿀까요?")
-                // 11/11 이도 님: 예약도 알람처럼 오전·오후를 말하지 않았으면 가까운 쪽으로 짐작해서 확인한다
+                // 11/11: 예약도 알람처럼 오전·오후를 말하지 않았으면 가까운 쪽으로 짐작해서 확인한다
                 c["time_type"] != "relative" && c["ampm"] == "none" && c["time"].take(2).toInt() in 1..12 -> {
                     val guess = if (minutesFrom(c.copy(kv = c.kv + ("ampm" to "am")))!! <= minutesFrom(c.copy(kv = c.kv + ("ampm" to "pm")))!!) "am" else "pm"
                     Turn(s.copy(pending = Pending("ampm", setField(raw, "ampm", guess), heard)), say = "${ampmKo(guess)} ${clockKo(c["time"])}인가요?")
@@ -514,6 +756,86 @@ class Brain(private val clock: () -> Long) {
                     val what = if (p == Purpose.FLAT) "평평하게" else "${p.ko} 자세로"
                     val replaced = s.reservation?.let { "기존 ${it.label} 예약 대신 " } ?: ""
                     Turn(s.copy(reservation = Reservation(clock() + mins * 60_000L, label, p, target), pending = null), say = "${replaced}${label}에 $what 바꾸도록 예약했어요")
+                }
+            }
+        }
+        // 11/12: 시각 + 두 각도 예약(17차 reserve_angles). 시각 묻기·오전 오후 짐작·24시간 제한은 자세 예약과 같다
+        "reserve_angles" -> {
+            val mins = minutesFrom(c)
+            val read = readAngles(s, heard, c, raw)
+            when {
+                read.second != null -> read.second!!
+                mins == null -> Turn(s.copy(pending = Pending("set_time", raw, heard)), say = "몇 시에 바꿀까요?")
+                c["time_type"] != "relative" && c["ampm"] == "none" && c["time"].take(2).toInt() in 1..12 -> {
+                    val guess = if (minutesFrom(c.copy(kv = c.kv + ("ampm" to "am")))!! <= minutesFrom(c.copy(kv = c.kv + ("ampm" to "pm")))!!) "am" else "pm"
+                    Turn(s.copy(pending = Pending("ampm", setField(raw, "ampm", guess), heard)), say = "${ampmKo(guess)} ${clockKo(c["time"])}인가요?")
+                }
+                mins > 24 * 60 -> Turn(s, say = "자세 예약은 지금부터 24시간 이내로만 설정할 수 있어요")
+                else -> {
+                    val (h, l) = read.first!!
+                    val t = Angles(clamp(h, Part.HEAD), clamp(l, Part.LEG))
+                    val label = timeLabel(c, mins)
+                    val over = if (t.head < snap5(h) || t.leg < snap5(l)) " 최대를 넘는 쪽은 최대로 맞췄어요." else ""
+                    val replaced = s.reservation?.let { "기존 ${it.label} 예약 대신 " } ?: ""
+                    Turn(s.copy(reservation = Reservation(clock() + mins * 60_000L, label, s.purpose ?: Purpose.FLAT, t, angleOnly = true), pending = null, angleAsks = 0),
+                        say = "${replaced}${label}에 머리 ${t.head.roundToInt()}도, 다리 ${t.leg.roundToInt()}도로 바꾸도록 예약했어요.$over")
+                }
+            }
+        }
+        // 11/12: 시각 + 한 부위 조절 예약(17차 reserve_adjust). 칸 규칙은 지금 조절(adjust)과 같고, 각도는 예약 시각의 각도에서 계산한다
+        "reserve_adjust" -> {
+            val mins = minutesFrom(c)
+            val type = c["amount_type"]
+            val dir = when (c["direction"]) { "same" -> s.lastDir; "context_up" -> "up"; else -> c["direction"] }
+            val part = c["part"].takeIf { it != "none" } ?: s.lastPart?.code
+            when {
+                part == null -> Turn(s.copy(pending = Pending("part", raw, heard)), say = "어느 쪽을 맞출까요? 머리, 다리 중에 말해 주세요")
+                type != "target" && dir != "up" && dir != "down" -> Turn(s.copy(pending = Pending("direction", raw, heard)), say = "올릴까요, 내릴까요?")
+                mins == null -> Turn(s.copy(pending = Pending("set_time", raw, heard)), say = "몇 시에 맞출까요?")
+                c["time_type"] != "relative" && c["ampm"] == "none" && c["time"].take(2).toInt() in 1..12 -> {
+                    val guess = if (minutesFrom(c.copy(kv = c.kv + ("ampm" to "am")))!! <= minutesFrom(c.copy(kv = c.kv + ("ampm" to "pm")))!!) "am" else "pm"
+                    Turn(s.copy(pending = Pending("ampm", setField(raw, "ampm", guess), heard)), say = "${ampmKo(guess)} ${clockKo(c["time"])}인가요?")
+                }
+                mins > 24 * 60 -> Turn(s, say = "자세 예약은 지금부터 24시간 이내로만 설정할 수 있어요")
+                else -> {
+                    val plan = AdjustPlan(part, dir ?: "none", c["amount"], type)
+                    val label = timeLabel(c, mins)
+                    val replaced = s.reservation?.let { "기존 ${it.label} 예약 대신 " } ?: ""
+                    val r = Reservation(clock() + mins * 60_000L, label, s.purpose ?: Purpose.FLAT, adjustTarget(s.target, plan), angleOnly = true, adjust = plan)
+                    Turn(s.copy(reservation = r, pending = null), say = "${replaced}${label}에 ${adjustDesc(plan).removeSuffix("는")}도록 예약했어요")
+                }
+            }
+        }
+        // 11/12: 걸린 예약의 자세만 바꾸기(17차 change_reserve_purpose). 시각은 그대로 둔다
+        "change_reserve_purpose" -> {
+            val r = s.reservation
+            val named = Purpose.of(c["target"])
+            val to = Purpose.of(c["purpose"])
+            // 11/13: 모델은 예약이 걸려 있는지 모르므로 "예약 잠 자세로 해 줘"(target=none)가 새 예약인지 걸린 예약 바꾸기인지는 보드가 가린다
+            // - 걸린 예약이 없으면 새 예약을 맞출지 묻고, "응"이면 시각 없는 자세 예약(reserve)으로 이어 시각을 묻는다
+            // - 걸린 예약이 있는데 어느 예약인지 말하지 않았으면 바로 바꾸지 않고 먼저 묻는다
+            // target=current는 모델이 내는 값이 아니라, 걸린 예약을 바꾸는 것임을 보드가 이미 묻고 확인했다는 표시다
+            val asked = c["target"] == "current"
+            when {
+                r == null && to != null -> {
+                    val what = if (to == Purpose.FLAT) "평평하게 바꾸는" else "${to.ko} 자세"
+                    Turn(s.copy(pending = Pending("confirm", "<maum_0>(command=reserve, purpose=${to.code}, date=none, ampm=none, time=none, time_type=none, confirm=no)<maum_end>", heard)),
+                        say = "$what 예약을 맞출까요?")
+                }
+                r == null -> Turn(s, say = Rules.NO_RESERVATION)
+                to == null -> Turn(s.copy(pending = Pending("purpose", raw, heard)), say = "예약을 어떤 자세로 바꿀까요?")
+                // 말한 예약 자세가 걸린 예약과 다르면 바꾸지 않고 걸린 예약을 알린다(잠·평평은 취소와 같이 같은 갈래로 본다)
+                named != null && (r.angleOnly || named != r.purpose) && !(!r.angleOnly && setOf(named, r.purpose) == setOf(Purpose.SLEEP, Purpose.FLAT)) ->
+                    Turn(s, say = "현재는 ${r.label} ${r.desc()} 예약이 걸려 있어요")
+                !r.angleOnly && to == r.purpose -> Turn(s, say = "이미 ${r.label} ${r.desc()} 예약이에요")
+                named == null && !asked -> {
+                    val into = if (to == Purpose.FLAT) "평평하게 바꾸는 예약으로" else "${to.ko} 자세로"
+                    Turn(s.copy(pending = Pending("confirm", setField(setField(raw, "target", "current"), "confirm", "no"), heard)), say = "${r.desc()} 예약을 $into 바꿀까요?")
+                }
+                else -> {
+                    val what = if (to == Purpose.FLAT) "평평하게 바꾸는" else "${to.ko} 자세"
+                    Turn(s.copy(reservation = r.copy(purpose = to, target = s.memory[to] ?: Rules.DEFAULTS.getValue(to), angleOnly = false, adjust = null), pending = null),
+                        say = "${r.label} 예약을 $what 예약으로 바꿨어요")
                 }
             }
         }
@@ -598,35 +920,70 @@ class Brain(private val clock: () -> Long) {
         val to: Double; val result: String
         if (type == "target") {
             // 11/10 Q7: "계속 끝까지"(max, same)는 직전 방향이 내림이면 가장 낮게, 아니면 최대까지
-            if (amount == "max" && dir == "down") { to = 0.0; result = "${part.ko}를 가장 낮게 내렸어요" }
+            if (amount == "max" && dir == "down") { to = 0.0; result = "${part.ko}를 끝까지 내렸어요" }
             else if (amount == "max") { to = Rules.LIMIT[part]; result = "${part.ko}를 최대인 ${to.roundToInt()}도까지 올렸어요" }
-            else { val want = amount.toDouble(); to = clamp(want, part); result = if (to == want) "${part.ko}를 ${to.roundToInt()}도로 맞췄어요" else "${part.ko}를 최대인 ${to.roundToInt()}도까지 올렸어요" }
+            else { val want = snap5(amount.toDouble()); to = clamp(want, part); result = if (to == want && to == 0.0) "${part.ko}를 끝까지 내렸어요" else if (to == want) "${part.ko}를 ${to.roundToInt()}도로 맞췄어요" else "${part.ko}를 최대인 ${to.roundToInt()}도까지 올렸어요" }
         } else {
             if (dir != "up" && dir != "down") return Turn(s.copy(pending = Pending("direction", raw, heard)), say = "${part.ko} 올릴까요, 내릴까요?")
             val step = stepOf(amount)
             val want = cur + if (dir == "up") step else -step
             to = clamp(want, part)
             if (abs(to - cur) < 0.5) return Turn(s.copy(lastPart = part, lastDir = dir), say = if (dir == "up") "${part.ko}는 이미 최대인 ${Rules.LIMIT[part].roundToInt()}도예요" else "${part.ko}는 이미 가장 낮아요")
-            result = if (to != want && dir == "up") "${part.ko}를 최대인 ${to.roundToInt()}도까지 올렸어요" else "${part.ko}를 ${abs(to - cur).roundToInt()}도 ${if (dir == "up") "올렸어요" else "내렸어요"}"
+            result = if (to != snap5(want) && dir == "up") "${part.ko}를 최대인 ${to.roundToInt()}도까지 올렸어요" else "${part.ko}를 ${abs(to - cur).roundToInt()}도 ${if (dir == "up") "올렸어요" else "내렸어요"}"
         }
         val t = moveTo(s, s.target.with(part, to), s.purpose, result, targetMove = type == "target")
         return remember(t.copy(state = t.state.copy(lastPart = part, lastDir = if (to >= cur) "up" else "down")))
     }
 
     /** 11/10 R4: small 5도, large 20도, none 10도(올릴 때와 내릴 때 모두), 숫자는 그대로 */
+    /** 조절 예약의 목표 각도: from(그때 각도)에서 계획대로 움직인 값. 최대·최소는 넘지 않는다 */
+    fun adjustTarget(from: Angles, a: AdjustPlan): Angles {
+        val parts = when (a.part) { "head" -> listOf(Part.HEAD); "leg" -> listOf(Part.LEG); else -> listOf(Part.HEAD, Part.LEG) }
+        var t = from
+        for (p in parts) {
+            val v = if (a.amountType == "target") when (a.amount) { "max" -> if (a.direction == "down") 0.0 else Rules.LIMIT[p]; else -> a.amount.toDoubleOrNull() ?: from[p] }
+                else from[p] + (if (a.direction == "down") -1 else 1) * stepOf(a.amount)
+            t = t.with(p, clamp(v, p))
+        }
+        return t
+    }
+    /** 예약 시각이 되었을 때 옮겨 갈 각도(조절 예약은 그때 각도에서 계산) */
+    fun reservedTarget(s: BedState, r: Reservation): Angles = r.adjust?.let { adjustTarget(s.target, it) } ?: r.target
+
     private fun stepOf(amount: String) = when (amount) { "small" -> Rules.SMALL; "large" -> Rules.LARGE; "none" -> Rules.DEFAULT_STEP; else -> amount.toDouble() }
 
     /** 11/10 Q12: 머리와 다리 각도를 한 번에. 자세 이름이 있으면 침대는 그대로 두고 그 자세 저장값만 바꾼다. 최대를 넘으면 최대로 맞추고 알린다 */
-    private fun setAngles(s: BedState, heard: String, c: Command): Turn {
-        // 11/11 보드 시험: "사십삼십해줘"를 모델이 머리 43으로 냈다. 들은 글에서 두 수를 다시 읽어 맞춘다
-        val fix = anglePair(heard, c["head"].toInt(), c["leg"].toInt())
-        val h = (fix?.first ?: c["head"].toInt()).toDouble(); val l = (fix?.second ?: c["leg"].toInt()).toDouble()
+    private fun setAngles(s: BedState, heard: String, c: Command, raw: String): Turn {
+        val read = readAngles(s, heard, c, raw)
+        if (read.second != null) return read.second!!
+        val (h, l) = read.first!!
         val th = clamp(h, Part.HEAD); val tl = clamp(l, Part.LEG)
-        val what = "${if (th < h) "머리는 최대인" else "머리"} ${th.roundToInt()}도, ${if (tl < l) "다리는 최대인" else "다리"} ${tl.roundToInt()}도로 맞췄어요"
+        val what = "${if (th < snap5(h)) "머리는 최대인" else "머리"} ${th.roundToInt()}도, ${if (tl < snap5(l)) "다리는 최대인" else "다리"} ${tl.roundToInt()}도로 맞췄어요"
         val p = Purpose.of(c["purpose"])
-        if (p != null && p != Purpose.FLAT) return Turn(s.copy(memory = s.memory + (p to Angles(th, tl)), pending = null), say = "${p.ko} 자세를 $what")
-        val t = moveTo(s, Angles(th, tl), s.purpose, what, targetMove = true)
+        if (p != null && p != Purpose.FLAT) return Turn(s.copy(memory = s.memory + (p to Angles(th, tl)), pending = null, angleAsks = 0), say = "${p.ko} 자세를 $what")
+        val t = moveTo(s.copy(angleAsks = 0), Angles(th, tl), s.purpose, what, targetMove = true)
         return remember(t.copy(state = t.state.copy(lastPart = null, lastDir = null)))
+    }
+
+    /** 11/11 보드 시험 뒤 결정(11/12 구현): 받아쓴 글에서 두 각도를 다시 읽는다.
+     *  "사십삼십"처럼 한 가지로 읽히면 그 값, 둘로 읽히거나("이십오십오" = 25·15 또는 20·55) 숫자가 뭉개졌으면("팔백칠십") 짐작하지 않고 다시 말해 달라고 한다.
+     *  처음에는 "다시 한 번 말씀해 주세요", 연달아 두 번째부터는 숫자 사이에 쉬어 말하라고 안내한다. 글에서 각도를 못 찾으면 모델 값 그대로 */
+    private fun readAngles(s: BedState, heard: String, c: Command, raw: String): Pair<Pair<Double, Double>?, Turn?> {
+        val h = c["head"].toIntOrNull(); val l = c["leg"].toIntOrNull()
+        fun again(): Pair<Pair<Double, Double>?, Turn?> {
+            val n = s.angleAsks + 1
+            return null to Turn(s.copy(angleAsks = n, pending = null), say = if (n >= 2) Rules.ANGLE_PAUSE else Rules.ANGLE_AGAIN, note = "들은 숫자로 두 각도를 하나로 정할 수 없어 다시 말해 달라고 했어요.")
+        }
+        if (MANGLED.containsMatchIn(heard)) return again()
+        val pairs = anglePairs(heard)
+        return when {
+            // 자세 이름에 숫자 하나만 말했으면(독서 자세 삼십으로 저장해 = 머리 30, 다리 none) 짐작하지 않고 두 각도를 묻는다(규격 11/11)
+            pairs == null || pairs.isEmpty() -> if (h == null || l == null) null to Turn(s.copy(pending = Pending("angles", setField(raw, "confirm", "no"), heard)), say = "머리와 다리를 몇 도로 맞출까요?") else (h.toDouble() to l.toDouble()) to null
+            pairs.size > 1 -> again()
+            // 한 가지로 읽히고 모델 값과 같은 두 수면(순서만 바뀐 "다리 삼십 머리 이십" 포함) 부위를 따른 모델 값을 쓴다
+            h != null && l != null && (pairs[0] == (h to l) || pairs[0] == (l to h)) -> (h.toDouble() to l.toDouble()) to null
+            else -> (pairs[0].first.toDouble() to pairs[0].second.toDouble()) to null
+        }
     }
 
     // ---------- 알람 ----------
@@ -698,14 +1055,21 @@ class Brain(private val clock: () -> Long) {
     /** 말로 가리킨 알람을 찾는다. 하나로 정해지지 않으면 물어볼 Turn을 돌려준다 */
     private fun targets(s: BedState, heard: String, c: Command, raw: String, verb: String): Pair<List<AlarmItem>?, Turn?> {
         if (s.alarms.isEmpty()) return null to Turn(s, say = "맞춰 둔 알람이 없어요")
-        val found = AlarmFinder.find(s.alarms, c, now().toLocalDate())
+        val found0 = AlarmFinder.find(s.alarms, c, now().toLocalDate())
+        // 11/14 22차 준비(11-18): 시각으로 가리켰는데 그 시각 알람이 여럿이고 그 가운데 [앞 대답]에서 말한 알람이 있으면 그 알람을 고른다.
+        // 날짜·요일·순서를 말했으면 사용자가 고른 것이라 손대지 않는다
+        val found = found0?.let { f ->
+            val mine = f.filter { a -> a.id in replied(s).map { it.id } }
+            if (f.size > 1 && mine.isNotEmpty() && mine.size < f.size && Regex("\\d\\d:\\d\\d").matches(c["target"]) &&
+                listOf("date", "target_days", "target_order").all { k -> c[k] == "none" }) mine else f
+        }
         val xs = found ?: recent(s)?.let { listOf(it) } ?: if (s.alarms.size == 1) s.alarms else null
         return when {
             xs == null -> null to Turn(s.copy(pending = Pending("alarm", raw, heard)), say = "어떤 알람을 $verb?")
             xs.isEmpty() -> null to Turn(s, say = "말씀하신 알람이 없어요")
-            // 넷 이상이면 몇 개 읽고 마는 대신 개수를 말하고 전부인지 묻는다(11/09 이도 님 "고쳐"). "응"이면 전부, 시각을 말하면 그 알람
+            // 넷 이상이면 몇 개 읽고 마는 대신 개수를 말하고 전부인지 묻는다(11/09). "응"이면 전부, 시각을 말하면 그 알람
             xs.size > 3 && c["target"] != "all" -> null to Turn(s.copy(pending = Pending("alarm", raw, heard, alarms = xs)), say = manyAlarms(c, xs, verb))
-            // 11/10 이도 님 결정: 읽어 준 목록 바로 뒤 "두 번째 거"를 받으려고 목록을 읽었다는 것을 남긴다(같은 조건으로 다시 찾으면 같은 순서)
+            // 11/10 결정: 읽어 준 목록 바로 뒤 "두 번째 거"를 받으려고 목록을 읽었다는 것을 남긴다(같은 조건으로 다시 찾으면 같은 순서)
             xs.size > 1 && c["target"] != "all" -> null to Turn(s.copy(pending = Pending("alarm", raw, heard, listed = true)),
                 say = "${xs.joinToString(", ") { label(it) }} 알람이 있어요. 어떤 알람을 $verb?")
             else -> xs to null
@@ -763,7 +1127,7 @@ class Brain(private val clock: () -> Long) {
     /** 그 회차만(scope=once) 바꾸기의 한 대상: 알람, 원래 회차의 날, 바뀐 날짜·시각 */
     private data class OnceMove(val a: AlarmItem, val day: java.time.LocalDate, val at: java.time.LocalDateTime)
 
-    /** 그 회차만(scope=once) 바꾸기(11/04 코덱스 9·10·11차). 고른 알람마다 같은 원칙을 적용한다.
+    /** 그 회차만(scope=once) 바꾸기(11/04 9·10·11차 검토). 고른 알람마다 같은 원칙을 적용한다.
      *  - 바꿀 날: 날짜를 말했으면 그날, 말하지 않았으면("이번만") 그 알람이 다음에 울리는 날
      *  - at: 그 회차(알람, 날)의 바뀐 날짜와 시각. 당기거나 늦춰 자정을 넘으면 날짜도 넘어간다(밤 11시 반을 한 시간 늦추면 다음 날 0시 반)
      *  - 먼저 알람마다 계산하고 확인한 뒤에만 상태를 바꾼다. 다음 알람은 바꾸지 않고(원래 시각·날짜·건너뛰기 그대로) 이유를 알린다
@@ -811,7 +1175,7 @@ class Brain(private val clock: () -> Long) {
         return Turn(s.copy(pending = Pending("scope", raw, heard), lastAlarmId = xs.last().id), say = "${dk(d)}만 바꿀까요, 앞으로 계속 바꿀까요?")
     }
 
-    // 11/06 이도 님: "수요일 알람 지워"라고 했는데 수요일만 울리는 알람은 없고 수요일을 포함한 알람(매일·평일 등)만 있으면,
+    // 11/06: "수요일 알람 지워"라고 했는데 수요일만 울리는 알람은 없고 수요일을 포함한 알람(매일·평일 등)만 있으면,
     // 그 사실을 먼저 알리고 원래 안내(예: 매일 오전 여섯 시 알람을 삭제할까요?)를 잇는다. 모델은 말한 요일을 그대로 옮기고 판단은 보드가 한다.
     private val DAY_NOTE_COMMANDS = setOf("change_time", "change_type", "change_level", "skip", "enable", "delete", "off")
     private fun alarm(s: BedState, heard: String, c: Command, raw: String): Turn {
@@ -825,7 +1189,7 @@ class Brain(private val clock: () -> Long) {
         val note = "${name}만 울리는 알람이 없어요. "
         // 묻기만 한 경우(삭제 확인, 어떤 알람인지 등)는 안내만 붙인다
         if (effect(t.state) == effect(s)) return t.copy(say = note + t.say)
-        // 바로 실행되는 명령(끄기·건너뛰기·바꾸기·켜기)은 실행하지 않고 먼저 묻는다(11/06 이도 님).
+        // 바로 실행되는 명령(끄기·건너뛰기·바꾸기·켜기)은 실행하지 않고 먼저 묻는다(11/06).
         // "응"을 들으면 찾은 알람의 실제 요일로 다시 실행해 같은 안내를 반복하지 않고 물어본 그 알람에만 적용한다
         val ds = found.map { it.days }.distinct()
         if (ds.size != 1 || !found.all { it.repeating }) return t.copy(say = note + t.say)
@@ -859,7 +1223,7 @@ class Brain(private val clock: () -> Long) {
                         else -> day.atTime(clockOf(t, c["ampm"], a.time))
                     } }
                     return onceChange(s, xs, d, at, { it }) { ms ->
-                        // 안내는 바꾼 방식(time_type)부터 가른다(코덱스 11차). 시각을 정해 바꾸면 그 시각, 당기거나 늦추면 바꾼 양
+                        // 안내는 바꾼 방식(time_type)부터 가른다(11차 검토). 시각을 정해 바꾸면 그 시각, 당기거나 늦추면 바꾼 양
                         val crossed = ms.filter { it.at.toLocalDate() != it.day }
                         when {
                             // 회차 하나가 날짜를 넘기면 원래 회차와 새 일시를 나눠 말한다
@@ -876,9 +1240,10 @@ class Brain(private val clock: () -> Long) {
                 return Turn(update(s, xs) { it.copy(time = newOf(it)) }, say = "${obj(xs)} ${ro(AlarmItem.timeKo(nt))} 바꿨어요")
             }
             "change_type" -> {
-                if (c["type"] == "none") return Turn(s.copy(pending = Pending("alarm_type", raw, heard)), say = "어떤 알람으로 바꿀까요? 침대에서 나와야 꺼지는 알람과 문제를 풀어야 꺼지는 알람이 있어요")
+                // 11/14 보드 시험: 없는 알람(9시 40분)에도 종류부터 묻고 나서야 "없어요"라고 했다. 알람부터 찾고, 있을 때만 종류를 묻는다
                 val (xs0, ask) = targets(s, heard, c, raw, "바꿀까요"); if (ask != null) return ask
                 val xs = xs0!!; val type = c["type"]
+                if (type == "none") return Turn(s.copy(pending = Pending("alarm_type", raw, heard), lastAlarmId = xs.last().id), say = "어떤 알람으로 바꿀까요? 침대에서 나와야 꺼지는 알람과 문제를 풀어야 꺼지는 알람이 있어요")
                 val d = AlarmItem.date(c["date"], today)
                 scopeAsk(s, raw, heard, c, xs, d)?.let { return it }
                 if (xs.all { it.type == type }) return Turn(s.copy(lastAlarmId = xs.last().id), say = "${topic(xs)} 이미 ${typeKo(type)} 알람이에요")
@@ -925,7 +1290,7 @@ class Brain(private val clock: () -> Long) {
                     }
                     c["date"] != "none" -> AlarmItem.date(c["date"], today)!!.let { it to it }
                     span -> {
-                        // 11/04(코덱스 16차): "이번 주만 … 주말 빼고"(until=fri)처럼 '이번 주'의 요일이 이미 지났으면, 다가오는 다음 주 요일로 넘기지 않고 안내한다.
+                        // 11/04(16차 검토): "이번 주만 … 주말 빼고"(until=fri)처럼 '이번 주'의 요일이 이미 지났으면, 다가오는 다음 주 요일로 넘기지 않고 안내한다.
                         // '이번 주'는 정답 칸에 남지 않아 들은 문장으로 본다(보조 장치). '이번 주'가 없으면 요일은 지금처럼 다가오는 그 요일이다
                         if (Regex("이번\\s*주").containsMatchIn(heard)) {
                             val mon = today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
@@ -1046,9 +1411,17 @@ class Brain(private val clock: () -> Long) {
             "delete" -> if (c["target"] == "all" && clock() <= s.listedUntil && s.listed.isNotEmpty() && s.listed.all { id -> s.alarms.any { it.id == id } }) {
                     val xs = s.alarms.filter { it.id in s.listed }
                     Turn(s.copy(pending = Pending("delete", "<maum_1>(command=delete, target=all, target_ampm=none, target_days=none, date=none, state=any, target_type=none, target_order=none, confirm=no)<maum_end>", heard, alarms = xs)), say = "방금 말씀드린 ${obj(xs)} 모두 삭제할까요?")
+                } else if (c["target_order"] != "none" && clock() <= s.listedUntil && s.listed.isNotEmpty() && s.listed.all { id -> s.alarms.any { it.id == id } }) {
+                    // 11/13: 방금 읽어 준 목록 뒤 "마지막 거 지워"·"두 번째 거 지워"는 그 목록의 그 순서 알람을 지울지 묻는다. 순서가 목록을 넘으면 지우지 않는다
+                    val o = c["target_order"]
+                    val x = s.listed.getOrNull(if (o == "last") s.listed.size - 1 else o.drop(6).toInt() - 1)?.let { id -> s.alarms.first { it.id == id } }
+                    if (x == null) Turn(s, say = "무엇을 삭제할까요?")
+                    else Turn(s.copy(pending = Pending("delete", "<maum_1>(command=delete, target=%02d:%02d, target_ampm=%s, confirm=no)<maum_end>".format(if (x.time.hour % 12 == 0) 12 else x.time.hour % 12, x.time.minute, if (x.time.hour < 12) "am" else "pm"), heard, alarms = listOf(x))), say = "${label(x)} 알람을 삭제할까요?")
                 } else if (tgt == null) Turn(s, say = "무엇을 삭제할까요?")
                 else Turn(s.copy(pending = Pending("delete", "<maum_1>(command=delete, $tgt, confirm=no)<maum_end>", heard, alarms = listOf(a))), say = "${label(a)} 알람을 삭제할까요?")
-            "skip" -> if (tgt == null) Turn(s, say = "어떤 알람을 건너뛸까요?")
+            // 11/13: 물은 뒤 바로 다음 한 마디(20초 안)를 이 물음의 대답으로 볼 수 있게, 이어 갈 건너뛰기 명령과 끝 시각을 남긴다
+            "skip" -> if (tgt == null) Turn(s.copy(skipAsk = "<maum_1>(command=skip, target=none, target_ampm=none, target_days=none, date=${c["date"]}, start=none, until=none, period=none, target_type=none, target_order=none, confirm=no)<maum_end>",
+                    skipAskUntil = clock() + SKIP_ASK_MS), say = "어떤 알람을 건너뛸까요?")
                 else {
                     val day = AlarmItem.date(c["date"], now().toLocalDate()) ?: a.next(now())?.toLocalDate()
                     Turn(s.copy(pending = Pending("confirm", "<maum_1>(command=skip, $tgt, target_days=none, date=${c["date"]}, start=none, until=none, period=none, target_type=none, target_order=none, confirm=no)<maum_end>", heard)), say = "${label(a)} 알람의 ${day?.let { dk(it) } ?: "다음"} 회차를 건너뛸까요?")
@@ -1163,6 +1536,8 @@ class Brain(private val clock: () -> Long) {
                 val ap = if (v.startsWith("am_") || v.startsWith("pm_")) v.take(2) else "none"; val t = v.removePrefix("am_").removePrefix("pm_")
                 when (p?.kind) {
                     "set_time" -> rerun(s, heard, setField(setField(setField(p.output, "time", t), "ampm", ap), "time_type", "absolute"))
+                    // 11/14 보드 시험: "오전 아홉 시 사십 분인가요?"에 "아홉 시 사 분"처럼 시각으로 답하면 그 시각으로 바꿔 다시 확인한다(오전·오후를 말했으면 바로)
+                    "ampm" -> rerun(s, heard, setField(setField(setField(p.output, "time", t), "ampm", ap), "time_type", "absolute"))
                     "alarm" -> rerun(s, heard, setField(setField(p.output, "target", t), "target_ampm", ap))
                     // 묻는 것이 없을 때 시각만 말하면("여섯 시 이십칠 분에 맞춰") 새 알람을 바로 만들지 않고 먼저 묻는다(11/04 경계 점검)
                     null -> rerun(s, heard, "<maum_1>(command=set, date=none, ampm=$ap, time=$t, time_type=absolute, type=none, repeat=none, days=none, confirm=yes)<maum_end>")
@@ -1170,6 +1545,11 @@ class Brain(private val clock: () -> Long) {
                 }
             }
             "relative_time", "duration" -> when (p?.kind) {
+                // 11/14 보드 시험: "오후 아홉 시 사십 분인가요?"에 "사 분"이라고 분만 고쳐 답하면 그 분으로 바꿔 다시 확인한다("동안·뒤·후·더"가 있으면 아님)
+                "ampm" -> if (Regex("\\d\\d:\\d\\d").matches(v) && v.startsWith("00:") && !Regex("동안|뒤|후|더|있다").containsMatchIn(heard))
+                        Regex("time=(\\d\\d):\\d\\d").find(p.output)?.let { m -> rerun(s, heard, setField(setField(p.output, "time", "${m.groupValues[1]}:${v.takeLast(2)}"), "ampm", "none")) }
+                            ?: (reask(s, heard) ?: Turn(s, say = Rules.NOT_NOW))
+                    else reask(s, heard) ?: Turn(s, say = Rules.NOT_NOW)
                 // 시작일만 말한 건너뛰기에 "사흘 동안"처럼 날 수로 대답
                 "skip_span" -> if (v.startsWith("days_")) rerun(s, heard, setField(p.output, "period", v.drop(5))) else reask(s, heard) ?: Turn(s, say = Rules.NOT_NOW)
                 // "사흘"(days_N)처럼 시각으로 쓸 수 없는 대답이면 상태를 그대로 두고 같은 질문을 다시 한다
@@ -1192,9 +1572,9 @@ class Brain(private val clock: () -> Long) {
                     // 두 값으로 들리면 두 값을 짚고 '요' 없이 숫자만 말해 달라고 한다. "육십"·"육십이"처럼 끝을 빼면 하나로 정해진다
                     if (fin.size == 2) Turn(s, say = "${Brain.sino(fin.min())}인지 ${Brain.sino(fin.max())}인지 헷갈려요. 끝에 요 없이 숫자만 말씀해 주세요.", note = "말끝이 애매해 두 값($fin)으로 들려 판정하지 않았어요.")
                     // 11/10 B7: 들은 말에서 읽은 수가 하나면 모델 숫자 대신 그 수로 판정한다(1B 모델의 수 조합 실수를 피함)
-                    else if (fin.size != 1) Turn(s, say = "다시 한 번 말씀해 주세요. ${Brain.sino(q.first)} 더하기 ${Brain.sino(q.second)}는 얼마예요?", note = "마지막 답을 하나로 찾지 못해($fin, 모델 $v) 판정하지 않았어요.")
+                    else if (fin.size != 1) Turn(s, say = "다시 한 번 말씀해 주세요. ${Brain.addQ(q.first, q.second)}", note = "마지막 답을 하나로 찾지 못해($fin, 모델 $v) 판정하지 않았어요.")
                     else if (fin[0] == q.first + q.second) Turn(s.copy(ringing = null, question = null), say = "정답이에요. 좋은 아침이에요 알람을 끌게요")
-                    else Turn(s, say = "다시 생각해 보세요. ${Brain.sino(q.first)} 더하기 ${Brain.sino(q.second)}는 얼마예요?")
+                    else Turn(s, say = "다시 생각해 보세요. ${Brain.addQ(q.first, q.second)}")
                 } else if (p?.kind == "part") reask(s, heard) ?: Turn(s, say = "어느 쪽을 맞출까요? 머리, 다리 중에 말해 주세요")
                 else Turn(s, say = Rules.NOT_NOW)
             }
@@ -1241,7 +1621,13 @@ class Brain(private val clock: () -> Long) {
             "leg" -> "지금 다리는 ${s.angles.leg.roundToInt()}도예요"
             else -> "지금 머리는 ${s.angles.head.roundToInt()}도, 다리는 ${s.angles.leg.roundToInt()}도예요"
         })
-        "tell_reservations" -> Turn(s, say = s.reservation?.let { "${it.label}에 ${it.desc()} 예약이 있어요" } ?: Rules.NO_RESERVATION)
+        // 11/14 보드 시험: 예약 이름이 "삼 분 뒤"처럼 상대 시각이면 시간이 지나도 그대로 말했다. 실제 시각으로 말한다
+        "tell_reservations" -> Turn(s, say = s.reservation?.let { r ->
+            val at = java.time.LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(r.atMs), KST)
+            "${resvLabel(at, now().toLocalDate())}에 ${r.desc()} 예약이 있어요" } ?: Rules.NO_RESERVATION)
+        // 11/12: 듣고 있는지 묻는 말(17차 tell_listening). 대답 끝이 "말씀해 주세요."라 대답 뒤 8초 동안 부르는 말 없이 듣는다
+        "tell_listening" -> Turn(s, say = Rules.LISTENING)
+        "tell_name" -> Turn(s, say = "저는 ${s.call ?: s.name} 침대예요")   // 11/12: 이름은 상태의 설정값
         "tell_capabilities" -> Turn(s, say = "저는 자세 바꾸기, 각도 조절, 자세 예약, 알람을 맞출 수 있어요. 자세한 건 스마트폰 잘자요 앱에서 볼 수 있어요")
         "repeat_last" -> Turn(s, say = s.lastSpeech.ifEmpty { "다시 말씀드릴 안내가 없어요" })
         "tell_reason" -> Turn(s, say = when {
@@ -1261,7 +1647,9 @@ class Brain(private val clock: () -> Long) {
             val type = c["target_type"].takeIf { it != "none" }
             val pool = if (type == null) s.alarms else s.alarms.filter { it.type == type }
             val day = asked ?: (0..7).map { today.plusDays(it.toLong()) }.firstOrNull { d -> pool.any { it.ringsOn(d) && (d != today || d.atTime(it.time).isAfter(now())) } }
-            val xs = if (day == null) emptyList() else pool.filter { it.ringsOn(day) && (wantDays.isEmpty() || it.days.any { d -> d in wantDays }) }.sortedBy { it.time }
+            // 11/14 보드 시험: "지금 알람 뭐 있어"에 이미 지난 오늘 회차까지 읽었다. 날짜를 말하지 않았으면 오늘 남은 회차만
+            val xs = if (day == null) emptyList() else pool.filter { it.ringsOn(day) && (wantDays.isEmpty() || it.days.any { d -> d in wantDays }) &&
+                (asked != null || day != today || day.atTime(it.time).isAfter(now())) }.sortedBy { it.time }
             Turn(s, say = when {
                 day == null && type != null -> "${typeKo(type)} 알람은 없어요"
                 day == null -> "맞춰 둔 알람이 없어요"
@@ -1293,15 +1681,26 @@ class Brain(private val clock: () -> Long) {
         return null
     }
 
+    /** 11/17 병원 시연의 "알람 시각이 됨" 버튼: 다음에 울릴 알람 회차가 지금 된 것처럼 울린다(dueAlarm과 같은 모양).
+     *  그 회차를 울린 것으로 적어 두므로 실제 시각이 와도 두 번 울리지 않는다. 울리는 중이거나 울릴 알람이 없으면 null */
+    fun ringNow(s: BedState): Turn? {
+        if (s.ringing != null) return null
+        val n = now()
+        val (a, at) = s.alarms.mapNotNull { a -> a.next(n)?.let { a to it } }.minByOrNull { it.second } ?: return null
+        val fired = a.copy(lastFired = at)
+        return Turn(s.copy(ringing = fired, lastAlarmId = a.id, alarms = s.alarms.map { if (it.id == a.id) fired else it }, pending = null, question = null, snoozeAt = null),
+            note = "시연: ${label(a)} 알람 시각이 된 것으로 울려요.")
+    }
+
     /** 물리 버튼: 알람 중이면 종류에 따라 끄거나 문제를 내고, 아니면 null(움직임 멈춤은 보드 앱이 처리) */
     fun alarmButton(s: BedState, rnd: java.util.Random = java.util.Random()): Turn? {
         val a = s.ringing ?: return null
         return when (a.type) {
             "question" -> {
-                if (s.question != null) return Turn(s, say = "${Brain.sino(s.question.first)} 더하기 ${Brain.sino(s.question.second)}는 얼마예요?")
+                if (s.question != null) return Turn(s, say = "${Brain.addQ(s.question.first, s.question.second)}")
                 val r = if (a.level == 1) 1..9 else 10..99
                 val q = (r.first + rnd.nextInt(r.last - r.first + 1)) to (r.first + rnd.nextInt(r.last - r.first + 1))
-                Turn(s.copy(question = q), say = "${Brain.sino(q.first)} 더하기 ${Brain.sino(q.second)}는 얼마예요?", note = "답을 맞히면 알람이 꺼져요.")
+                Turn(s.copy(question = q), say = "${Brain.addQ(q.first, q.second)}", note = "답을 맞히면 알람이 꺼져요.")
             }
             "leave_bed" -> Turn(s, say = "침대에서 나오면 알람이 꺼져요", note = "버튼으로 잠깐 소리를 멈췄어요. 침대가 비어야 꺼져요.")
             else -> Turn(s.copy(ringing = null), say = "좋은 아침이에요 알람을 끌게요")
@@ -1348,6 +1747,55 @@ class Brain(private val clock: () -> Long) {
         }
         private val SINO = listOf("", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구")
         // 0~9999 한자어 수. 자리 앞 일은 생략(백, 천). 11/03: 100 이상에서 배열 밖 오류로 멈추던 것 고침
+        // 11/14 보드 시험: 둘 중 하나를 고르는 순서 말(공백을 뺀 들은 말 전체와 맞춘다)
+        private const val PICK_TAIL = "(거|것|꺼|걸|게|거요|걸로|거로|꺼로|요|이요)?(해줘|해|요)?"   // "앞으로"(계속)·"뒤로"를 순서 말로 잘못 받지 않게 "(으)로"는 뺀다
+        val ORDER_FRONT = Regex("^(전자|전자로|앞|앞에|앞엣|앞의|앞쪽|처음|처음에|첫번째|첫째|첫번|먼저|먼저말한|앞에말한|앞에꺼|앞에거)$PICK_TAIL$")
+        // 11/17: "다 올려·다 내려"류(공백을 뺀 들은 말 전체와 맞춘다). p = 머리·다리를 둘 다 말함, v = 움직이는 말
+        val UP_VERBS = setOf("올려", "세워", "일으켜", "높여")
+        /** 11/17 보드 시험: 받아쓰기가 말끝을 겹쳐 적은 것("다 올려려", "내려려 줘")을 하나로 */
+        fun unstutter(t: String) = t.replace(Regex("(려|워|켜|춰|혀|펴)\\1+"), "$1")
+        // 11/17: 숫자 두 개 + 올려·내려, "로" 없음(띄어 쓴 들은 말과 맞춘다). 숫자는 한 낱말이어야 한다("삼십이십"처럼 붙은 것은 해당 없음)
+        val TWO_DELTA = Regex("^(야\\s*)?(침대\\s*)?((?<p1>머리|다리)(를|은|는|도)?\\s*)?(?<n1>[영일이삼사오육칠팔구십]+|\\d+)(?=\\s|도|,|머리|다리)\\s*도?\\s*(씩)?\\s*,?\\s*(그리고\\s*)?" +
+            "((?<p2>머리|다리)(를|은|는|도)?\\s*)?(?<n2>[영일이삼사오육칠팔구십]+|\\d+)\\s*도?\\s*(씩|만큼|정도)?\\s*(더\\s*)?" +
+            "(?<v>올려|내려|높여|낮춰)\\s*(줘|줘요|주세요|줄래|봐|라|)$")
+        val ALL_UPDOWN = Regex("^(침대)?(?<p>머리(랑|와|하고|하구|도)?다리|다리(랑|와|하고|하구|도)?머리)?(를|을|도)?" +
+            "(둘다|양쪽다|양쪽모두|양쪽|싹다|전부다|모두다|다같이|끝까지다|다|전부|싹|몽땅|모두)(끝까지|최대로|최대한)?" +
+            "(?<v>올려|세워|일으켜|높여|내려|눕혀|펴|낮춰)(줘|줘요|주세요|줄래|봐|라|놔|)$")
+        /** 11/17: 부른 직후(물은 것 없음, 멈춰 있음, 알람 없음) 이 말이면 모델에 넘기지 않고 대답 없이 듣기를 닫는다. 가정용·병원용 모두 */
+        val DISMISS = setOf("됐어", "됐어됐어", "아됐어", "됐다고", "됐다", "관둬라", "그만둬라", "그냥둬라", "둬", "그냥둬", "두자", "그냥두자",
+            "아니다", "아니야", "괜찮아", "괜찮아됐어", "아니야됐어", "괜찮아그냥둬",
+            // 존댓말
+            "됐어요", "됐어요됐어요", "아됐어요", "됐다고요", "됐습니다", "관두세요", "관둬요", "그만두세요", "그만둬요", "그냥두세요", "그냥둬요", "둬요", "두세요",
+            "두죠", "그냥두죠", "아니에요", "아니예요", "아닙니다", "괜찮아요", "괜찮습니다", "괜찮아요됐어요", "아니에요됐어요", "괜찮아요그냥둬요", "괜찮아요그냥두세요")
+        fun isDismiss(text: String) = text.replace(Regex("[\\s,.?!~]"), "") in DISMISS
+        /** 모델 출력이 그만두기(취소·아니)인지: request cancel, 대답 cancel·no */
+        /** 11/19: 알람을 새로 만드는 명령인지(맞추기, 없으면 만들어 켜기). 알람 쓰기를 끈 병원에서 받지 않는다 */
+        fun makesAlarm(c: Command) = c.token == "maum_1" && (c.command == "set" || (c.command == "enable" && c["create"] == "yes"))
+        fun isQuitCmd(c: Command) = (c.command == "request" && c["operation"] == "cancel") || (c.token == "maum_2" && c["type"] in setOf("cancel", "no"))
+        val ORDER_BACK = Regex("^(후자|후자로|뒤|뒤에|뒤엣|뒤의|뒤쪽|나중|나중에|나중에말한|두번째|둘째|두번|마지막|뒤에말한|뒤에꺼|뒤에거)$PICK_TAIL$")
+
+        /** 11/14 보드 시험: 목소리 모델에 넘기기 전 문장 속 숫자를 한글로 바꾼다("0도"를 못 읽어 끊겼다). 25 → 이십오, 0 → 영 */
+        // 11/14: 들은 말 속 시각(고유어 시 + 한자어 분·반). fixMinute이 쓴다
+        val HEARD_TIME = Regex("(열한|열두|열|한|두|세|네|다섯|여섯|일곱|여덟|아홉|(?<![가-힣])[일이삼사오육칠팔구십]+) ?시(?: ?(반|[일이삼사오육칠팔구십]+ ?분))?")   // 받아쓰기 숫자를 바꾼 "구 시"도
+        val NATIVE_HOUR = mapOf("열한" to 11, "열두" to 12, "열" to 10, "한" to 1, "두" to 2, "세" to 3, "네" to 4, "다섯" to 5, "여섯" to 6, "일곱" to 7, "여덟" to 8, "아홉" to 9)
+        fun sinoNum(w: String): Int? = NumSplice.sinoVal(w)
+
+        // 11/19 보드에서 들음: 새 목소리가 "삼십도"를 "삼시도"로 읽었다. 학습 글은 늘 "삼십 도"처럼 숫자와 단위를 띄어 썼으므로,
+        // 숫자 바로 뒤에 단위(도·분·초·단계·번·개)가 붙으면 한 칸 띄워 읽게 한다
+        // 학습 글과 같은 표기로 맞추는 것 두 가지도 함께: "TV"는 "티브이"로, 요일 사이 가운뎃점(수·금요일)은 띄어쓰기로
+        private val UNIT_AFTER_NUM = Regex("(\\d+)(?=도|분|초|단계|번|개|시간)")
+        fun speakable(text: String): String {
+            val t = UNIT_AFTER_NUM.replace(text.replace("TV", "티브이").replace("·", " ")) { "${it.value} " }
+            return Regex("\\d+").replace(t) { m -> m.value.toIntOrNull()?.let { sino(it) } ?: m.value }
+        }
+
+        /** 11/19 보드에서 들음 "칠 더하기 일는": 뒤 숫자 끝 글자에 받침이 있으면 "은", 없으면 "는" */
+        fun addQ(a: Int, b: Int): String {
+            val w = sino(b); val c = w.last()
+            val jong = c in '가'..'힣' && (c - '가') % 28 != 0
+            return "${sino(a)} 더하기 $w${if (jong) "은" else "는"} 얼마예요?"
+        }
+
         fun sino(n: Int): String {
             if (n == 0) return "영"
             val m = n.coerceIn(0, 9999)
@@ -1368,20 +1816,41 @@ class Brain(private val clock: () -> Long) {
         /** 들은 글에서 각도 수 두 개를 다시 읽는다. 십이 들어 있거나 바로 뒤에 "도"가 오는 수 덩어리만 보고,
          *  붙어 있는 덩어리("사십삼십")는 나눌 수 있는 방법을 모두 만든다. 모델 값이 그중 하나면 그대로, 아니면 가장 가까운 것.
          *  읽을 수 없으면 null(모델 값을 쓴다) */
-        fun anglePair(heard: String, h: Int, l: Int): Pair<Int, Int>? {
+        // 백·천이 붙은 숫자("팔백칠십", "삼백사십")는 받아쓰기가 두 각도를 뭉갠 것이라 각도로 읽지 않는다
+        private val MANGLED = Regex("[일이삼사오육칠팔구십]*[백천][일이삼사오육칠팔구십백천]*")
+        /** 들은 글에서 두 각도로 읽을 수 있는 짝 전부. 각도 숫자가 없으면 null.
+         *  규칙표(17차 W8): "X십Y십"은 X십, Y십이다. 그래서 맨 "십"(10)을 따로 떼어 읽는 짝은, 떼지 않고 읽는 짝이 있으면 버린다.
+         *  그래도 둘 이상 남으면 둘로 읽히는 말이다(예: "이십오십오" = 25·15 또는 20·55) */
+        fun anglePairs(heard: String): List<Pair<Int, Int>>? {
             val runs = ANGLE_RUN.findAll(heard).filter { m -> '십' in m.value || heard.substring(m.range.last + 1).trimStart().startsWith("도") }.map { it.value }.toList()
             if (runs.isEmpty()) return null
-            fun splits(w: String): List<List<Int>> {
-                if (w.isEmpty()) return listOf(emptyList())
-                val out = mutableListOf<List<Int>>()
-                for (i in 1..w.length) { val v = sinoValue(w.take(i)) ?: continue; if (v > 90) continue; for (r in splits(w.drop(i))) out += listOf(v) + r }
+            // 읽기 하나 = (값 목록, 붙은 말에서 맨 "십"을 따로 뗀 개수). 띄어 말한 "십"(사십삼 십)은 떼어 읽은 것이 아니다
+            fun splits(w: String, joined: Boolean): List<Pair<List<Int>, Int>> {
+                if (w.isEmpty()) return listOf(emptyList<Int>() to 0)
+                val out = mutableListOf<Pair<List<Int>, Int>>()
+                for (i in 1..w.length) {
+                    val part = w.take(i); val v = sinoValue(part) ?: continue; if (v > 90) continue
+                    for ((r, b) in splits(w.drop(i), joined)) out += (listOf(v) + r) to (b + if (joined && part == "십") 1 else 0)
+                }
                 return out
             }
-            var all = listOf(emptyList<Int>())
-            for (w in runs) all = all.flatMap { a -> splits(w).map { a + it } }.filter { it.size <= 2 }
-            val pairs = all.filter { it.size == 2 }.map { it[0] to it[1] }.distinct()
-            if (pairs.isEmpty() || (h to l) in pairs) return null
-            return pairs.minByOrNull { kotlin.math.abs(it.first - h) + kotlin.math.abs(it.second - l) }
+            var all = listOf(emptyList<Int>() to 0)
+            for (w in runs) all = all.flatMap { (a, b) -> splits(w, w.length > 1).map { (r, rb) -> (a + r) to (b + rb) } }.filter { it.first.size <= 2 }
+            if (all.isEmpty()) return emptyList()
+            // 떼어 읽은 "십"이 가장 적은 읽기만 남긴다("삼십"은 30 하나이지 3·10이 아니다, "사십삼십"은 40·30)
+            val least = all.minOf { it.second }
+            return all.filter { it.second == least && it.first.size == 2 }.map { it.first[0] to it.first[1] }.distinct()
+        }
+        /** 조절 예약을 말로: "머리를 삼십 도 올리는", "다리를 이십 도로 맞추는", "머리와 다리를 조금 내리는" */
+        fun adjustDesc(a: AdjustPlan): String {
+            val who = when (a.part) { "head" -> "머리를"; "leg" -> "다리를"; else -> "머리와 다리를" }
+            if (a.amountType == "target") return when (a.amount) {
+                "max" -> if (a.direction == "down") "$who 가장 낮게 내리는" else "$who 최대로 올리는"
+                "0" -> "$who 평평하게 맞추는"
+                else -> "$who ${sino(a.amount.toIntOrNull() ?: 0)} 도로 맞추는"
+            }
+            val how = when (a.amount) { "small" -> "조금 "; "large" -> "많이 "; "none" -> ""; else -> "${sino(a.amount.toIntOrNull() ?: 0)} 도 " }
+            return "$who $how${if (a.direction == "down") "내리는" else "올리는"}"
         }
         private fun sinoValue(w: String): Int? {
             var total = 0; var d = -1; var last = 10000
@@ -1452,6 +1921,11 @@ class Brain(private val clock: () -> Long) {
         fun typeKo(t: String) = mapOf("basic" to "기본", "leave_bed" to "침대에서 나와야 꺼지는", "question" to "문제를 풀어야 꺼지는")[t] ?: "기본"
         /** 검사를 이미 통과한 출력을 다시 읽는다(물어 둔 일을 실행할 때) */
         const val RECENT_MS = 10_000L
+        const val SKIP_ASK_MS = 20_000L   // "어떤 알람을 건너뛸까요?" 뒤 다음 한 마디를 그 대답으로 보는 시간
+        const val RESERVE_LIMIT = "자세 예약은 지금부터 24시간 이내로만 설정할 수 있어요"
+        // 11/13: "하루하고도 세 시간 뒤", "이틀 뒤", "삼 일 후"처럼 하루가 넘는 뒤를 말한 것. "하루 종일", "하루만", "십일 분 뒤", "오후"는 아니다
+        val DAY_AFTER = Regex("(?:하루|이틀|사흘|나흘|며칠|(?:\\d+|[일이삼사오육칠팔구십]+) ?일(?! ?(?:분|시간|초|도|[일이삼사오육칠팔구십])))(?! ?종일)(?! ?만).*(?:뒤|(?<!오)후|있다)")
+        val RESERVE_COMMANDS = setOf("reserve", "reserve_angles", "reserve_adjust", "change_reserve", "change_reserve_purpose", "cancel_reserve", "reserve_undo")
         // 11/11: 지금 상태를 말하는 끝맺음(낮아, 떠 있어 등)과 움직이라는 말
         val COMPLAINT_END = Regex("(?:(?:낮|높)(?:아|네|아요|네요|은 것 같아|은 거 같아|은 것 같은데|은 거 같은데|은 듯해|은 편이네)|(?:떠|서|누워|처져|들려|솟아|내려가|올라가|세워져|눕혀져) ?있(?:어|네|어요|네요|는 것 같아|는 거 같아))$")
         val MOVE_VERB = Regex("(?:올려|내려|낮춰|높여|세워|눕혀|맞춰|돌려)(?= ?(?:줘|주|봐|놔|둬|라|요|$))|해 ?(?:줘|주)|(?:하|리|추|이|우|히)자(?:$| )")

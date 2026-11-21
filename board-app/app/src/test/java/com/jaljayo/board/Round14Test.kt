@@ -149,6 +149,7 @@ class Round14Test {
             Spec.upgrade("<maum_0>(command=adjust, part=head, direction=up, amount=30, amount_type=target, confirm=no)<maum_end>"))
         assertTrue(spec.parse("<maum_0>(command=adjust, part=head, direction=up, amount=30, amount_type=target, confirm=no)<maum_end>") is Spec.Result.Bad)
         assertTrue(spec.parse("<maum_0>(command=adjust, part=head, direction=up, amount=large, amount_type=target, confirm=no)<maum_end>") is Spec.Result.Bad)
-        assertTrue(spec.parse("<maum_0>(command=set_angles, purpose=none, head=none, leg=20, confirm=no)<maum_end>") is Spec.Result.Bad)
+        // 11/11 규격(17차)부터 두 각도 칸에 none이 들어올 수 있다. 자세 이름 없이 하나만 오면 보드가 두 각도를 묻는다(Round18BoardTest)
+        assertTrue(spec.parse("<maum_0>(command=set_angles, purpose=none, head=none, leg=20, confirm=no)<maum_end>") is Spec.Result.Ok)
     }
 }

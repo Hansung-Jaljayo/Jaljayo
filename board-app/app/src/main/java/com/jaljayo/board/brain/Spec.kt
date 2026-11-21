@@ -112,6 +112,8 @@ class Spec(json: String) {
             "target_angle" -> v == "none" || (v.all(Char::isDigit) && v.toInt() in 0..90)
             "angle" -> v in setOf("none", "max", "small", "large") || (v.all(Char::isDigit) && v.toInt() in 0..90)
             "set_angle" -> v.isNotEmpty() && v.all(Char::isDigit) && v.toInt() in 0..90
+            // 11/11 규격(17차): 자세 이름과 숫자 하나만 말하면 말하지 않은 쪽은 none(보드가 두 각도를 묻는다)
+            "set_angle_none" -> v == "none" || (v.isNotEmpty() && v.all(Char::isDigit) && v.toInt() in 0..90)
             "target" -> v == "none" || v == "all" || isTime(v)
             "period" -> v == "none" || (v.all(Char::isDigit) && v.toInt() in 1..60)
             "skip_date" -> v == "this_weekend" || v == "none" || isDate(v)
@@ -153,11 +155,15 @@ class Spec(json: String) {
         /** v0.8 모델(7차·8차)이 낸 skip·disable 출력을 v0.9 skip으로 옮긴다. 이미 v0.9이거나 다른 출력이면 그대로 돌려준다.
          *  하루를 가리키는 기간(오늘까지, 시작일+하루, 시작일=끝날)은 date 하나로 맞춘다(ai 변환 convert_v09.py와 같음) */
         fun upgrade(out: String): String {
+            // 11/11 규격(17차)에서 조절 방향 context_up을 없앴다. 옛 모델 출력은 보드가 원래 하던 대로 올리기(up)로 받는다
+            if ("direction=context_up" in out) return upgrade(out.replace("direction=context_up", "direction=up"))
+            // 11/10 규격에서 알람 repeat=once를 없앴다(한 번 알람은 repeat=none). 20차 학습 자료에도 24줄 남아 있어 모델이 낼 수 있다(11/14 확인)
+            if ("repeat=once" in out) return upgrade(out.replace("repeat=once", "repeat=none"))
             // 11/04 이전 모델의 저장값 초기화에는 object 칸이 없다: 저장값을 말한 것(saved)으로 받는다
             OLD_RESET.matchEntire(out)?.let { return "<maum_0>(command=reset_default, purpose=${it.groupValues[1]}, to=factory, confirm=${it.groupValues[2]})<maum_end>" }
             // 11/04~11/09 모델의 object(saved/unclear) 칸은 처음 값으로 되돌리기다(11/09 object 갈림 없앰)
             OBJ_RESET.matchEntire(out)?.let { return "<maum_0>(command=reset_default, purpose=${it.groupValues[1]}, to=factory, confirm=${it.groupValues[2]})<maum_end>" }
-            // 11/09 이전 모델의 지금 각도 묻기 part=both는 none과 같은 동작이라 none으로 받는다(11/09 이도 님 "하나로 통일해")
+            // 11/09 이전 모델의 지금 각도 묻기 part=both는 none과 같은 동작이라 none으로 받는다(11/09)
             // 11/10: tell_angles에 자세(purpose) 칸, tell_alarms에 종류(target_type) 칸을 더했다. 옛 꼴은 none을 붙여 받는다.
             // 13차가 낸 자세 각도 묻기(part=read 등, 옛 규격에서도 형식 오류)는 purpose로 옮긴다
             OLD_ANGLES.matchEntire(out)?.let {

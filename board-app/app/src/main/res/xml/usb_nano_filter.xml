@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 11/19 침대 버튼·압력 센서 나노의 USB 직렬 칩. 이 칩이 꽂히면 안드로이드가 보드 앱을 열지 묻고, "항상"을 고르면 다음부터 허락을 다시 묻지 않습니다.
+     같은 허브의 USB 사운드카드·마우스는 여기 없는 회사 번호라 해당하지 않습니다 -->
+<resources>
+    <usb-device vendor-id="1027" />   <!-- 0x0403 FTDI(FT232, 지금 나노) -->
+    <usb-device vendor-id="6790" />   <!-- 0x1A86 CH340·CH341(호환 나노) -->
+    <usb-device vendor-id="4292" />   <!-- 0x10C4 CP210x -->
+    <usb-device vendor-id="9025" />   <!-- 0x2341 아두이노 정품(CDC) -->
+    <usb-device vendor-id="10755" />  <!-- 0x2A03 아두이노 정품(CDC) -->
+</resources>

@@ -17,8 +17,8 @@ import java.time.LocalDateTime
 // 알람 2개와 자세 예약이 걸려 있고 TV 자세로 누워 있는 상태에서 시작한다
 class SmokeTest {
     @Test fun everyGoldOutputRuns() {
-        val files = listOf("/Users/lumos/Jaljayo/ai/data/datasets/v0.8-round7-1026/dev.jsonl",
-            "/Users/lumos/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl").map(::File)
+        val files = listOf("../../ai/data/datasets/v0.8-round7-1026/dev.jsonl",
+            "${System.getProperty("user.home")}/GoodNight/ai-training-v5/data/round6-independent-1026/eval_candidate.jsonl").map(::File)
         assumeTrue(files.all { it.exists() })
         val spec = Spec(File("src/main/assets/spec_v09.json").readText())
         val brain = Brain { LocalDateTime.of(2026, 10, 27, 22, 0).atZone(KST).toInstant().toEpochMilli() }

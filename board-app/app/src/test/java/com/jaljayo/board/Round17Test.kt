@@ -41,10 +41,11 @@ class Round17Test {
     @Test fun moreDay() = assertEquals("모레 알람 몇 개야", Hearing.normalize("모래 알람 몇 개야"))
 
     @Test fun anglePairReread() {
-        assertEquals(40 to 30, Brain.anglePair("사십삼십해줘", 43, 30))
-        assertNull(Brain.anglePair("머리 사십 다리 이십으로 해줘", 40, 20))   // 모델 값이 맞으면 그대로
-        assertNull(Brain.anglePair("독서 자세로 해 줘", 30, 20))              // 읽을 수 없으면 그대로
-        assertEquals(43 to 10, Brain.anglePair("사십삼 십 도", 40, 13).let { it ?: (40 to 13) }.let { if (it == (40 to 13)) 43 to 10 else it })
+        // 11/12: anglePair → anglePairs(읽을 수 있는 짝 전부). "X십Y십"은 X십, Y십
+        assertEquals(listOf(40 to 30), Brain.anglePairs("사십삼십해줘"))
+        assertEquals(listOf(40 to 20), Brain.anglePairs("머리 사십 다리 이십으로 해줘"))
+        assertNull(Brain.anglePairs("독서 자세로 해 줘"))
+        assertEquals(listOf(43 to 10), Brain.anglePairs("사십삼 십 도"))
         val t = say(flat, "사십삼십해줘", "<maum_0>(command=set_angles, purpose=none, head=43, leg=30, confirm=no)<maum_end>")
         assertEquals(40.0, t.state.target.head, 0.0); assertEquals(30.0, t.state.target.leg, 0.0)
     }

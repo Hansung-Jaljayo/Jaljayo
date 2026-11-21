@@ -135,7 +135,7 @@ class BoundaryAuditTest {
     }
 
     @Test fun saveOrMoveAnswerFollowsNewWordsAndLetsOtherCommandsThrough() {
-        // "독서 자세로 저장할까요, 지금 침대를 독서 자세로 옮길까요?"(save_or_move)에 대한 대답들(B4, 코덱스 4차 검토)
+        // "독서 자세로 저장할까요, 지금 침대를 독서 자세로 옮길까요?"(save_or_move)에 대한 대답들(B4, 4차 검토)
         val s = BedState(angles = com.jaljayo.board.brain.Angles(33.0, 7.0), target = com.jaljayo.board.brain.Angles(33.0, 7.0))
         val a = say(s, "이 자세 저장해", "<maum_0>(command=set_default, purpose=none, confirm=no)<maum_end>")
         val q = say(a.state, "독서 자세로 옮겨 줘", "<maum_0>(command=call, purpose=read, confirm=no)<maum_end>").state
