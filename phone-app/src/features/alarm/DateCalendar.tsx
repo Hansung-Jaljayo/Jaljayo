@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { RippleButton } from '@/components/RippleButton'
 import { color, font, radius, space } from '@/theme/tokens'
 
-import { DAY_NAMES, nowMinutes } from './alarm'
+import { DAY_NAMES } from './alarm'
 
 // 이번 달부터 석 달까지 넘겨 볼 수 있다
 const LAST_MONTH = 2
@@ -28,7 +28,6 @@ export function DateCalendar({ value, time, onPick }: Props) {
   const m = first.getMonth()
   const count = new Date(y, m + 1, 0).getDate()
   const offOf = (d: number) => Math.round((new Date(y, m, d).getTime() - today.getTime()) / 864e5)
-  const passed = time <= nowMinutes(now)
 
   // 1일 앞은 빈 칸, 7칸씩 한 주
   const cells: (number | null)[] = [...Array<null>(first.getDay()).fill(null)]
@@ -97,7 +96,7 @@ export function DateCalendar({ value, time, onPick }: Props) {
               const d = week[i]
               if (d == null) return <View key={i} style={styles.cell} />
               const off = offOf(d)
-              const disabled = off < 0 || (off === 0 && passed)
+              const disabled = off < 0   // 11/17: 오늘부터 고를 수 있다(지난 시각은 저장할 때 막음)
               const on = off === value
               return (
                 <View key={i} style={styles.cell}>

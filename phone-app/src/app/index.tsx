@@ -3,12 +3,14 @@ import { Animated, BackHandler, ScrollView, StyleSheet, Text, useWindowDimension
 
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { PortalHost, PortalScope } from '@/components/Portal'
-import { TabBar, type TabKey } from '@/components/TabBar'
+import { TabBar, tabTick, type TabKey } from '@/components/TabBar'
 import { AlarmTab } from '@/features/alarm/AlarmTab'
 import { closeSettings, getFlow, setFlow, useFlow } from '@/features/app/flow'
 import { bedName, getBedInfo, setBedInfo, useBedInfo } from '@/features/bed/bed'
+import { boardOpen, forgetBoard } from '@/features/bed/boardLink'
+import { startBedRequest } from '@/features/bed/requests'
 import { useBedRequest } from '@/features/bed/useBedRequest'
-import { CONTACT } from '@/features/hospital/hospital'
+import { CONTACT, setHospital } from '@/features/hospital/hospital'
 import { PoseTab } from '@/features/pose/PoseTab'
 import { resetPoseStore } from '@/features/pose/poseStore'
 import { obBack, RegisterFlow, regActions } from '@/features/reg/RegisterFlow'
@@ -48,12 +50,16 @@ export default function Index() {
   const lockRef = useRef<((on: boolean) => void) | null>(null)
   const onLock = useCallback((on: boolean) => lockRef.current?.(on), [])
   // 탭으로 가기: 판을 그 탭까지 부드럽게 넘긴다
+  // 누른 탭으로 넘어가는 동안에는 지나가는 탭을 고른 탭으로 바꾸지 않는다(바뀌면 탭 표시가 흔들리고 진동이 여러 번 울린다)
+  const [pg] = useState(makePaging)
   const go = useCallback(
     (key: TabKey) => {
+      const i = TAB_ORDER.indexOf(key)
+      pg.jump(i)
       setTab(key)
-      pager.current?.scrollTo({ x: TAB_ORDER.indexOf(key) * width, animated: true })
+      pager.current?.scrollTo({ x: i * width, animated: true })
     },
-    [width],
+    [width, pg],
   )
 
   // 앱을 열 때와 연결이 돌아왔을 때 침대 상태를 다시 읽는다. 읽기 전에는 옛 값으로 조작하지 않게 막는다
@@ -125,17 +131,29 @@ export default function Index() {
   const askN = flow.tabAsk?.n
   const askKey = flow.tabAsk?.key
   useEffect(() => {
-    if (askKey) pager.current?.scrollTo({ x: TAB_ORDER.indexOf(askKey) * width, animated: true })
-  }, [askN, askKey, width])
+    if (!askKey) return
+    const i = TAB_ORDER.indexOf(askKey)
+    pg.jump(i)
+    pager.current?.scrollTo({ x: i * width, animated: true })
+  }, [askN, askKey, width, pg])
 
-  // 판을 넘기는 동안 화면 가운데에 더 많이 걸친 탭을 고른 탭으로
-  const onScroll = Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
-    useNativeDriver: true,
-    listener: (e: { nativeEvent: { contentOffset: { x: number } } }) => {
-      const i = Math.max(0, Math.min(2, Math.round(e.nativeEvent.contentOffset.x / width)))
-      setTab((t) => (t === TAB_ORDER[i] ? t : TAB_ORDER[i]))
-    },
-  })
+  // 판을 넘기는 동안 화면 가운데에 더 많이 걸친 탭을 고른 탭으로. 손으로 넘겨 탭이 바뀌는 순간 한 번 진동한다
+  useEffect(() => {
+    pg.listen(width, (i) => {
+      tabTick()
+      setTab(TAB_ORDER[i])
+    })
+  }, [pg, width])
+  const [onScroll] = useState(() =>
+    Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+      useNativeDriver: true,
+      listener: (e: { nativeEvent: { contentOffset: { x: number } } }) => pg.page(e.nativeEvent.contentOffset.x),
+    }),
+  )
+  // 다른 곳에서 고른 탭을 바꿔도(처음 화면으로 돌아가기 등) 넘김 판이 아는 탭을 맞춰 둔다
+  useEffect(() => {
+    pg.shown(TAB_ORDER.indexOf(tab))
+  }, [pg, tab])
   const bedForTabs = useBedInfo()
   const alarmOff = !bedForTabs.hasButton || (!!bedForTabs.ward && !bedForTabs.ward.alarmAllowed)
   // 설정을 등록 화면에서 열면 침대 묶음 없이 앱·병원 관리만
@@ -196,6 +214,26 @@ export default function Index() {
         onHospitalAdmin={() => {
           closeSettings()
           regActions.admin()
+        }}
+        onDemoFirstRun={() => {
+          // 처음 깐 앱처럼: 보드에서 이 침대 이름을 비우고(bed-release), 등록·보드 주소·이 폰의 탭 상태를 지우고 시작 화면 → QR 화면.
+          // 보드에 붙어 있지 않거나 2초 안에 답이 없으면 이 폰 쪽만 지운다
+          reset.cancel()
+          let done = false
+          const wipe = () => {
+            if (done) return
+            done = true
+            forgetBoard()
+            setResvState({ item: null, fail: null })
+            resetPoseStore()
+            setHospital({ mine: null })
+            setBedInfo({ registered: false, ward: null })
+            setFlow({ settings: false, doc: null, wipe: getFlow().wipe + 1 })
+            setTab('pose')
+            regActions.firstRun()
+          }
+          if (!boardOpen()) return wipe()
+          startBedRequest({ type: 'bed-release', body: {} }, { onAck: wipe, onTimeout: wipe, timeoutMs: 2000 })
         }}
       />
       <PrivacyPolicyScreen visible={flow.doc === 'privacy'} onClose={() => setFlow({ doc: null })} />
@@ -258,6 +296,36 @@ const styles = StyleSheet.create({
   },
   toastText: { fontFamily: font.semiBold, fontSize: 14, color: color['on-ink'] },
 })
+
+// 탭 넘김 판이 지금 어느 탭에 있는지와 누른 탭으로 넘어가는 중인지. 처음 한 번 만들어 계속 쓴다(그릴 때 읽지 않는다)
+function makePaging() {
+  const s = { jumpTo: null as number | null, idx: 0, width: 1, end: null as ReturnType<typeof setTimeout> | null, onIndex: (_: number) => {} }
+  return {
+    // 누른 탭으로 넘어가기 시작. 넘기는 도중 손으로 잡아 멈추는 등 끝내 닿지 않아도 0.7초 뒤에는 다시 손 넘김을 따른다
+    jump: (i: number) => {
+      s.jumpTo = i
+      s.idx = i
+      if (s.end) clearTimeout(s.end)
+      s.end = setTimeout(() => void (s.jumpTo = null), 700)
+    },
+    shown: (i: number) => void (s.idx = i),
+    listen: (width: number, onIndex: (i: number) => void) => {
+      s.width = width
+      s.onIndex = onIndex
+    },
+    page: (x: number) => {
+      if (s.jumpTo != null) {
+        // 누른 탭에 닿으면 그때부터 다시 손 넘김을 따른다
+        if (Math.abs(x - s.jumpTo * s.width) < 1) s.jumpTo = null
+        return
+      }
+      const i = Math.max(0, Math.min(2, Math.round(x / s.width)))
+      if (i === s.idx) return
+      s.idx = i
+      s.onIndex(i)
+    },
+  }
+}
 
 // 탭 넘김 판. 잠금 값을 여기서만 바꾸므로, 안에 든 탭들은 부모가 다시 그리지 않는 한 다시 그려지지 않는다
 function TabPager({

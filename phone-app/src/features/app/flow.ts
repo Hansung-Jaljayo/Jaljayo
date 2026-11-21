@@ -15,6 +15,7 @@ export type ObState =
   | 'nolan' // 로컬 네트워크 권한 없음
   | 'confirming' // 등록 결과 확인 중
   | 'confirmfail' // 등록됐는지 확인 못 함
+  | 'refused' // 침대가 등록을 거절함(예: 병원 관리자가 먼저 등록해야 하는 침대)
   | 'wjoin' // 와이파이 처음 설정: 침대 와이파이에 붙는 중
   | 'wjoinfail'
   | 'wlist' // 와이파이 고르기
@@ -31,6 +32,7 @@ export type ObState =
   | 'admin' // 병원 관리
   | 'abeds' // 병원 관리: 침대 목록
   | 'abed' // 병원 관리: 침대 하나
+  | 'aadd' // 병원 관리: 침대 추가(QR 찍기 → 호실·침대 번호 고르기)
   | 'apwc' // 병원 관리: 비밀번호 바꾸기
 
 export type DocKey = 'privacy' | 'terms' | 'oss'

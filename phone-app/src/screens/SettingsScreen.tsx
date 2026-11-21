@@ -4,7 +4,6 @@ import {
   Modal,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +12,7 @@ import { keepAll } from '@/components/ObScreen';
 import { boardUrl, setBoardUrl, useBoardStatus } from '@/features/bed/boardLink';
 import { font } from '@/theme/tokens';
 import { RippleButton } from '@/components/RippleButton';
+import { InputDialog } from '@/components/InputDialog';
 import { PullScroll } from '@/components/PullScroll';
 
 interface Props {
@@ -38,35 +38,42 @@ interface Props {
   onTerms?: () => void;
   onOpenSource?: () => void;
   onHospitalAdmin?: () => void;
+  // 11/19 데모 시연: 처음 깐 앱처럼 등록과 보드 주소를 지우고 QR 화면부터
+  onDemoFirstRun?: () => void;
 }
 
 const BOARD_STATUS = { open: '연결됨', trying: '연결 중', none: '주소 없음' };
 
 function BoardAddress() {
   const status = useBoardStatus();
-  const [text, setText] = useState(() => boardUrl());
+  const [url, setUrl] = useState(() => boardUrl());
+  const [editing, setEditing] = useState(false);
   return (
     <View style={styles.actionsCard}>
       <View style={[styles.actionRow, styles.actionRowBorder]}>
         <Text style={styles.actionText}>보드 주소</Text>
         <Text style={styles.boardStatus}>{BOARD_STATUS[status]}</Text>
       </View>
-      <View style={styles.actionRow}>
-        <TextInput
-          style={styles.boardInput}
-          value={text}
-          onChangeText={setText}
-          onSubmitEditing={() => setBoardUrl(text)}
-          onEndEditing={() => setBoardUrl(text)}
-          placeholder="예: 192.168.0.10"
-          placeholderTextColor="#705A54"
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          returnKeyType="done"
-          accessibilityLabel="보드 주소"
-        />
-      </View>
+      {/* 누르면 주소 넣는 창이 뜬다. 키보드의 완료가 아니라 창의 확인·취소로 끝낸다 */}
+      <RippleButton style={styles.actionRow} onPress={() => setEditing(true)} accessibilityLabel="보드 주소 바꾸기">
+        <Text style={[styles.boardInput, !url && styles.boardPlaceholder]} numberOfLines={1}>
+          {url || '예: 192.168.0.10'}
+        </Text>
+      </RippleButton>
+      <InputDialog
+        open={editing}
+        title="보드 주소"
+        message="같은 와이파이에 있는 보드의 주소를 넣어 주세요."
+        value={url}
+        placeholder="예: 192.168.0.10"
+        keyboardType="url"
+        onOk={(text) => {
+          setBoardUrl(text);
+          setUrl(boardUrl());
+          setEditing(false);
+        }}
+        onClose={() => setEditing(false)}
+      />
     </View>
   );
 }
@@ -92,6 +99,7 @@ export default function SettingsScreen({
   onTerms,
   onOpenSource,
   onHospitalAdmin,
+  onDemoFirstRun,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [showReregisterDialog, setShowReregisterDialog] = useState(false);
@@ -263,6 +271,22 @@ export default function SettingsScreen({
                   <Image source={require('../../assets/icons/chevron.svg')} style={styles.irowChevron} />
                 </RippleButton>
               </View>
+            </>
+          )}
+
+          {/* 데모 시연 섹션(맨 아래): 시연할 때 보여 줄 화면으로 바로 가는 줄을 모은다 */}
+          {onDemoFirstRun && (
+            <>
+              <Text style={[styles.sectionLabel, styles.sectionLabelApp]}>데모 시연</Text>
+              <View style={styles.ilist}>
+                <RippleButton style={styles.irow} onPress={onDemoFirstRun}>
+                  <Text style={[styles.irowLabel, styles.irowLabelFlex]}>첫 화면에서 시작하기</Text>
+                  <Image source={require('../../assets/icons/chevron.svg')} style={styles.irowChevron} />
+                </RippleButton>
+              </View>
+              <Text style={[styles.hint, styles.hintGap]}>
+                {keepAll('이 폰의 침대 등록과 보드 주소를 지우고, 처음 깐 앱처럼 QR 찍기부터 시작해요.')}
+              </Text>
             </>
           )}
         </PullScroll>
@@ -471,7 +495,8 @@ const styles = StyleSheet.create({
   },
 
   boardStatus: { marginLeft: 'auto', fontSize: 15, fontFamily: font.medium, color: '#705A54' },
-  boardInput: { flex: 1, height: 56, fontSize: 17, fontFamily: font.medium, color: '#2D2220' },
+  boardInput: { flex: 1, fontSize: 17, lineHeight: 22, fontFamily: font.medium, color: '#2D2220' },
+  boardPlaceholder: { color: '#705A54' },
 
   actionRowDisabled: {
     opacity: 0.45,
@@ -495,6 +520,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#705A54',
     marginBottom: 0,
+  },
+
+  hintGap: {
+    marginTop: 12,
   },
 
   // ilist · 설정 목록

@@ -31,6 +31,8 @@ type Props = {
   topGap?: number
   // 켜지면 맨 아래로 내린다(저장 실패 안내와 다시 시도 버튼이 화면 밖에 남지 않게)
   toEnd?: boolean
+  // 시트 머리(제목·닫기). 손잡이와 같은 칸에 두어, 이 근처 어디를 잡고 끌어도 시트 전체가 내려간다(안쪽 내용은 따로 움직이지 않는다)
+  header?: React.ReactNode
   children: React.ReactNode
 }
 
@@ -39,7 +41,7 @@ const closeEase = Easing.bezier(...motion.sheetClose.bezier)
 
 // 아래에서 올라오는 창. 어두운 바탕을 누르거나, 손잡이를 80 넘게 끌어내리거나, 뒤로 가기를 누르면 닫힌다.
 // 시안처럼 어두운 바탕(0.4초)과 시트(열기 0.5초·닫기 0.35초)는 따로 움직이고, 시트는 자기 높이의 105%만큼 아래에서 올라온다
-export function BottomSheet({ open, onClose, tall, topGap, toEnd, children }: Props) {
+export function BottomSheet({ open, onClose, tall, topGap, toEnd, header, children }: Props) {
   const insets = useSafeAreaInsets()
   const { height: screenH } = useWindowDimensions()
   // 닫히는 움직임이 끝날 때까지는 그려 둔다
@@ -114,6 +116,8 @@ export function BottomSheet({ open, onClose, tall, topGap, toEnd, children }: Pr
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
+        // 머리 안의 닫기 버튼을 누른 채 끌어도 세로로 움직이면 시트 끌기로 넘어온다
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
         onPanResponderGrant: () => y.stopAnimation(),
         onPanResponderMove: (_, g) => y.setValue(Math.max(0, g.dy)),
         onPanResponderRelease: (_, g) => {
@@ -146,8 +150,12 @@ export function BottomSheet({ open, onClose, tall, topGap, toEnd, children }: Pr
           onLayout={onLayout}
           style={[styles.sheet, tall ? { top } : { maxHeight }, { opacity: fade, transform: [{ translateY: y }] }]}
         >
-          <View style={styles.grab} {...grab.panHandlers}>
-            <View style={styles.grabBar} />
+          {/* 손잡이와 머리: 여기 어디를 잡고 끌어도 시트 전체가 내려간다 */}
+          <View {...grab.panHandlers}>
+            <View style={styles.grab}>
+              <View style={styles.grabBar} />
+            </View>
+            {header ? <View style={styles.header}>{header}</View> : null}
           </View>
           {/* 끝까지 당기면 내용이 짧아도 튕긴다(갤럭시도 아이폰처럼) */}
           <PullScroll
@@ -178,5 +186,6 @@ const styles = StyleSheet.create({
   // 손잡이 칸: 위 4, 높이 20, 그 아래 묶음 사이 16
   grab: { marginTop: 4, marginHorizontal: 18, height: 20, alignItems: 'center', justifyContent: 'center' },
   grabBar: { width: 44, height: 5, borderRadius: radius[3], backgroundColor: color.grab },
+  header: { paddingTop: 16, paddingHorizontal: 18 },
   content: { paddingTop: 16, paddingHorizontal: 18, gap: 16 },
 })

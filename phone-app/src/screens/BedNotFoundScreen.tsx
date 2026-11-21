@@ -11,8 +11,10 @@ interface Props {
   onSettings?: () => void;
   // 다시 찾는 중이면 버튼을 막고 "찾는 중…"
   finding?: boolean;
+  // 11/19: 붙으려던 보드 주소와 실패 이유(작게 보인다)
+  detail?: string;
 }
-export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSettings, finding = false }: Props) {
+export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSettings, finding = false, detail = '' }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={OB_EDGES}>
       <View style={styles.fill}>
@@ -28,6 +30,7 @@ export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSett
           <Text style={styles.title}>{keepAll(balance('침대를 찾지 못했어요'))}</Text>
 
           <Text style={styles.description}>{keepAll(bySentence('폰과 침대가 같은 와이파이에 연결돼 있는지 확인해 주세요. 침대 전원이 켜져 있는지도 확인해 주세요.'))}</Text>
+          {!!detail && <Text style={styles.detail} selectable>{detail}</Text>}
         </View>
 
         {/* 버튼 묶음 */}
@@ -55,6 +58,14 @@ export default function BedNotFoundScreen({ onRetry, onHome, onWifiSetup, onSett
 }
 
 const styles = StyleSheet.create({
+  detail: {
+    marginTop: 12,
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: font.regular,
+    color: '#8A746E',
+    textAlign: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F4F0ED',

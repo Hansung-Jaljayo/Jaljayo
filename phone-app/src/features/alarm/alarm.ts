@@ -108,7 +108,8 @@ export function fixDraft(d: AlarmDraft, now = nowMinutes(), today = new Date()):
   }
   if (d.skipOff != null || d.pauseTo != null || d.pauseDays != null || (d.exc && Object.keys(d.exc).length))
     d = { ...d, skipOff: null, pauseTo: null, pauseDays: null, exc: {} }
-  if (d.dateOff == null || (d.dateOff === 0 && d.time <= now)) return { ...d, dateOff: d.time > now ? 0 : 1 }
+  // 11/17: 한 번 알람의 날짜는 늘 오늘(폰 날짜)부터. 시각을 보고 내일로 넘기지 않는다(지난 시각은 저장할 때 막음)
+  if (d.dateOff == null) return { ...d, dateOff: 0 }
   return d
 }
 

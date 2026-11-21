@@ -6,9 +6,10 @@ import { ObScreen } from '@/components/ObScreen'
 import { useReduceMotion } from '@/components/useReduceMotion'
 import { getFlow, goOb, innerBack, type ObState, openSettings, setFlow, useFlow } from '@/features/app/flow'
 import { type BedInfo, getBedInfo, setBedInfo, wardDefault } from '@/features/bed/bed'
+import { boardProblem, boardUrl, parseBedQr, saveRegisteredBed, setBoardUrl, waitBoardOpen } from '@/features/bed/boardLink'
 import { type BedReply } from '@/features/bed/requests'
 import { useBedRequest } from '@/features/bed/useBedRequest'
-import { getHospital, setHospital } from '@/features/hospital/hospital'
+import { getHospital, reasonOf, setHospital } from '@/features/hospital/hospital'
 import AppUpdateScreen from '@/screens/AppUpdateScreen'
 import BedFirmwareUpdateScreen from '@/screens/BedFirmwareUpdateScreen'
 import BedNotFoundScreen from '@/screens/BedNotFoundScreen'
@@ -28,7 +29,7 @@ import WifiConnectingScreen from '@/screens/WifiConnectingScreen'
 import WifiPasswordScreen from '@/screens/WifiPasswordScreen'
 import WifiSelectScreen from '@/screens/WifiSelectScreen'
 
-import { AdminBed, AdminBeds, AdminHome, AdminPassword, AdminPasswordChange, NightInfo } from './HospitalAdmin'
+import { AdminAdd, AdminBed, AdminBeds, AdminHome, AdminPassword, AdminPasswordChange, NightInfo } from './HospitalAdmin'
 import { NamePick } from './NamePick'
 import { cssEase } from '@/theme/tokens'
 
@@ -57,12 +58,18 @@ type Reg = {
   keepName: string
   // 침대를 찾는 동안 그대로 보여 줄 화면(QR 화면·못 찾음 화면·와이파이 옮기는 중)
   findFrom: 'scan' | 'notfound' | 'wmove'
+  // 침대가 찾기·등록을 거절한 이유(예: 병원 관리자가 먼저 이 침대를 등록해야 해요)
+  refuse: string
 }
-const REG0: Reg = { qr: '', taken: false, wardName: null, ssid: '', wifiBad: false, networks: [], fromApp: false, renaming: false, keepName: '', findFrom: 'scan' }
+const REG0: Reg = { qr: '', taken: false, wardName: null, ssid: '', wifiBad: false, networks: [], fromApp: false, renaming: false, keepName: '', findFrom: 'scan', refuse: '' }
 
-// 침대 답에서 병원용 정보를 읽는다(형식은 보드 담당 규격을 따른다)
-const wardFrom = (reply: BedReply): BedInfo['ward'] =>
-  reply.ward ? { ...wardDefault(typeof reply.name === 'string' ? reply.name : '사과'), ...(typeof reply.ward === 'object' ? reply.ward : {}) } : null
+// 침대 답에서 병원용 정보를 읽는다(docs/interfaces/hospital-beds.md: ward는 true/false, name은 과일 이름 또는 null).
+// 밤 시간·알람 허용은 병원 관리에서 정한 값을 이어 쓰고, 처음이면 병원용 처음 값
+const wardFrom = (reply: BedReply): BedInfo['ward'] => {
+  if (!reply.ward) return null
+  const name = typeof reply.name === 'string' ? reply.name : ''
+  return { ...(getBedInfo().ward ?? wardDefault(name)), ...(typeof reply.ward === 'object' ? reply.ward : {}), name }
+}
 
 // 등록·오류·병원 관리 화면을 탭 위에 덮는다
 export function RegisterFlow() {
@@ -115,28 +122,48 @@ export function RegisterFlow() {
       (reply) => {
         if (reply.update === 'app') return goOb('upapp')
         if (reply.update === 'board') return goOb('upboard')
+        // 병원 관리자가 아직 목록에 넣지 않은 침대 등은 침대가 이유와 함께 거절한다
+        if (reply.ok === false) {
+          setReg({ refuse: reasonOf(reply, '이 침대를 등록하지 못했어요. 다시 찍어 주세요.') })
+          return goOb('refused')
+        }
         const ward = wardFrom(reply)
+        // 병원 침대면 이 폰이 맡은 침대와 같은 호실에서 쓰는 과일 이름을 기억한다(이름 고르기에서 막는다)
+        setHospital({
+          mine:
+            ward && typeof reply.id === 'string'
+              ? {
+                  id: reply.id,
+                  room: typeof reply.room === 'string' ? reply.room : '',
+                  no: typeof reply.no === 'number' ? reply.no : 0,
+                  used: Array.isArray(reply.used) ? reply.used.filter((n): n is string => typeof n === 'string') : [],
+                }
+              : null,
+        })
+        // 11/19: 등록한 침대 고유 번호를 폰에 저장한다(다시 켜도 등록된 상태, 보드에 붙을 때 hello의 bed)
+        saveRegisteredBed(typeof reply.id === 'string' ? reply.id : parseBedQr(regRef.current.qr).id)
         setBedInfo({
           registered: true,
           connected: true,
           ward,
           firmware: typeof reply.firmware === 'string' ? reply.firmware : getBedInfo().firmware,
         })
-        setReg({ taken: false, keepName: regRef.current.taken && ward ? ward.name : '' })
-        // 병원용이면 이름부터 고른다. 다른 폰에서 넘겨받은 침대는 쓰던 이름을 미리 골라 둔다
+        setReg({ taken: false, keepName: ward ? ward.name : '' })
+        // 병원용이면 이름부터 고른다. 이미 이름이 있는 침대(다른 폰에서 넘겨받은 침대 등)는 쓰던 이름을 미리 골라 둔다
         goOb(ward ? 'name' : 'done')
       },
       () => goOb('confirmfail'),
     )
   }, [r, setReg])
 
-  const find = useCallback(() => {
-    const cur = getFlow().ob
-    setReg({ findFrom: cur === 'notfound' || cur === 'wmove' ? cur : 'scan' })
-    goOb('finding')
+  const sendFind = useCallback(() => {
     r.send(
       { type: 'bed-find', body: { qr: regRef.current.qr } },
       (reply) => {
+        if (reply.ok === false) {
+          setReg({ refuse: reasonOf(reply, '이 침대를 찾지 못했어요. 다시 찍어 주세요.') })
+          return goOb('refused')
+        }
         setReg({ taken: !!reply.taken, wardName: typeof reply.name === 'string' && reply.ward ? reply.name : null })
         // 다른 폰에 등록된 침대면 먼저 묻고, 아니면 바로 이 폰을 등록한다(등록 확인 중 화면)
         if (reply.taken) goOb('swap')
@@ -145,6 +172,29 @@ export function RegisterFlow() {
       () => goOb('notfound'),
     )
   }, [r, setReg, register])
+
+  // QR에 보드 주소가 있으면 그 주소로 붙은 뒤에 찾는다(붙는 동안 기다림을 그만둘 때 쓴다)
+  const waitRef = useRef<(() => void) | null>(null)
+  const find = useCallback(() => {
+    const cur = getFlow().ob
+    setReg({ findFrom: cur === 'notfound' || cur === 'wmove' ? cur : 'scan' })
+    goOb('finding')
+    waitRef.current?.()
+    waitRef.current = null
+    const { host } = parseBedQr(regRef.current.qr)
+    if (host && boardUrl() !== `ws://${host}`) setBoardUrl(host)
+    if (host) {
+      waitRef.current = waitBoardOpen(6000, (ok) => {
+        waitRef.current = null
+        if (getFlow().ob !== 'finding') return
+        if (ok) sendFind()
+        else goOb('notfound')
+      })
+      return
+    }
+    sendFind()
+  }, [setReg, sendFind])
+
 
   // 와이파이 찾기: 목록을 받은 뒤에 목록 화면을 보여 준다(받기 전에 "찾지 못했어요"가 비치지 않게).
   // 목록 화면의 다시 찾기는 화면을 그대로 두고 링크만 "찾는 중…"으로 바뀐다(시안 data-ob-refresh)
@@ -198,7 +248,8 @@ export function RegisterFlow() {
   const adminExit = useCallback(() => {
     const h = getHospital()
     if (h.endedMine) {
-      setHospital({ endedMine: false })
+      setHospital({ endedMine: false, mine: null })
+      saveRegisteredBed(null)
       setBedInfo({ registered: false })
       setFlow({ wipe: getFlow().wipe + 1 })
       return goOb('ended')
@@ -236,6 +287,7 @@ export function RegisterFlow() {
         admin: adminExit,
         abeds: () => goOb('admin'),
         abed: () => goOb('abeds'),
+        aadd: () => goOb('abeds'),
         apwc: () => goOb('admin'),
         night: toApp,
         swap: restart,
@@ -276,6 +328,7 @@ export function RegisterFlow() {
         if (ob === 'finding' && reg.findFrom === 'wmove') return <BedWifiConnectingScreen ssid={reg.ssid} />
         return (
           <QRScanScreen
+            finding={ob === 'finding'}
             onScanned={(qr) => {
               setReg({ qr })
               find()
@@ -307,13 +360,24 @@ export function RegisterFlow() {
           />
         )
       case 'notfound':
-        return <BedNotFoundScreen onRetry={find} onHome={restart} onWifiSetup={wifiJoin} onSettings={settings} />
+        return <BedNotFoundScreen onRetry={find} onHome={restart} onWifiSetup={wifiJoin} onSettings={settings} detail={boardProblem()} />
       case 'nocam':
         return <CameraPermissionScreen onRetry={() => Linking.openSettings()} onSettings={settings} />
       case 'nolan':
         return <LocalNetworkPermissionScreen onRetry={() => Linking.openSettings()} onSettings={settings} />
       case 'confirming':
         return <RegisteringScreen />
+      case 'refused':
+        return (
+          <ObScreen
+            icon={require('../../../assets/images/warn.png')}
+            bad
+            title="이 침대를 등록할 수 없어요"
+            lead={reg.refuse}
+            primary={{ label: '다시 찍기', onPress: restart }}
+            links={[{ label: '설정', onPress: settings }]}
+          />
+        )
       case 'confirmfail':
         return <RegisterFailScreen onRetry={register} onHome={restart} onSettings={settings} />
       case 'wjoin':
@@ -379,11 +443,14 @@ export function RegisterFlow() {
               setHospital({ bedId: id })
               goOb('abed')
             }}
+            onAdd={() => goOb('aadd')}
             onBack={() => goOb('admin')}
           />
         )
+      case 'aadd':
+        return <AdminAdd onDone={() => goOb('abeds')} onCancel={() => goOb('abeds')} />
       case 'abed':
-        return <AdminBed key={getHospital().bedId ?? 0} onBack={() => goOb('abeds')} />
+        return <AdminBed key={getHospital().bedId ?? ''} onBack={() => goOb('abeds')} />
       case 'apwc':
         return <AdminPasswordChange onDone={() => goOb('admin')} onCancel={() => goOb('admin')} />
     }
@@ -445,8 +512,14 @@ export const regActions = {
     regApi.current.setFromApp(true)
   },
   unregister: () => {
+    saveRegisteredBed(null)
     setBedInfo({ registered: false })
     regApi.current.restart()
+  },
+  // 11/19 데모 시연 "첫 화면에서 시작하기": 처음 깐 앱처럼 시작 화면 → QR 화면(등록·보드 주소는 부른 쪽에서 지운다)
+  firstRun: () => {
+    regApi.current.restart()
+    goOb('splash')
   },
   admin: () => {
     const cur = getFlow().ob

@@ -171,16 +171,18 @@ export default function EditPresetsSheet({
   const noop = () => {};
 
   return (
-    <BottomSheet open={visible} onClose={onClose ?? noop} topGap={56} toEnd={isError}>
-      {/* 헤더 */}
-      <View style={styles.shead}>
-        <Text style={styles.title} role="heading">자세별 기본 각도 수정</Text>
-        <RippleButton style={styles.closeBtn} onPress={onClose} accessibilityLabel="닫기">
-          <View style={[styles.xLine, { transform: [{ rotate: '45deg' }] }]} />
-          <View style={[styles.xLine, { transform: [{ rotate: '-45deg' }] }]} />
-        </RippleButton>
-      </View>
-
+    <BottomSheet open={visible} onClose={onClose ?? noop} topGap={56} toEnd={isError}
+      // 헤더. 손잡이와 함께 잡고 끌어내리면 시트 전체가 내려간다
+      header={
+        <View style={styles.shead}>
+          <Text style={styles.title} role="heading">자세별 기본 각도 수정</Text>
+          <RippleButton style={styles.closeBtn} onPress={onClose} accessibilityLabel="닫기">
+            <View style={[styles.xLine, { transform: [{ rotate: '45deg' }] }]} />
+            <View style={[styles.xLine, { transform: [{ rotate: '-45deg' }] }]} />
+          </RippleButton>
+        </View>
+      }
+    >
       {/* 자세 고르기 */}
       <View style={styles.purposeTabs} role="radiogroup" accessibilityLabel="자세">
         {PRESET_LABELS.map((label, i) => (

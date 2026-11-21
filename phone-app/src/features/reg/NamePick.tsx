@@ -6,8 +6,9 @@ import { Ko, ObScreen, obStyles } from '@/components/ObScreen'
 import { useRipple } from '@/components/RippleButton'
 import { useInnerBack } from '@/features/app/flow'
 import { setBedInfo, useBedInfo } from '@/features/bed/bed'
+import { saveRegisteredBed } from '@/features/bed/boardLink'
 import { useBedRequest } from '@/features/bed/useBedRequest'
-import { FRUITS, fruitXml, MY_BED, getHospital, setHospital, useHospital, usedNames } from '@/features/hospital/hospital'
+import { FRUITS, fruitXml, getHospital, reasonOf, setHospital, useHospital } from '@/features/hospital/hospital'
 import { color, font } from '@/theme/tokens'
 
 type Props = {
@@ -20,16 +21,17 @@ type Props = {
 }
 
 // 병원용: 같은 병실의 여러 침대 중 이 침대만 대답하게, 부르는 이름을 과일 12개에서 고른다.
-// 같은 병실에서 쓰는 이름은 고를 수 없다. 이름은 침대에 저장하므로 침대가 답할 때 정해진다
+// 같은 병실에서 쓰는 이름(bed-register 답의 used)은 고를 수 없다. 이름은 침대에 저장하므로 침대가 답할 때 정해진다(name-save)
 export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
   const bed = useBedInfo()
   const hosp = useHospital()
   const current = bed.ward?.name ?? ''
   const [pick, setPick] = useState(renaming ? current : preset)
-  const [taken, setTaken] = useState(false)
+  // 침대가 거절한 이유(예: 같은 병실에서 이미 쓰는 이름이에요)
+  const [refused, setRefused] = useState('')
   const r = useBedRequest()
-  const me = hosp.beds.find((b) => b.id === MY_BED)
-  const used = me ? usedNames(hosp.beds, me.room, MY_BED) : []
+  // 이 침대가 쓰던 이름은 다시 고를 수 있게 뺀다
+  const used = (hosp.mine?.used ?? []).filter((n) => n !== current)
   const blocked = !bed.connected || bed.loading
   const pending = r.waiting
   const waiting = r.waiting && !r.timedOut
@@ -40,16 +42,23 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
     if (blocked || !pick || waiting) return
     if (r.timedOut) return r.retry()
     const selected = pick
-    setTaken(false)
+    setRefused('')
     r.send({ type: 'name-save', body: { name: selected } }, (reply) => {
-      // 그사이 같은 병실의 다른 침대가 먼저 이 이름을 썼으면 침대가 거절한다
+      // 그사이 같은 병실의 다른 침대가 먼저 이 이름을 썼으면 침대가 거절한다. 그 이름은 사용 중으로 막는다
       if (reply.ok === false) {
         setPick('')
-        setTaken(true)
+        setRefused(reasonOf(reply, '이 이름으로 정하지 못했어요. 다른 이름을 골라 주세요.'))
+        const mine = getHospital().mine
+        if (mine && !mine.used.includes(selected)) setHospital({ mine: { ...mine, used: [...mine.used, selected] } })
         return
       }
       if (bed.ward) setBedInfo({ ward: { ...bed.ward, name: selected } })
-      setHospital({ beds: getHospital().beds.map((b) => (b.id === MY_BED ? { ...b, name: selected } : b)) })
+      // 11/19: 병실 QR로 등록하면 고른 이름에 따라 침대가 정해진다. 보드가 알려 준 침대 번호를 저장해 다음에 켤 때 그 침대로 붙는다
+      if (typeof reply.id === 'string') {
+        saveRegisteredBed(reply.id)
+        const m = getHospital().mine
+        if (m) setHospital({ mine: { ...m, id: reply.id } })
+      }
       onDone()
     })
   }
@@ -84,12 +93,12 @@ export function NamePick({ renaming, preset = '', onDone, onCancel }: Props) {
       } : undefined}
     >
       <FruitGrid label="부르는 이름" value={pick} used={used} disabled={pending} onPick={setPick} />
-      {(blocked || r.timedOut || taken) && (
+      {(blocked || r.timedOut || !!refused) && (
         <Ko style={obStyles.noteBad} role="status">
           {blocked
             ? '침대와 연결되어 정보를 확인한 뒤 저장할 수 있어요.'
-            : taken
-              ? '다른 침대가 먼저 사용한 이름이에요. 다른 이름을 골라 주세요.'
+            : refused
+              ? refused
               : '저장 결과를 확인하지 못했어요. 다시 시도하거나 기다리기를 취소해 주세요.'}
         </Ko>
       )}

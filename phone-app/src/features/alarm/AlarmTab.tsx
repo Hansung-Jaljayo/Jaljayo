@@ -25,6 +25,7 @@ import {
   applyOverwrite,
   clashLabel,
   clockLabel,
+  nowMinutes,
   clockParts,
   findClashes,
   dropsOnly,
@@ -247,6 +248,9 @@ export function AlarmTab() {
         message: '저장이 끝난 뒤에 다시 시도해 주세요.',
       })
     const turned = { ...a, ...fixDraft(a), on }
+    // 11/17: 한 번 알람을 켜는데 그 시각이 이미 지났으면 켜지 않고 알린다(날짜를 저절로 내일로 넘기지 않음)
+    if (on && !turned.days.length && (turned.dateOff ?? 0) * 1440 + turned.time <= nowMinutes())
+      return setNote({ title: '이미 지난 시각이에요', message: `${whenLabel(turned.dateOff ?? 0)} ${clockLabel(turned.time)}는 이미 지났어요. 알람을 눌러 시각이나 날짜를 바꿔 주세요.` })
     const go = (clashes: Clash[]) => {
       const done = () => {
         toggleReqs.current.delete(id)
@@ -370,10 +374,10 @@ export function AlarmTab() {
         onRetry={retry}
         onCancelWait={cancelWait}
         ringing={ringing(editing?.id)}
-        onPast={(off, time) =>
+        onPast={(off, time, once) =>
           setNote({
             title: '이미 지난 시각이에요',
-            message: `${whenLabel(off)} ${clockLabel(time)}는 이미 지났어요. 다른 시각을 고르거나 '앞으로 계속'으로 바꿔 주세요.`,
+            message: `${whenLabel(off)} ${clockLabel(time)}는 이미 지났어요. ${once ? "다른 시각을 고르거나 '앞으로 계속'으로 바꿔 주세요." : '다른 시각이나 날짜를 골라 주세요.'}`,
           })
         }
         offline={offline}

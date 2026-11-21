@@ -91,9 +91,141 @@ const SAVES: BedMessage["type"][] = [
   "name-save",
   "admin-save",
   "admin-password",
+  "admin-add",
   "admin-move",
+  "admin-remove",
   "admin-end",
 ];
+
+// 개발용 보드 침대 목록(docs/interfaces/hospital-beds.md 시연 처음 상태: 201호 1·2·3번에 사과·포도·딸기).
+// 보드가 붙어 있지 않을 때 시험 도구가 보드 대신 이 목록으로 병원 요청에 답한다. room이 null이면 병원 목록에 없는 침대
+type DevBed = { id: string; room: string | null; no: number | null; name: string | null; phone: boolean };
+const devBeds0 = (): DevBed[] => [
+  { id: "DEV1-1", room: "201호", no: 1, name: "사과", phone: false },
+  { id: "DEV1-2", room: "201호", no: 2, name: "포도", phone: false },
+  { id: "DEV1-3", room: "201호", no: 3, name: "딸기", phone: false },
+];
+let devBeds = devBeds0();
+// 이 폰이 환자 폰으로 등록한 개발용 침대
+let devMine: string | null = null;
+const devId = (qr: unknown) =>
+  typeof qr === "string" ? qr.replace(/^jaljayo:\/\/bed\//, "") : "";
+const devPlaced = (b: DevBed) => ({
+  id: b.id,
+  room: b.room,
+  no: b.no,
+  name: b.name,
+  phone: b.phone,
+});
+// 병원 요청에 보드처럼 답한다
+function devWard(m: BedMessage): Record<string, unknown> {
+  const find = (id: string) => devBeds.find((b) => b.id === id);
+  const at = (room: string, no: number, except = "") =>
+    devBeds.find((b) => b.id !== except && b.room === room && b.no === no);
+  switch (m.type) {
+    case "admin-list":
+      return {
+        ok: true,
+        beds: devBeds.filter((b) => b.room).map(devPlaced),
+        rooms: ["201호", "202호", "203호"],
+      };
+    case "admin-add": {
+      const b = find(devId(m.body.qr));
+      if (!b) return { ok: false, reason: "이 보드의 침대가 아니에요" };
+      if (b.room)
+        return { ok: false, reason: `이미 등록된 침대예요(${b.room} ${b.no}번)` };
+      if (at(m.body.room, m.body.no))
+        return {
+          ok: false,
+          reason: `${m.body.room} ${m.body.no}번에는 이미 침대가 있어요`,
+        };
+      b.room = m.body.room;
+      b.no = m.body.no;
+      return { ok: true, bed: devPlaced(b) };
+    }
+    case "admin-move": {
+      const b = find(m.body.bed);
+      if (!b || !b.room) return { ok: false, reason: "병원 목록에 없는 침대예요" };
+      if (at(m.body.room, m.body.no, b.id))
+        return {
+          ok: false,
+          reason: `${m.body.room} ${m.body.no}번에는 이미 침대가 있어요`,
+        };
+      const clash =
+        !!b.name &&
+        devBeds.some(
+          (x) => x.id !== b.id && x.room === m.body.room && x.name === b.name,
+        );
+      b.room = m.body.room;
+      b.no = m.body.no;
+      if (clash) b.name = null;
+      return clash
+        ? { ok: true, bed: devPlaced(b), nameCleared: true }
+        : { ok: true, bed: devPlaced(b) };
+    }
+    case "admin-remove":
+    case "admin-end": {
+      const b = find(m.body.bed);
+      if (!b) return { ok: false, reason: "병원 목록에 없는 침대예요" };
+      b.name = null;
+      b.phone = false;
+      if (m.type === "admin-remove") {
+        b.room = null;
+        b.no = null;
+      }
+      return { ok: true };
+    }
+    case "bed-find": {
+      const b = find(devId(m.body.qr));
+      if (!b) return { ok: false, reason: "이 보드의 침대가 아니에요" };
+      return {
+        ok: true,
+        id: b.id,
+        ward: true,
+        placed: !!b.room,
+        room: b.room,
+        no: b.no,
+        name: b.name,
+        taken: b.phone && devMine !== b.id,
+      };
+    }
+    case "bed-register": {
+      const b = find(devId(m.body.qr));
+      if (!b) return { ok: false, reason: "이 보드의 침대가 아니에요" };
+      if (!b.room)
+        return {
+          ok: false,
+          reason: "병원 관리자가 먼저 이 침대를 등록해야 해요",
+        };
+      b.phone = true;
+      devMine = b.id;
+      return {
+        ok: true,
+        id: b.id,
+        ward: true,
+        room: b.room,
+        no: b.no,
+        name: b.name,
+        used: devBeds
+          .filter((x) => x.id !== b.id && x.room === b.room && x.name)
+          .map((x) => x.name),
+      };
+    }
+    case "name-save": {
+      const b = find(devMine ?? "DEV1-1");
+      if (!b) return { ok: false, reason: "등록한 침대가 없어요" };
+      const name = m.body.name;
+      if (
+        devBeds.some((x) => x.id !== b.id && x.room === b.room && x.name === name)
+      )
+        return { ok: false, reason: "같은 병실에서 이미 쓰는 이름이에요" };
+      b.name = name;
+      return { ok: true };
+    }
+    default:
+      return {};
+  }
+}
 
 // 시안의 화면 넘김 시간에 맞춘 답 시간
 const DELAY: Partial<Record<BedMessage["type"], number>> = {
@@ -115,6 +247,7 @@ const SCREEN_NAME: Record<ObState, string> = {
   nolan: "로컬 네트워크 거부",
   confirming: "등록 확인 중",
   confirmfail: "등록 확인 실패",
+  refused: "침대가 등록을 거절함",
   wjoin: "침대 와이파이에 연결 중",
   wjoinfail: "침대 와이파이 연결 실패",
   wlist: "와이파이 고르기",
@@ -131,6 +264,7 @@ const SCREEN_NAME: Record<ObState, string> = {
   admin: "병원 관리",
   abeds: "병원 관리 · 침대 목록",
   abed: "병원 관리 · 침대 하나",
+  aadd: "병원 관리 · 침대 추가",
   apwc: "병원 관리 · 비밀번호 바꾸기",
 };
 
@@ -167,12 +301,16 @@ export function DevTools() {
       };
       const ward = !!getBedInfo().ward;
       switch (m.type) {
-        case "bed-find":
-          return once("notFound")
-            ? "timeout"
-            : { taken: s.taken, ward, name: "사과" };
+        case "bed-find": {
+          if (once("notFound")) return "timeout";
+          // 집 침대는 지금처럼, 병원 침대는 개발용 보드 침대 목록으로 답한다
+          if (!ward) return { ok: true, ward: false, name: "잘자요", taken: s.taken };
+          const a = devWard(m);
+          return a.ok ? { ...a, taken: s.taken || a.taken } : a;
+        }
         case "bed-register":
-          return once("confirmFail") ? "timeout" : { ward, name: "사과" };
+          if (once("confirmFail")) return "timeout";
+          return ward ? devWard(m) : { ok: true, ward: false, name: "잘자요" };
         case "wifi-join":
           return once("apFail") ? "timeout" : {};
         case "wifi-scan":
@@ -185,15 +323,23 @@ export function DevTools() {
           return { ok: !once("adminBad") };
         case "admin-save":
           return {
+            ok: true,
             missing: s.apart
               ? getHospital()
-                  .beds.filter((b) => b.room === "305호")
-                  .slice(0, 2)
+                  .beds.slice(0, 2)
                   .map((b) => b.id)
               : [],
           };
         case "name-save":
-          return { ok: !once("nameTaken") };
+          return once("nameTaken")
+            ? { ok: false, reason: "같은 병실에서 이미 쓰는 이름이에요" }
+            : devWard(m);
+        case "admin-list":
+        case "admin-add":
+        case "admin-move":
+        case "admin-remove":
+        case "admin-end":
+          return devWard(m);
         default:
           return {};
       }
@@ -263,6 +409,8 @@ export function DevTools() {
     setNightOverride(null);
     resetHospital();
     setHospital({ back: null });
+    devBeds = devBeds0();
+    devMine = null;
     setBedInfo({
       registered: true,
       connected: true,

@@ -60,22 +60,24 @@ export function ResvSheet({ open, item, onClose, onSave, wait = null, onRetry, o
 
   return (
     // 저장 중에는 바탕 누르기·끌어내리기·뒤로 가기로도 닫히지 않는다
-    <BottomSheet open={open} onClose={locked ? noop : onClose} toEnd={failed}>
-      {/* shead · 시트 머리 */}
-      <View style={styles.head}>
-        <Text style={styles.title} role="heading">
-          자세 예약
-        </Text>
-        <RippleButton
-          style={[styles.close, locked && styles.closeLocked]}
-          onPress={onClose}
-          disabled={locked}
-          accessibilityLabel="닫기"
-        >
-          <Image source={require('../../../assets/icons/x.svg')} style={styles.icon22} />
-        </RippleButton>
-      </View>
-
+    <BottomSheet open={open} onClose={locked ? noop : onClose} toEnd={failed}
+      // shead · 시트 머리. 손잡이와 함께 잡고 끌어내리면 시트 전체가 내려간다
+      header={
+        <View style={styles.head}>
+          <Text style={styles.title} role="heading">
+            자세 예약
+          </Text>
+          <RippleButton
+            style={[styles.close, locked && styles.closeLocked]}
+            onPress={onClose}
+            disabled={locked}
+            accessibilityLabel="닫기"
+          >
+            <Image source={require('../../../assets/icons/x.svg')} style={styles.icon22} />
+          </RippleButton>
+        </View>
+      }
+    >
       {/* 바꿀 자세 */}
       <View style={[styles.part, locked && styles.locked]} pointerEvents={locked ? 'none' : 'auto'}>
         <Text style={styles.label}>바꿀 자세</Text>

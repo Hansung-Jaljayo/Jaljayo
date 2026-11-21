@@ -20,7 +20,8 @@
 // 2) 갤럭시처럼 납작한 칸에서는 꽉 채우면 침대 위아래가 잘린다. 침대 전체(BED)가 칸 가운데 오게 맞추고,
 //    좌우가 조금 모자라면 사진 끝 한 줄을 늘려 채운다
 const cv = document.querySelector('canvas')
-const q = new URLSearchParams(location.search)
+// 앱 안에서 열 때는 처음 각도를 앱이 미리 넣어 준다(주소가 없어 location.search가 비어 있음)
+const q = new URLSearchParams(window.__bedQuery || location.search)
 const clampA = (h, l) => [Math.min(60, Math.max(0, Number(h) || 0)), Math.min(40, Math.max(0, Number(l) || 0))]
 const current = (() => { const [h, l] = clampA(q.get('head'), q.get('leg')); return { head: h, leg: l } })()
 
@@ -35,7 +36,14 @@ let gen = 0               // 칸 크기가 바뀌면 풀어 둔 그림을 버린
 const rkey = (h, l) => `h${String(Math.round(h * 10)).padStart(3, '0')}_l${String(Math.round(l * 10)).padStart(3, '0')}`
 let dirty = true, exact = false
 
-fetch('room_coarse.txt').then((r) => { if (!r.ok) throw new Error(r.status); return r.text() }).then((t) => {
+// 파일 읽기: 앱 안에서는 앱에 달라고 해서 받고(앱 안에 넣은 파일), 맥에서 띄웠을 때는 그대로 받는다
+const waiting = {}
+window.__bedFile = (name, text) => { const w = waiting[name]; delete waiting[name]; if (w) text == null ? w.no(new Error('없음')) : w.ok(text) }
+const getText = (name) => window.ReactNativeWebView
+  ? new Promise((ok, no) => { waiting[name] = { ok, no }; window.ReactNativeWebView.postMessage(JSON.stringify({ load: name })) })
+  : fetch(name).then((r) => { if (!r.ok) throw new Error(r.status); return r.text() })
+
+getText('room_coarse.txt').then((t) => {
   for (const line of t.split('\n')) if (line) raw[line.slice(0, 9)] = raw[line.slice(0, 9)] || line.slice(10)
   dirty = true
   return true
@@ -50,7 +58,7 @@ function loadRest() {
     const h = [...left].sort((a, b) => level(a) - level(b) || Math.abs(a - current.head) - Math.abs(b - current.head))[0]
     left.delete(h)
     const hk = String(Math.round(h * 10)).padStart(3, '0')
-    fetch(`room_webp_pack/h${hk}.txt`).then((r) => { if (!r.ok) throw new Error(r.status); return r.text() }).then((t) => {
+    getText(`room_webp_pack/h${hk}.txt`).then((t) => {
       for (const line of t.split('\n')) if (line) raw[`h${hk}_${line.slice(0, 4)}`] = line.slice(5)
       dirty = true
     }).catch((e) => console.warn('사진 묶음을 받지 못했어요', hk, e)).then(nextPack)

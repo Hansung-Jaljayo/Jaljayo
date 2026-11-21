@@ -27,12 +27,17 @@ export type BedMessage =
   // 침대 설정
   | { type: 'bed-reset'; body: null }
   | { type: 'name-save'; body: { name: string } }
-  // 병원 관리(직원)
+  // 데모 시연 "첫 화면에서 시작하기": 이 폰이 붙은 침대의 사용을 끝낸다(이름 비움, hospital-beds.md)
+  | { type: 'bed-release'; body: Record<string, never> }
+  // 병원 관리(직원). 침대 목록 요청은 docs/interfaces/hospital-beds.md를 따른다. bed는 침대 고유 번호(글자)
   | { type: 'admin-login'; body: { password: string } }
-  | { type: 'admin-save'; body: { night: unknown; alarm: boolean; beds: number[] } }
+  | { type: 'admin-save'; body: { night: unknown; alarm: boolean } }
   | { type: 'admin-password'; body: { password: string } }
-  | { type: 'admin-move'; body: { bed: number; room: string; name: string } }
-  | { type: 'admin-end'; body: { bed: number } }
+  | { type: 'admin-list'; body: Record<string, never> }
+  | { type: 'admin-add'; body: { qr: string; room: string; no: number } }
+  | { type: 'admin-move'; body: { bed: string; room: string; no: number } }
+  | { type: 'admin-remove'; body: { bed: string } }
+  | { type: 'admin-end'; body: { bed: string } }
 
 // 침대가 답과 함께 보내 주는 값(예: 찾은 침대가 다른 폰에 등록돼 있는지). 형식은 보드 담당 규격을 따른다
 export type BedReply = Record<string, unknown>
