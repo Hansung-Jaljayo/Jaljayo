@@ -1,0 +1,21 @@
+.mode-switch {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 20;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: #faf9f6;
+  border: 1px solid #c6c0b5;
+  border-radius: 8px;
+  box-shadow: 0 3px 12px #24282020;
+  font: 600 14px/1.2 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+}
+.mode-switch a { padding: 9px 14px; border-radius: 5px; color: #52554e; text-decoration: none; }
+.mode-switch a[aria-current] { background: #323630; color: #fff; }
+.mode-switch a:focus-visible { outline: 2px solid #a78047; outline-offset: -2px; }
+body:has(.mode-switch) .remote { max-height: calc(100dvh - 2 * var(--edge) - 50px); }
+@media(max-width:720px) {
+  body:has(.mode-switch) .remote { bottom: 62px; max-height: calc(50dvh - 62px); }
+}

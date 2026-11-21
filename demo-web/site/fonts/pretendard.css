@@ -1,0 +1,6 @@
+@font-face{font-family:Pretendard;font-weight:400;font-display:swap;src:url(Pretendard-Regular.woff2) format('woff2')}
+@font-face{font-family:Pretendard;font-weight:500;font-display:swap;src:url(Pretendard-Medium.woff2) format('woff2')}
+@font-face{font-family:Pretendard;font-weight:600;font-display:swap;src:url(Pretendard-SemiBold.woff2) format('woff2')}
+@font-face{font-family:Pretendard;font-weight:700;font-display:swap;src:url(Pretendard-Bold.woff2) format('woff2')}
+/* 11/19: 제목 글씨체(나눔펜)를 폴더에 넣어 인터넷 없는 노트북에서도 같은 글씨체로 보이게 */
+@font-face{font-family:'Nanum Pen Script';font-weight:400;font-display:swap;src:url(NanumPenScript-Regular.ttf) format('truetype')}

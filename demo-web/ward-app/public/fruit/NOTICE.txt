@@ -1,0 +1,5 @@
+apple.png, grape.png, strawberry.png
+
+Source: Noto Emoji (Google), 3D PNG images (3D/png/512), https://github.com/googlefonts/noto-emoji
+License: Apache License 2.0 (full text: LICENSE-Apache-2.0.txt in this folder)
+Changes: none (used as downloaded, file names changed)

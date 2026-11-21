@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>잘자요 시연 화면</title>
+  <link rel="stylesheet" href="../mode-switch.css"><link rel="stylesheet" href="../fonts/pretendard.css"><link rel="stylesheet" href="../glass-ui.css?v=18">
+  <link rel="preload" href="content/loading-pen.ttf" as="font" type="font/ttf" crossorigin><style>body{margin:0;background:#eeeae3}iframe{position:fixed;inset:0;border:0;width:100%;height:100%}@media(max-width:720px),(max-height:700px){iframe{height:calc(100% - 56px)}}</style>
+<style>
+    @font-face{font-family:LoadingPen;src:url(content/loading-pen.ttf) format("truetype");font-display:block}
+    #ward-loading{position:fixed;inset:0;z-index:21;display:grid;place-items:center;background:#fff;color:#394a3b;font:400 clamp(36px,6vw,84px)/1.2 LoadingPen,cursive;text-align:center}
+    #ward-loading[hidden]{display:none}
+  </style>
+<link rel="stylesheet" href="../loading-type.css?v=pen-ready"></head>
+<body>
+  <div id="ward-loading" role="status"><span class="loading-type">공간을 준비하고 있어요</span></div>
+<script src="../loading-type.js?v=pen-ready"></script>
+  <script>
+    const message = document.getElementById('ward-loading');
+    window.addEventListener('message', async event => {
+      if (event.origin !== location.origin || event.source !== document.querySelector('iframe')?.contentWindow || event.data !== 'ward-rendered') return;
+      // The child has rendered: lettering must not delay the scene.
+      message.hidden = true;
+    });
+  </script>
+  <iframe id="ward-frame" title="잘자요 병상용 3인실 시연"></iframe>
+  <nav class="mode-switch" aria-label="시연 환경"><a href="../">가정용</a><a href="./" aria-current="page">병상용</a></nav><script>/* 11/18: 가정용·병상용 버튼을 눌러도 주소 뒤 ?board=… 가 따라가게(보드 연결이 끊기지 않게). 보이는 것은 그대로 */(function(){var q=location.search;if(!/[?&]board=/.test(q))return;document.querySelectorAll('.mode-switch a').forEach(function(a){a.setAttribute('href',a.getAttribute('href').split('?')[0]+q)})})()</script>
+<script>document.getElementById('ward-frame').src='content/'+(location.search?location.search+'&':'?')+'v='+Date.now()  /* 11/17: ?board=… 를 안쪽 화면에 넘김 */</script></body>
+</html>
